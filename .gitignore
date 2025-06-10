@@ -23,7 +23,8 @@ instance/
 .vscode/
 .idea/
 *.pem
-
+node_modules
+package*.json
 # === DJANGO MEDIA / STATIC ===
 /media/
 /staticfiles/
