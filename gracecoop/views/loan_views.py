@@ -13,7 +13,7 @@ from ..utils import (generate_repayment_schedule,
                     apply_loan_repayment
                     )
 from django_filters.rest_framework import DjangoFilterBackend
-from ..filters import AdminRepaymentFilter, MemberRepaymentFilter
+from ..filters import RepaymentFilter
 
 
 from gracecoop.models import (
@@ -354,9 +354,6 @@ class BaseRepaymentListView(generics.ListAPIView):
     serializer_class = RepaymentSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-
-    filterset_fields = ['loan__reference', 'due_date', 'was_late']
-    search_fields = ['loan__reference', 'loan__member__user__full_name']
     ordering_fields = [
         'payment_date', 'recorded_at', 'amount',
         'principal_component', 'interest_component',
@@ -366,31 +363,24 @@ class BaseRepaymentListView(generics.ListAPIView):
 
     def get_queryset(self):
         return LoanRepayment.objects.select_related(
-        'loan', 'paid_by', 'loan__member__user', 'scheduled_installment'
-    )
+            'loan', 'paid_by', 'loan__member__user', 'scheduled_installment'
+        )
+
 
 
     
 class AdminRepaymentListView(BaseRepaymentListView):
     permission_classes = [IsAuthenticated, IsAdminUser]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_class = AdminRepaymentFilter
-    ordering_fields = ['payment_date', 'recorded_at', 'amount', 'principal_component', 'interest_component', 'was_late', 'due_date']
-    ordering = ['-payment_date']
-    pagination_class = None  
+    filterset_class = RepaymentFilter
+    pagination_class = None  # No pagination for admin
 
-    def get_queryset(self):
-        return super().get_queryset()
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
     
 class MemberRepaymentListView(BaseRepaymentListView):
-    filterset_class = MemberRepaymentFilter
+    filterset_class = RepaymentFilter
 
     def get_queryset(self):
-        user = self.request.user
-        return super().get_queryset().filter(loan__member__user=user)
+        # Restrict to repayments belonging to the logged-in user
+        return super().get_queryset().filter(loan__member__user=self.request.user)
+
 

@@ -7,7 +7,7 @@ from gracecoop.serializers import LevySerializer
 from rest_framework.permissions import IsAuthenticated
 from ..permissions import IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
-from ..filters import AdminLevyFilter, MemberLevyFilter
+from ..filters import LevyFilter
 
 class BaseLevyViewSet(viewsets.ModelViewSet):
     queryset = Levy.objects.all()
@@ -25,12 +25,12 @@ class BaseLevyViewSet(viewsets.ModelViewSet):
 
 class AdminLevyViewSet(BaseLevyViewSet):
     permission_classes = [IsAdminUser]
-    filterset_class = AdminLevyFilter
+    filterset_class = LevyFilter
 
 
 class MemberLevyViewSet(BaseLevyViewSet):
     permission_classes = [IsAuthenticated]
-    filterset_class = MemberLevyFilter
+    filterset_class = LevyFilter
 
     def get_queryset(self):
         return self.queryset.filter(member=self.request.user.memberprofile)
