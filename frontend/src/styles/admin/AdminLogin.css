@@ -1,0 +1,103 @@
+/* AdminLogin.css */
+
+/* Animated background for the body */
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(-45deg, #3b82f6, #06b6d4, #10b981, #8b5cf6);
+    background-size: 400% 400%;
+    animation: gradientAnimation 15s ease infinite;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+  }
+  
+  /* Animate the background gradient */
+  @keyframes gradientAnimation {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  .login-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 30px 40px;
+    background: rgba(255, 255, 255, 0.95); /* slight transparency */
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  }
+  
+ 
+  .login-container h2 {
+    text-align: center;
+    color: #1f2937;
+    margin-bottom: 25px;
+  }
+  
+  form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  form div {
+    margin-bottom: 20px;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #374151;
+  }
+  
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
+    background-color: #f9fafb;
+    transition: border-color 0.2s ease-in-out;
+  }
+  
+  input:focus {
+    border-color: #2563eb;
+    outline: none;
+    background-color: #fff;
+  }
+  
+  button {
+    padding: 12px;
+    background-color: #2563eb;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+  }
+  
+  button:hover {
+    background-color: #1d4ed8;
+  }
+  
+  button:disabled {
+    background-color: #93c5fd;
+    cursor: not-allowed;
+  }
+  
+  .error-msg {
+    color: #dc2626;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  

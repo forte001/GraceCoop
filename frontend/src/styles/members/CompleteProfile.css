@@ -1,0 +1,39 @@
+.complete-profile-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #f9f9f9;
+  border-radius: 10px;
+}
+
+.complete-profile-form input,
+.complete-profile-form textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.complete-profile-form button {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  border: none;
+  color: white;
+  font-size: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.complete-profile-form button:disabled {
+  background-color: #aaa;
+}
+
+.error-message {
+  color: red;
+}
+
+.success-message {
+  color: green;
+}

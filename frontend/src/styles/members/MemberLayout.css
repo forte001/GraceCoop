@@ -1,0 +1,55 @@
+.member-layout {
+    display: flex;
+    min-height: 100vh;
+    font-family: sans-serif;
+  }
+  
+  .member-sidebar {
+    width: 220px;
+    background-color: #f8fafc;
+    padding: 1rem;
+    border-right: 1px solid #e5e7eb;
+  }
+  
+  .member-content {
+    flex-grow: 1;
+    padding: 2rem;
+    background-color: #ffffff;
+  }
+  
+  .sidebar-nav {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .sidebar-nav li {
+    margin: 10px 0;
+  }
+  
+  .sidebar-nav a {
+    color: #111827;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  
+  .sidebar-nav a:hover {
+    text-decoration: underline;
+  }
+  
+  .logout-button {
+    margin-top: 20px;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .member-fullname {
+  margin: 1rem 0;
+  padding: 0.5rem;
+  font-size: 1rem;
+  color: #fff; /*adjust to your theme*/
+  text-align: center;
+}

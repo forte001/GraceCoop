@@ -1,0 +1,291 @@
+/* Loan Categories Styling */
+.loan-categories-container {
+    padding: 20px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Add Category Button Styling */
+.add-category-btn {
+    padding: 12px 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50px;
+    font-size: 18px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.add-category-btn:hover {
+    background-color: #45a049;
+}
+
+.add-category-btn .add-icon {
+    background-color: white;
+    color: #4CAF50;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+.add-category-btn span {
+    font-size: 16px;
+}
+
+/* Loan Categories Table Styling */
+.loan-categories-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow for the table */
+    border-radius: 8px; /* Rounded corners for the table */
+}
+
+.loan-categories-table th, .loan-categories-table td {
+    border: 1px solid #ddd;
+    padding: 12px; /* Increased padding for more space */
+    text-align: left;
+    font-size: 14px;
+}
+
+/* Table Header Styling */
+.loan-categories-table th {
+    background-color: #4CAF50;
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase; /* Uppercase for better emphasis */
+}
+
+/* Alternate Row Coloring */
+.loan-categories-table tr:nth-child(even) {
+    background-color: #f9f9f9; /* Light gray background for even rows */
+}
+
+.loan-categories-table tr:nth-child(odd) {
+    background-color: #ffffff; /* White background for odd rows */
+}
+
+/* Hover Effect for Rows */
+.loan-categories-table tr:hover {
+    background-color: #f2f2f2; /* Light gray when hovering */
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Fade In Animation for Modal */
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Modal */
+.modal {
+    background-color: #fff;
+    width: 100%;
+    max-width: 500px;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+    transform: scale(0.9);
+    animation: modalIn 0.3s ease-out;
+}
+
+/* Modal Open Animation */
+@keyframes modalIn {
+    0% {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Modal Header */
+.modal h3 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+}
+
+/* Modal Form Inputs */
+.modal input,
+.modal textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+/* Focused Input */
+.modal input:focus,
+.modal textarea:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+/* Submit and Cancel Buttons */
+.modal button[type='submit'],
+.modal button[type='button'] {
+    width: 48%;
+    padding: 10px;
+    margin: 10px 1%;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.modal button[type='submit'] {
+    background-color: #4caf50; /* Green */
+    color: white;
+}
+
+.modal button[type='submit']:hover {
+    background-color: #45a049;
+}
+
+.modal button[type='button'] {
+    background-color: #f44336; /* Red */
+    color: white;
+}
+
+.modal button[type='button']:hover {
+    background-color: #d32f2f;
+}
+
+/* Cancel Button Styles */
+.modal .cancel-btn {
+    background-color: #ddd;
+    color: #333;
+}
+
+.modal .cancel-btn:hover {
+    background-color: #bbb;
+}
+
+/* Ensure Buttons are Aligned and Spaced Properly */
+.modal form {
+    display: block; 
+    text-align: center; 
+}
+
+.modal form button {
+    width: 45%; 
+    margin: 10px 2%; 
+}
+
+.modal select {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  
+  .modal select:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+  }
+
+  
+/* Action Buttons in Table */
+.btn-action {
+    padding: 6px 12px;
+    margin-right: 6px;
+    font-size: 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Edit Button */
+.btn-edit {
+    background-color: #4caf50; 
+    color: white;
+}
+
+.btn-edit:hover {
+    background-color: #45a049;
+}
+
+/* Delete Button */
+.btn-delete {
+    background-color: #f44336; 
+    color: white;
+}
+
+.btn-delete:hover {
+    background-color: #d32f2f;
+}
+
+.btn-delete.disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: white;
+    display: inline-block;
+    text-transform: uppercase;
+  }
+  
+  .status-badge.active {
+    background-color: green;
+  }
+  
+  .status-badge.inactive {
+    background-color: orange;
+  }
+  
+  .status-badge.archived {
+    background-color: gray;
+  }
+  

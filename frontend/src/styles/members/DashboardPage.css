@@ -1,0 +1,60 @@
+/* styles/members/DashboardPage.css */
+
+.dashboard-container {
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+  }
+  
+  .dashboard-container h1 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+  }
+  
+  .alert-banner {
+    background-color: #fff3cd;
+    border-left: 5px solid #ffc107;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: 6px;
+  }
+  
+  .alert-banner h3 {
+    margin-top: 0;
+    color: #856404;
+  }
+  
+  .alert-banner p {
+    margin: 0.5rem 0;
+  }
+  
+  .payment-buttons {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .payment-button {
+    padding: 0.5rem 1rem;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .payment-button:hover {
+    background-color: #0056b3;
+  }
+  
+  .dashboard-main {
+    background-color: #f9f9f9;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    min-height: 200px;
+  }
+  
