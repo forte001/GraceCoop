@@ -1,0 +1,55 @@
+# === PYTHON/DJANGO ===
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.egg-info/
+*.egg
+*.env
+.env
+.env.*
+*.coverage
+.coverage.*
+htmlcov/
+instance/
+.mypy_cache/
+.pytest_cache/
+.tox/
+.vscode/
+.idea/
+*.pem
+
+# === DJANGO MEDIA / STATIC ===
+/media/
+/staticfiles/
+/static/
+
+# === NODE/REACT ===
+frontend/node_modules/
+frontend/build/
+frontend/.next/
+frontend/.turbo/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# === OS / EDITOR FILES ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+
+# === GIT ===
+*.orig
+
+# === VENV ===
+venv/
+ENV/
+env/
