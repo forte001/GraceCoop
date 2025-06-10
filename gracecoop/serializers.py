@@ -140,11 +140,11 @@ class MemberProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'full_name', 'email', 'phone_number',
             'address', 'joined_on', 'status', 'membership_status', 'member_id',
-            'has_paid_shares', 'has_paid_levy', 'has_paid_contribution'
+            'has_paid_shares', 'has_paid_levy',
         ]
         read_only_fields = [
             'id', 'user', 'email', 'joined_on', 'status',
-            'member_id', 'has_paid_shares', 'has_paid_levy', 'has_paid_contribution'
+            'member_id', 'has_paid_shares', 'has_paid_levy',
         ]
 
 # =======================
@@ -349,7 +349,7 @@ class MemberApprovalSerializer(serializers.ModelSerializer):
                 member=instance,
                 amount=config.entry_shares_amount
             )
-            instance.has_paid_contribution = True
+            instance.has_paid_shares = True
 
             Levy.objects.create(
                 member=instance,
@@ -715,8 +715,8 @@ class EntryPaymentInitiateSerializer(serializers.ModelSerializer):
 class ContributionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contribution
-        fields = ['id', 'member', 'amount', 'created_at']
-        read_only_fields = ['member', 'created_at']
+        fields = ['id', 'member', 'amount', 'date']
+        read_only_fields = ['member', 'date']
 
     def validate_amount(self, value):
         config = CooperativeConfig.objects.filter(status='active').first()

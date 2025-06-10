@@ -33,7 +33,6 @@ class MemberProfile(models.Model):
 
     has_paid_shares = models.BooleanField(default=False)
     has_paid_levy = models.BooleanField(default=False)
-    has_paid_contribution = models.BooleanField(default=False)
 
     applied_config = models.ForeignKey(
         'CooperativeConfig',

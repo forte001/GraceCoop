@@ -6,12 +6,12 @@ from gracecoop.views.contribution_views import AdminContributionViewSet, MemberC
 contribution_router = DefaultRouter()
 
 # Member routes
-contribution_router.register(r'member/contributions', MemberContributionViewSet, basename='member-contribution')
+contribution_router.register(r'contributions-list', MemberContributionViewSet, basename='member-contribution')
 
 # Admin routes
-contribution_router.register(r'admin/contributions', AdminContributionViewSet, basename='admin-contribution')
+contribution_router.register(r'contributions-admin', AdminContributionViewSet, basename='admin-contribution')
 
 
 urlpatterns = [
-    path('contributions/', include(contribution_router.urls)),  # Handle all contribution-related endpoints
+    path('', include(contribution_router.urls)),  # Handle all contribution-related endpoints
 ]
