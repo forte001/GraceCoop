@@ -713,9 +713,10 @@ class EntryPaymentInitiateSerializer(serializers.ModelSerializer):
 # CONTRIBUTION
 # =======================
 class ContributionSerializer(serializers.ModelSerializer):
+    member_name = serializers.CharField(source='member.user.get_full_name', read_only=True)
     class Meta:
         model = Contribution
-        fields = ['id', 'member', 'amount', 'date']
+        fields = ['id', 'member', 'member_name', 'amount', 'date']
         read_only_fields = ['member', 'date']
 
     def validate_amount(self, value):
@@ -752,10 +753,11 @@ class ContributionSerializer(serializers.ModelSerializer):
 # LEVY
 # =======================
 class LevySerializer(serializers.ModelSerializer):
+    member_name = serializers.CharField(source='member.user.get_full_name', read_only=True)
     class Meta:
         model = Levy
-        fields = ['id', 'member', 'amount', 'created_at']
-        read_only_fields = ['member', 'created_at']
+        fields = ['id', 'member', 'member_name', 'amount', 'date']
+        read_only_fields = ['member', 'date']
 
     def validate_amount(self, value):
         config = CooperativeConfig.objects.filter(status='active').first()

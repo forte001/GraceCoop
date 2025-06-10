@@ -29,7 +29,7 @@ const AdminContributionList = () => {
       if (filters.payment_date_before) params['payment_date_before'] = filters.payment_date_before;
       if (filters.ordering) params['ordering'] = filters.ordering;
 
-      const response = await axiosInstance.get('/admin/contributions/contributions-admin/', { params });
+      const response = await axiosInstance.get('/admin/contribution/contributions-admin/', { params });
       setData(response.data);
     } catch (err) {
       setError(err);

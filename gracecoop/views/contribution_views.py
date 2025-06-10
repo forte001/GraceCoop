@@ -6,10 +6,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Sum
+from django_filters.rest_framework import DjangoFilterBackend
+from ..filters import AdminContributionFilter, MemberContributionFilter
 
 class BaseContributionViewSet(viewsets.ModelViewSet):
     queryset = Contribution.objects.all()
     serializer_class = ContributionSerializer
+    filter_backends = [DjangoFilterBackend]
+    ordering_fields = ['date', 'amount']
+    ordering = ['-date']
 
     def perform_create(self, serializer):
         if not serializer.validated_data.get('member'):
@@ -20,10 +25,13 @@ class BaseContributionViewSet(viewsets.ModelViewSet):
 
 class AdminContributionViewSet(BaseContributionViewSet):
     permission_classes = [IsAdminUser]
+    filterset_class = AdminContributionFilter
+    
 
 
 class MemberContributionViewSet(BaseContributionViewSet):
     permission_classes = [IsAuthenticated]
+    filterset_class = MemberContributionFilter
 
     def get_queryset(self):
         return self.queryset.filter(member=self.request.user.memberprofile)

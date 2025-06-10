@@ -63,7 +63,7 @@ urlpatterns = [
 
 
     ### Levy-related endpoints
-    path('levy', include('gracecoop.urls.levy_urls')),
+    path('levy/', include('gracecoop.urls.levy_urls')),
     path('levy/pay/initiate/', LevyPaymentInitiateView.as_view(), name='levy-initiate'),
     path('levy/pay/verify/', LevyPaymentVerifyView.as_view(), name='levy-verify'),
 

@@ -37,6 +37,8 @@ import DevelopmentLevyPayment from './pages/members/OtherPayments/DevelopmentLev
 import { ensureCsrf } from './utils/ensureCsrf';
 import AdminContributionList from './pages/admin/OtherPayments/AdminContributionList';
 import MemberContributionList from './pages/members/OtherPayments/MemberContributionList';
+import MemberLevyList from './pages/members/OtherPayments/MemberLevyList';
+import AdminLevyList from './pages/admin/OtherPayments/AdminLevyList';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -132,6 +134,7 @@ const App = () => {
       <Route path="pay/contribution" element={<ContributionPayment />} />
       <Route path="pay/levy" element={<DevelopmentLevyPayment />} />
       <Route path="contribution-list" element={<MemberContributionList />} />
+       <Route path="levy-list" element={<MemberLevyList />} />
       <Route path="edit-profile" element={<EditProfilePage />} />
       <Route path="settings/2fa" element={<TwoFAToggle />} />
       <Route path="2fa/setup" element={<TwoFASetup />} />
@@ -147,6 +150,7 @@ const App = () => {
         <Route path="loan/management" element={<LoanManagement />} />
         <Route path="loan/repayment-list" element={<AdminLoanRepaymentList />} />
         <Route path="payments/contributions" element={<AdminContributionList />} />
+        <Route path="payments/levies" element={<AdminLevyList />} />
         <Route path="settings/theme" element={<ThemeSwitcher />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="2fa/setup" element={<TwoFASetup />} />

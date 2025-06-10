@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from gracecoop.urls import loan_urls
+from gracecoop.urls import loan_urls, contribution_urls
 from gracecoop.views.admin_views import (
     AdminLoginView, 
     AdminDashboardView, 
@@ -56,6 +56,12 @@ urlpatterns = [
 
    ### Admin loan-related routes
    path('loan/', include('gracecoop.urls.loan_urls')), 
+
+   ###Admin contribution-related endpoints
+   path('contribution/', include('gracecoop.urls.contribution_urls')),
+
+   ### Admin levy-related routes
+   path('levy/', include('gracecoop.urls.levy_urls')),
 
    ### Cooperative admin config urls
    path('', include(router.urls)),

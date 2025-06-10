@@ -81,7 +81,7 @@ const AdminLayout = () => {
               {isPaymentsOpen && (
                 <ul className="submenu">
                   <li><Link to="/admin/loan/repayment-list">Loan Repayments</Link></li>
-                  <li><Link to="/admin/payments/development-levy">Development Levy</Link></li>
+                  <li><Link to="/admin/payments/levies">Development Levy</Link></li>
                   <li><Link to="/admin/payments/contributions">Contribution</Link></li>
                 </ul>
               )}

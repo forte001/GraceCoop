@@ -98,7 +98,7 @@ const MemberLayout = () => {
                     <ul className="submenu">
                       <li><Link to="/member/loan-repayments">Loan Repayments</Link></li>
                       <li><Link to="/member/contribution-list">Contribution</Link></li>
-                      <li><Link to="/member/development_levy">Development Levy</Link></li>
+                      <li><Link to="/member/levy-list">Development Levy</Link></li>
                     </ul>
                   )}
                 </li>

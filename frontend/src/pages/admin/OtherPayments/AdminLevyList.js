@@ -7,7 +7,7 @@ import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
 
-const MemberContributionList = () => {
+const AdminLevyList = () => {
   const [filters, setFilters] = useState({
     member_name: '',
     payment_date_after: '',
@@ -29,7 +29,7 @@ const MemberContributionList = () => {
       if (filters.payment_date_before) params['payment_date_before'] = filters.payment_date_before;
       if (filters.ordering) params['ordering'] = filters.ordering;
 
-      const response = await axiosInstance.get('/members/contribution/contributions-list/', { params });
+      const response = await axiosInstance.get('/admin/levy/levy-admin/', { params });
       setData(response.data);
     } catch (err) {
       setError(err);
@@ -51,8 +51,8 @@ const MemberContributionList = () => {
     }));
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
-    XLSX.writeFile(workbook, 'contributions.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Levies');
+    XLSX.writeFile(workbook, 'levies.xlsx');
   };
 
   const exportToPDF = () => {
@@ -68,7 +68,7 @@ const MemberContributionList = () => {
         item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
       ]),
     });
-    doc.save('contributions.pdf');
+    doc.save('levies.pdf');
   };
 
   const exportToCSV = () => {
@@ -80,8 +80,8 @@ const MemberContributionList = () => {
     }));
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
-    XLSX.writeFile(workbook, 'contributions.csv', { bookType: 'csv' });
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Levies');
+    XLSX.writeFile(workbook, 'levies.csv', { bookType: 'csv' });
   };
 
   const handlePrint = () => {
@@ -96,10 +96,17 @@ const MemberContributionList = () => {
 
   return (
     <div className="loan-management">
-      <h2>Your Contributions</h2>
+      <h2>All Levies</h2>
 
       <div className="filter-group">
-
+        <input
+          className="filter-input"
+          placeholder="Member name"
+          value={filters.member_name}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, member_name: e.target.value }))
+          }
+        />
         <small className="form-hint">Start Date:</small>
         <input
           type="date"
@@ -152,7 +159,7 @@ const MemberContributionList = () => {
             ) : (
               <tr>
                 <td colSpan="3" style={{ textAlign: 'center' }}>
-                  No contribution records found.
+                  No levy records found.
                 </td>
               </tr>
             )}
@@ -163,4 +170,4 @@ const MemberContributionList = () => {
   );
 };
 
-export default MemberContributionList;
+export default AdminLevyList;

@@ -6,10 +6,15 @@ from gracecoop.models import Levy
 from gracecoop.serializers import LevySerializer
 from rest_framework.permissions import IsAuthenticated
 from ..permissions import IsAdminUser
+from django_filters.rest_framework import DjangoFilterBackend
+from ..filters import AdminLevyFilter, MemberLevyFilter
 
 class BaseLevyViewSet(viewsets.ModelViewSet):
     queryset = Levy.objects.all()
     serializer_class = LevySerializer
+    filter_backends = [DjangoFilterBackend]
+    ordering_fields = ['date', 'amount']
+    ordering = ['-date']
 
     def perform_create(self, serializer):
         if not serializer.validated_data.get('member'):
@@ -20,10 +25,12 @@ class BaseLevyViewSet(viewsets.ModelViewSet):
 
 class AdminLevyViewSet(BaseLevyViewSet):
     permission_classes = [IsAdminUser]
+    filterset_class = AdminLevyFilter
 
 
 class MemberLevyViewSet(BaseLevyViewSet):
     permission_classes = [IsAuthenticated]
+    filterset_class = MemberLevyFilter
 
     def get_queryset(self):
         return self.queryset.filter(member=self.request.user.memberprofile)
