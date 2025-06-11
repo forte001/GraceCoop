@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import axiosInstance from './axiosInstance';
 
-const usePaginatedData = (url, dependencies = []) => {
-  const [data, setData] = useState([]);
+const usePaginatedData = (url, filters = {}, initialPage = 1) => {
+  const [data, setData] = useState([]); // always default to an empty array
   const [count, setCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
 
@@ -13,32 +13,40 @@ const usePaginatedData = (url, dependencies = []) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get(`${url}?page=${currentPage}`);
-      setData(response.data.results);
-      setCount(response.data.count);
-      setPageSize(response.data.results.length || 10);
+      const params = new URLSearchParams({
+        page: currentPage,
+        page_size: pageSize,
+        ...filters,
+      }).toString();
+
+      const response = await axiosInstance.get(`${url}?${params}`);
+      const results = response?.data?.results;
+      const count = response?.data?.count;
+
+      setData(Array.isArray(results) ? results : []);
+      setCount(typeof count === 'number' ? count : 0);
     } catch (error) {
       console.error('Error fetching paginated data:', error);
+      setData([]); // fallback to prevent undefined
+      setCount(0);
     } finally {
       setLoading(false);
     }
   };
 
-  // Defensive check: ensure dependencies is always an array
-  const safeDependencies = Array.isArray(dependencies) ? dependencies : [];
-
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, ...safeDependencies]);
+  }, [currentPage, pageSize, JSON.stringify(filters)]);
 
   return {
     data,
     count,
     currentPage,
+    pageSize,
     totalPages,
-    setCurrentPage,
     loading,
+    setCurrentPage,
+    setPageSize,
   };
 };
 

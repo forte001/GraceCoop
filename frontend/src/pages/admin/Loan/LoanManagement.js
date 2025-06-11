@@ -1,50 +1,52 @@
-import React, { useEffect, useState } from 'react';
+// src/components/admin/loan/LoanManagement.js
+
+import React, { useState } from 'react';
+import usePaginatedData from '../../../utils/usePaginatedData';
 import axiosInstance from '../../../utils/axiosInstance';
 import { getCSRFToken } from '../../../utils/csrf';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
-import { FaCalendarAlt, FaChartPie, FaMoneyCheckAlt, FaClock } from 'react-icons/fa';
+import { FaCalendarAlt, FaChartPie, FaMoneyCheckAlt, FaFileExport, FaClock  } from 'react-icons/fa';
 import { Tooltip } from 'react-tooltip';
 
-
-
 const LoanManagement = () => {
-  const [loanApplications, setLoanApplications] = useState([]);
-  const [loans, setLoans] = useState([]);
   const [activeTab, setActiveTab] = useState('pending');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [disburseAmount, setDisburseAmount] = useState('');
-  const [disbursementType, setDisbursementType] = useState('full'); // Full or Partial
-  const [numDisbursements, setNumDisbursements] = useState(1); // For partial disbursement
+  const [disbursementType, setDisbursementType] = useState('full');
   const [repaymentSchedules, setRepaymentSchedules] = useState({});
   const [expandedSchedules, setExpandedSchedules] = useState({});
   const [expandedSummaries, setExpandedSummaries] = useState({});
   const [loanSummaries, setLoanSummaries] = useState({});
   const [showModal, setShowModal] = useState(false);
-  const [isFullPayment, setIsFullPayment] = useState(false); // For full payment option after partial disbursement
+  const [isFullPayment, setIsFullPayment] = useState(false);
 
-  useEffect(() => {
-    fetchLoanApplications();
-    fetchLoans();
-  }, []);
-
-  const fetchLoanApplications = async () => {
-    try {
-      const response = await axiosInstance.get('/admin/loan/loan-applications-admin/');
-      setLoanApplications(response.data);
-    } catch (error) {
-      console.error('Error fetching loan applications:', error);
-    }
+  const queryParams = {
+    search: searchTerm,
+    start_date: startDate,
+    end_date: endDate,
   };
 
-  const fetchLoans = async () => {
-    try {
-      const response = await axiosInstance.get('/admin/loan/loans-admin/');
-      setLoans(response.data);
-    } catch (error) {
-      console.error('Error fetching loans:', error);
-    }
-  };
+  const {
+    data: loanApplicationsData,
+    count: applicationCount,
+    currentPage: applicationPage,
+    totalPages: totalApplicationPages,
+    setCurrentPage: setApplicationPage,
+    refresh: refreshApplications,
+  } = usePaginatedData('/admin/loan/loan-applications-admin/', queryParams);
+
+  const {
+    data: loansData,
+    count: loanCount,
+    currentPage: loanPage,
+    totalPages: totalLoanPages,
+    setCurrentPage: setLoanPage,
+    refresh: refreshLoans,
+  } = usePaginatedData('/admin/loan/loans-admin/', queryParams);
 
   const handleApproveApplication = async (applicationId) => {
     try {
@@ -54,75 +56,62 @@ const LoanManagement = () => {
         { headers: { 'X-CSRFToken': getCSRFToken() } }
       );
       alert('Loan application approved and loan created.');
-      fetchLoans();
+      refreshApplications();
+      refreshLoans();
     } catch (error) {
       alert('Failed to approve application.');
     }
   };
 
+  const openModal = (loan) => {
+    setSelectedLoan(loan);
+    setShowModal(true);
+    setDisburseAmount('');
+    setDisbursementType('full');
+    setIsFullPayment(false);
+  };
+
   const handleDisburse = async (e) => {
     e.preventDefault();
     try {
-      // Calculate amount for disbursement
-      let amount = 0;
-      if (disbursementType === 'full') {
-        amount = selectedLoan.disbursements_remaining;
-      } else if (disbursementType === 'partial' && !isFullPayment) {
-        amount = disburseAmount;
-      } else if (isFullPayment) {
-        amount = selectedLoan.disbursements_remaining; // Full payment option
-      }
+      const amount = disbursementType === 'full' || isFullPayment
+        ? selectedLoan.disbursements_remaining
+        : disburseAmount;
 
       await axiosInstance.post(
         `/admin/loan/loans-admin/${selectedLoan.id}/disburse/`,
-        { amount: amount },
+        { amount },
         { headers: { 'X-CSRFToken': getCSRFToken() } }
       );
+
       alert('Loan disbursed successfully!');
-      setDisburseAmount('');
       setShowModal(false);
-      setIsFullPayment(false); // Reset full payment flag
-      fetchLoans();
+      refreshLoans();
     } catch (err) {
       alert(err.response?.data?.error || 'An error occurred during disbursement.');
     }
   };
 
   const toggleSchedule = async (loanId) => {
-    setExpandedSchedules((prev) => ({
-      ...prev,
-      [loanId]: !prev[loanId],
-    }));
-
+    setExpandedSchedules(prev => ({ ...prev, [loanId]: !prev[loanId] }));
     if (!repaymentSchedules[loanId]) {
       try {
-        const response = await axiosInstance.get(`/admin/loan/loans-admin/${loanId}/repayment-schedule/`);
-        setRepaymentSchedules((prev) => ({
-          ...prev,
-          [loanId]: response.data,
-        }));
+        const res = await axiosInstance.get(`/admin/loan/loans-admin/${loanId}/repayment-schedule/`);
+        setRepaymentSchedules(prev => ({ ...prev, [loanId]: res.data }));
       } catch (err) {
-        alert('Repayment schedule unavailable.');
+        alert('Failed to load repayment schedule.');
       }
     }
   };
 
   const toggleSummary = async (loanId) => {
-    setExpandedSummaries((prev) => ({
-      ...prev,
-      [loanId]: !prev[loanId],
-    }));
-
+    setExpandedSummaries(prev => ({ ...prev, [loanId]: !prev[loanId] }));
     if (!loanSummaries[loanId]) {
       try {
-        const response = await axiosInstance.get(`/admin/loan/loans-admin/${loanId}/summary/`);
-        console.log(response.data);
-        setLoanSummaries((prev) => ({
-          ...prev,
-          [loanId]: response.data,
-        }));
+        const res = await axiosInstance.get(`/admin/loan/loans-admin/${loanId}/summary/`);
+        setLoanSummaries(prev => ({ ...prev, [loanId]: res.data }));
       } catch (err) {
-        console.error('Failed to fetch summary:', err);
+        alert('Failed to load loan summary.');
       }
     }
   };
@@ -138,16 +127,10 @@ const LoanManagement = () => {
         { headers: { 'X-CSRFToken': getCSRFToken() } }
       );
       alert(response.data.message);
-      fetchLoans();
+      refreshLoans();
     } catch (err) {
       alert(err.response?.data?.error || 'Error applying grace period.');
     }
-  };
-
-
-  const openModal = (loan) => {
-    setSelectedLoan(loan);
-    setShowModal(true);
   };
 
   const getStatusBadge = (status) => {
@@ -162,100 +145,117 @@ const LoanManagement = () => {
       unpaid: 'gray',
     };
     return (
-      <span
-        style={{
-          backgroundColor: colorMap[status] || 'black',
-          color: '#fff',
-          padding: '3px 6px',
-          borderRadius: '4px',
-        }}
-      >
+      <span style={{
+        backgroundColor: colorMap[status] || 'black',
+        color: '#fff',
+        padding: '3px 6px',
+        borderRadius: '4px',
+      }}>
         {status.toUpperCase().replace('_', ' ')}
       </span>
     );
   };
 
-  
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams(queryParams).toString();
+      const response = await axiosInstance.get(`/admin/loan/export-loans/?${params}`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'loans.xlsx');
+      document.body.appendChild(link);
+      link.click();
+    } catch (err) {
+      alert('Failed to export data.');
+    }
+  };
+
+  const renderPagination = (page, totalPages, setPage) => (
+    <div className="pagination">
+      <button disabled={page <= 1} onClick={() => setPage(page - 1)}>Prev</button>
+      <span>Page {page} of {totalPages}</span>
+      <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button>
+    </div>
+  );
+
   return (
     <div className="loan-management">
       <h2>Loan Management</h2>
 
+      <div className="filter-controls">
+        <input type="text" placeholder="Search by reference or name" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+        <button onClick={handleExport}><FaFileExport /> Export</button>
+      </div>
+
       <div className="loan-tabs">
-        <button
-          className={activeTab === 'pending' ? 'active' : ''}
-          onClick={() => setActiveTab('pending')}
-        >
-          Pending Applications
-        </button>
-        <button
-          className={activeTab === 'active' ? 'active' : ''}
-          onClick={() => setActiveTab('active')}
-        >
-          Active Loans
-        </button>
+        <button className={activeTab === 'pending' ? 'active' : ''} onClick={() => setActiveTab('pending')}>Pending Applications</button>
+        <button className={activeTab === 'active' ? 'active' : ''} onClick={() => setActiveTab('active')}>Active Loans</button>
       </div>
 
       {activeTab === 'pending' && (
-        <table className="loan-table">
-          <thead>
-            <tr>
-              <th>Applicant</th>
-              <th>Category</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Application Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loanApplications
-              .filter((app) => app.status === 'pending')
-              .map((app) => (
+        <>
+          <table className="loan-table">
+            <thead>
+              <tr>
+                <th>Applicant</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Application Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(loanApplicationsData || []).filter(app => app.status === 'pending').map(app => (
                 <tr key={app.id}>
                   <td>{app.applicant_name || 'N/A'}</td>
                   <td>{app.category.name}</td>
                   <td>{formatNaira(app.amount)}</td>
                   <td>{getStatusBadge(app.status)}</td>
                   <td>{new Date(app.application_date).toLocaleString()}</td>
-                  <td>
-                    <button onClick={() => handleApproveApplication(app.id)}>Approve</button>
-                  </td>
+                  <td><button onClick={() => handleApproveApplication(app.id)}>Approve</button></td>
                 </tr>
               ))}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+          {renderPagination(applicationPage, totalApplicationPages, setApplicationPage)}
+        </>
       )}
 
       {activeTab === 'active' && (
-        <table className="loan-table">
-          <thead>
-            <tr>
-              <th>Reference</th>
-              <th>Member</th>
-              <th>Category</th>
-              <th>Amount</th>
-              <th>Remaining</th>
-              <th>Status</th>
-              <th>Start</th>
-              <th>Months</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loans.map((loan) => (
-              <React.Fragment key={loan.id}>
-                {/* Loan row */}
-                <tr>
-                  <td>{loan.reference}</td>
-                  <td>{loan.applicant_name}</td>
-                  <td>{loan.category_name}</td>
-                  <td>{formatNaira(loan.amount)}</td>
-                  <td>{formatNaira(loan.disbursements_remaining)}</td>
-                  <td>{getStatusBadge(loan.status)}</td>
-                  <td>{loan.approval_date ? new Date(loan.approval_date).toLocaleDateString() : 'N/A'}</td>
-                  <td>{loan.total_repayment_months}</td>
-                 
-                  <td>
+        <>
+          <table className="loan-table">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Member</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Remaining</th>
+                <th>Status</th>
+                <th>Start</th>
+                <th>Months</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(loansData || []).map(loan => (
+                <React.Fragment key={loan.id}>
+                  <tr>
+                    <td>{loan.reference || 'N/A'}</td>
+                    <td>{loan.applicant_name || 'N/A'}</td>
+                    <td>{loan.category_name}</td>
+                    <td>{formatNaira(loan.amount)}</td>
+                    <td>{formatNaira(loan.disbursements_remaining)}</td>
+                    <td>{getStatusBadge(loan.status)}</td>
+                    <td>{loan.approval_date ? new Date(loan.approval_date).toLocaleDateString() : 'N/A'}</td>
+                    <td>{loan.total_repayment_months}</td>
+                    <td>
                     <button data-tooltip-id="tooltip" data-tooltip-content="View Schedule" onClick={() => toggleSchedule(loan.id)}>
                       <FaCalendarAlt />
                     </button>
@@ -280,11 +280,10 @@ const LoanManagement = () => {
                     </button>
                 <Tooltip id="tooltip" />
               </td>
-                </tr>
-
-                {/* Loan Summary Row (below the loan row) */}
-                {expandedSummaries[loan.id] && loanSummaries[loan.id] && (
-                  <tr className="summary-row">
+                  </tr>
+                  
+                  {expandedSummaries[loan.id] && loanSummaries[loan.id] && (
+                    <tr className="summary-row">
                     <td colSpan="9">
                       <div className="loan-summary">
                         <h4>Loan Summary</h4>
@@ -298,9 +297,8 @@ const LoanManagement = () => {
                       </div>
                     </td>
                   </tr>
-                )}
-
-                {/* Loan Repayment Schedule Row (below the loan row) */}
+                  )}
+                  {/* Loan Repayment Schedule Row (below the loan row) */}
                 {expandedSchedules[loan.id] && repaymentSchedules[loan.id] && (
                   <tr className="schedule-row">
                     <td colSpan="9">
@@ -342,61 +340,61 @@ const LoanManagement = () => {
                     </td>
                   </tr>
                 )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+          {renderPagination(loanPage, totalLoanPages, setLoanPage)}
+        </>
       )}
 
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Disburse Loan</h3>
+      {showModal && selectedLoan && (
+        <div className="modal">
+          <div className="modal-content">
+            <h3>Disburse Loan - {selectedLoan.reference}</h3>
             <form onSubmit={handleDisburse}>
-              <label>Disbursement Type:</label>
-              <select
-                value={disbursementType}
-                onChange={(e) => setDisbursementType(e.target.value)}
-              >
-                <option value="full">Full</option>
-                <option value="partial">Partial</option>
-              </select>
-
+              <div>
+                <label>
+                  <input
+                    type="radio"
+                    name="disbursementType"
+                    value="full"
+                    checked={disbursementType === 'full'}
+                    onChange={() => {
+                      setDisbursementType('full');
+                      setIsFullPayment(true);
+                    }}
+                  />
+                  Full Disbursement
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="disbursementType"
+                    value="partial"
+                    checked={disbursementType === 'partial'}
+                    onChange={() => {
+                      setDisbursementType('partial');
+                      setIsFullPayment(false);
+                    }}
+                  />
+                  Partial Disbursement
+                </label>
+              </div>
               {disbursementType === 'partial' && (
-                <>
-                  <label>Number of Tranches:</label>
+                <div>
+                  <label>Amount to Disburse</label>
                   <input
                     type="number"
+                    value={disburseAmount}
+                    onChange={(e) => setDisburseAmount(e.target.value)}
                     min="1"
-                    value={numDisbursements}
-                    onChange={(e) => setNumDisbursements(e.target.value)}
+                    max={selectedLoan.disbursements_remaining}
                     required
                   />
-                </>
+                </div>
               )}
-
-              {selectedLoan && selectedLoan.disbursements_remaining > 0 && (
-                <>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={isFullPayment}
-                      onChange={(e) => setIsFullPayment(e.target.checked)}
-                    />
-                    Full payment remaining amount
-                  </label>
-                </>
-              )}
-
-              <label>Amount:</label>
-              <input
-                type="number"
-                value={disburseAmount}
-                onChange={(e) => setDisburseAmount(e.target.value)}
-                required
-              />
-              <p><strong>Duration:</strong> {selectedLoan?.total_repayment_months || selectedLoan?.duration_months} months</p>
-              <button type="submit">Disburse</button>
+              <button type="submit">Confirm Disbursement</button>
               <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
             </form>
           </div>

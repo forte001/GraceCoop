@@ -14,6 +14,7 @@ from ..utils import (generate_repayment_schedule,
                     )
 from django_filters.rest_framework import DjangoFilterBackend
 from ..filters import RepaymentFilter
+from gracecoop.pagination import StandardResultsSetPagination
 
 
 from gracecoop.models import (
@@ -372,7 +373,7 @@ class BaseRepaymentListView(generics.ListAPIView):
 class AdminRepaymentListView(BaseRepaymentListView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     filterset_class = RepaymentFilter
-    pagination_class = None  # No pagination for admin
+    pagination_class = StandardResultsSetPagination
 
 
     

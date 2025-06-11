@@ -136,7 +136,7 @@ const AdminLevyList = () => {
       </div>
 
       {loading && <p>Loading...</p>}
-      {error && <p style={{ color: 'red' }}>Error loading contributions.</p>}
+      {error && <p style={{ color: 'red' }}>Error loading levies.</p>}
 
       <div ref={printRef}>
         <table className="loan-table">
