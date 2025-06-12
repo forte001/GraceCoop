@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import axiosInstance from '../../../utils/axiosInstance';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -6,6 +6,7 @@ import autoTable from 'jspdf-autotable';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import usePaginatedData from '../../../utils/usePaginatedData';
 
 const AdminContributionList = () => {
   const [filters, setFilters] = useState({
@@ -14,37 +15,23 @@ const AdminContributionList = () => {
     payment_date_before: '',
     ordering: '-date',
   });
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const printRef = useRef();
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (filters.member_name) params['member_name'] = filters.member_name;
-      if (filters.payment_date_after) params['payment_date_after'] = filters.payment_date_after;
-      if (filters.payment_date_before) params['payment_date_before'] = filters.payment_date_before;
-      if (filters.ordering) params['ordering'] = filters.ordering;
+  const {
+    data,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    goToPage,
+  } = usePaginatedData('/admin/contribution/contributions-admin/', filters);
 
-      const response = await axiosInstance.get('/admin/contribution/contributions-admin/', { params });
-      setData(response.data);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [filters]);
+  const exportData = data || [];
 
   const exportToExcel = () => {
-    if (!data.length) return;
-    const excelData = data.map((item) => ({
+    if (!exportData.length) return;
+    const excelData = exportData.map((item) => ({
       PaidBy: item.member_name || 'N/A',
       Amount: formatNaira(item.amount),
       PaymentDate: item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
@@ -56,13 +43,13 @@ const AdminContributionList = () => {
   };
 
   const exportToPDF = () => {
-    if (!data.length) return;
+    if (!exportData.length) return;
     const doc = new jsPDF();
     doc.text('Contributions List', 14, 15);
     autoTable(doc, {
       startY: 20,
       head: [['Paid By', 'Amount', 'Payment Date']],
-      body: data.map((item) => [
+      body: exportData.map((item) => [
         item.member_name || 'N/A',
         formatNaira(item.amount),
         item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
@@ -72,8 +59,8 @@ const AdminContributionList = () => {
   };
 
   const exportToCSV = () => {
-    if (!data.length) return;
-    const excelData = data.map((item) => ({
+    if (!exportData.length) return;
+    const excelData = exportData.map((item) => ({
       PaidBy: item.member_name || 'N/A',
       Amount: formatNaira(item.amount),
       PaymentDate: item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
@@ -127,7 +114,7 @@ const AdminContributionList = () => {
         />
 
         <ExportPrintGroup
-          data={data}
+          data={exportData}
           exportToExcel={exportToExcel}
           exportToPDF={exportToPDF}
           exportToCSV={exportToCSV}
@@ -148,8 +135,8 @@ const AdminContributionList = () => {
             </tr>
           </thead>
           <tbody>
-            {data.length > 0 ? (
-              data.map((item) => (
+            {exportData.length > 0 ? (
+              exportData.map((item) => (
                 <tr key={item.id}>
                   <td>{item.member_name || 'N/A'}</td>
                   <td>{formatNaira(item.amount)}</td>
@@ -166,6 +153,20 @@ const AdminContributionList = () => {
           </tbody>
         </table>
       </div>
+
+      {/* {totalPages > 1 && ( */}
+        <div className="pagination">
+          <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+            Previous
+          </button>
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
+            Next
+          </button>
+        </div>
+    {/* //   )} */}
     </div>
   );
 };

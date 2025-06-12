@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import axiosInstance from './axiosInstance';
 
 const usePaginatedData = (url, filters = {}, initialPage = 1) => {
-  const [data, setData] = useState([]); // always default to an empty array
+  const [data, setData] = useState([]);
   const [count, setCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(10);
@@ -13,6 +13,7 @@ const usePaginatedData = (url, filters = {}, initialPage = 1) => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Build query params
       const params = new URLSearchParams({
         page: currentPage,
         page_size: pageSize,
@@ -20,15 +21,11 @@ const usePaginatedData = (url, filters = {}, initialPage = 1) => {
       }).toString();
 
       const response = await axiosInstance.get(`${url}?${params}`);
-      const results = response?.data?.results;
-      const count = response?.data?.count;
-
-      setData(Array.isArray(results) ? results : []);
-      setCount(typeof count === 'number' ? count : 0);
+      console.log("Fetched paginated data:", response.data);
+      setData(response.data.results || []);
+      setCount(response.data.count || 0);
     } catch (error) {
       console.error('Error fetching paginated data:', error);
-      setData([]); // fallback to prevent undefined
-      setCount(0);
     } finally {
       setLoading(false);
     }
@@ -36,6 +33,7 @@ const usePaginatedData = (url, filters = {}, initialPage = 1) => {
 
   useEffect(() => {
     fetchData();
+    // Include JSON.stringify to watch deep equality changes
   }, [currentPage, pageSize, JSON.stringify(filters)]);
 
   return {
@@ -51,3 +49,4 @@ const usePaginatedData = (url, filters = {}, initialPage = 1) => {
 };
 
 export default usePaginatedData;
+

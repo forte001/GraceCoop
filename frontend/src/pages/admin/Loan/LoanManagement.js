@@ -1,6 +1,6 @@
 // src/components/admin/loan/LoanManagement.js
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import axiosInstance from '../../../utils/axiosInstance';
 import { getCSRFToken } from '../../../utils/csrf';
@@ -8,8 +8,19 @@ import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import { FaCalendarAlt, FaChartPie, FaMoneyCheckAlt, FaFileExport, FaClock  } from 'react-icons/fa';
 import { Tooltip } from 'react-tooltip';
+import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const LoanManagement = () => {
+    const [filters, setFilters] = useState({
+  query: '',
+  approved_at_after: '',
+  approved_at_before: '',
+  ordering: '-approval_date',
+});
+
   const [activeTab, setActiveTab] = useState('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -24,29 +35,27 @@ const LoanManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [isFullPayment, setIsFullPayment] = useState(false);
 
-  const queryParams = {
-    search: searchTerm,
-    start_date: startDate,
-    end_date: endDate,
-  };
+  const combinedParams = { ...filters };
 
-  const {
-    data: loanApplicationsData,
-    count: applicationCount,
-    currentPage: applicationPage,
-    totalPages: totalApplicationPages,
-    setCurrentPage: setApplicationPage,
-    refresh: refreshApplications,
-  } = usePaginatedData('/admin/loan/loan-applications-admin/', queryParams);
 
-  const {
-    data: loansData,
-    count: loanCount,
-    currentPage: loanPage,
-    totalPages: totalLoanPages,
-    setCurrentPage: setLoanPage,
-    refresh: refreshLoans,
-  } = usePaginatedData('/admin/loan/loans-admin/', queryParams);
+const {
+  data: loanApplicationsData,
+  count: applicationCount,
+  currentPage: applicationPage,
+  totalPages: totalApplicationPages,
+  setCurrentPage: setApplicationPage,
+  refresh: refreshApplications,
+} = usePaginatedData('/admin/loan/loan-applications-admin/', combinedParams);
+
+const {
+  data: loansData,
+  count: loanCount,
+  currentPage: loanPage,
+  totalPages: totalLoanPages,
+  setCurrentPage: setLoanPage,
+  refresh: refreshLoans,
+} = usePaginatedData('/admin/loan/loans-admin/', combinedParams);
+
 
   const handleApproveApplication = async (applicationId) => {
     try {
@@ -156,22 +165,59 @@ const LoanManagement = () => {
     );
   };
 
-  const handleExport = async () => {
-    try {
-      const params = new URLSearchParams(queryParams).toString();
-      const response = await axiosInstance.get(`/admin/loan/export-loans/?${params}`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'loans.xlsx');
-      document.body.appendChild(link);
-      link.click();
-    } catch (err) {
-      alert('Failed to export data.');
-    }
+  const printRef = useRef();
+
+  const exportData = (loansData || []).map((loan) => ({
+    LoanRef: loan.reference || 'N/A',
+    Member: loan.applicant_name || 'N/A',
+    Amount: `NGN ${Number(loan.amount).toLocaleString()}`,
+    InterestRate: `${loan.interest_rate}%`,
+    Duration: `${loan.duration_months} mo`,
+    Status: loan.status.toUpperCase(),
+    Start: loan.approval_date?.split('T')[0] || 'N/A',
+    DisbursedAmount: formatNaira(loan.total_disbursed),
+  }));
+
+  const exportToExcel = () => {
+    if (!exportData.length) return;
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Loans');
+    XLSX.writeFile(workbook, 'loans.xlsx');
   };
+
+  const exportToCSV = () => {
+    if (!exportData.length) return;
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Loans');
+    XLSX.writeFile(workbook, 'loans.csv', { bookType: 'csv' });
+  };
+
+  const exportToPDF = () => {
+    if (!exportData.length) return;
+    const doc = new jsPDF();
+    doc.text('Loan Management', 14, 15);
+    autoTable(doc, {
+      startY: 20,
+      head: [['Loan Ref', 'Member', 'Amount', 'Interest', 'Duration', 'Status', 'Start Date', 'Disbursed']],
+      body: exportData.map((loan) => Object.values(loan)),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [63, 81, 181] },
+    });
+    doc.save('loans.pdf');
+  };
+
+  const handlePrint = () => {
+    if (!printRef.current) return;
+    const printContents = printRef.current.innerHTML;
+    const originalContents = document.body.innerHTML;
+    document.body.innerHTML = printContents;
+    window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload();
+  };
+
 
   const renderPagination = (page, totalPages, setPage) => (
     <div className="pagination">
@@ -180,17 +226,47 @@ const LoanManagement = () => {
       <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button>
     </div>
   );
-
+useEffect(() => {
+  setApplicationPage(1);
+  setLoanPage(1);
+}, [filters]);
   return (
     <div className="loan-management">
       <h2>Loan Management</h2>
 
-      <div className="filter-controls">
-        <input type="text" placeholder="Search by reference or name" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        <button onClick={handleExport}><FaFileExport /> Export</button>
+      <div className="filter-section">
+       <small className="form-hint">Search with:</small>
+       <input
+          className="filter-input"
+          type='text'
+          placeholder="Loan reference or member name"
+          value={filters.query}
+          onChange={(e) => setFilters({ ...filters, query: e.target.value })}
+        />
+        <small className="form-hint">Set start date:</small>
+        <input
+          className="filter-input"
+          type="date"
+          value={filters.approved_at_after}
+          onChange={(e) => setFilters({ ...filters, approved_at_after: e.target.value })}
+        />
+        <small className="form-hint">Set end date:</small>
+        <input
+          className="filter-input"
+          type="date"
+          value={filters.approved_at_before}
+          onChange={(e) => setFilters({ ...filters, approved_at_before: e.target.value })}
+        />
+
+        <ExportPrintGroup
+          data={exportData}
+          exportToExcel={exportToExcel}
+          exportToPDF={exportToPDF}
+          exportToCSV={exportToCSV}
+          handlePrint={handlePrint}
+        />
       </div>
+      
 
       <div className="loan-tabs">
         <button className={activeTab === 'pending' ? 'active' : ''} onClick={() => setActiveTab('pending')}>Pending Applications</button>

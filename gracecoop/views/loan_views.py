@@ -13,7 +13,7 @@ from ..utils import (generate_repayment_schedule,
                     apply_loan_repayment
                     )
 from django_filters.rest_framework import DjangoFilterBackend
-from ..filters import RepaymentFilter
+from ..filters import RepaymentFilter, LoanFilter
 from gracecoop.pagination import StandardResultsSetPagination
 
 
@@ -77,7 +77,10 @@ class LoanCategoryViewSet(viewsets.ModelViewSet):
 class AdminLoanViewSet(viewsets.ModelViewSet):
     queryset = Loan.objects.all()
     serializer_class = LoanSerializer
+    pagination_class= StandardResultsSetPagination
     permission_classes = [IsAdminUser]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = LoanFilter
 
     def get_permissions(self):
         if self.action == 'approve':
@@ -354,6 +357,7 @@ class MemberLoanApplicationViewSet(BaseLoanApplicationViewSet):
 class BaseRepaymentListView(generics.ListAPIView):
     serializer_class = RepaymentSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     ordering_fields = [
         'payment_date', 'recorded_at', 'amount',
@@ -373,7 +377,7 @@ class BaseRepaymentListView(generics.ListAPIView):
 class AdminRepaymentListView(BaseRepaymentListView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     filterset_class = RepaymentFilter
-    pagination_class = StandardResultsSetPagination
+    
 
 
     

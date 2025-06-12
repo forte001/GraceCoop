@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../utils/axiosInstance';
 import '../../styles/admin/Permissions.css';
+import usePaginatedData from '../../utils/usePaginatedData';
 
 const Permissions = () => {
-  const [users, setUsers] = useState([]);
+  // const [users, setUsers] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [groups, setGroups] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [userPermissions, setUserPermissions] = useState([]);
   const [userGroups, setUserGroups] = useState([]);
+  const {
+  data: users,
+  count,
+  currentPage,
+  pageSize,
+  totalPages,
+  loading,
+  setCurrentPage,
+  setPageSize,
+} = usePaginatedData('/admin/users/');
 
   // Fetch users, all permissions, and all groups
   useEffect(() => {
@@ -19,7 +30,7 @@ const Permissions = () => {
           axiosInstance.get('/admin/permissions/'),
           axiosInstance.get('/admin/groups/')
         ]);
-        setUsers(usersRes.data);
+        // setUsers(usersRes.data);
         setPermissions(permsRes.data || []);
         setGroups(groupsRes.data || []);
       } catch (err) {
@@ -101,47 +112,86 @@ const Permissions = () => {
             </option>
           ))}
         </select>
+        {totalPages > 1 && (
+        <div className="pagination-controls">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <span>Page {currentPage} of {totalPages}</span>
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
+      
+
       </div>
 
       {selectedUserId && (
         <>
-          <div className="permissions-checkboxes">
-            <h4>Permissions</h4>
-            {permissions.length > 0 ? (
-              permissions.map((perm) => (
-                <label key={perm.id} className="permission-item">
-                  <input
-                    type="checkbox"
-                    value={perm.id}
-                    checked={userPermissions.includes(perm.id)}
-                    onChange={() => handlePermissionToggle(perm.id)}
-                  />
-                  {perm.name}
-                </label>
-              ))
-            ) : (
-              <p>No permissions available</p>
-            )}
+          <div className="permissions-banner-section">
+            <h4>Selected Permissions</h4>
+            <div className="permissions-banners">
+              {permissions.filter(p => userPermissions.includes(p.id)).map(p => (
+                <span
+                  key={p.id}
+                  className="permission-banner selected"
+                  onClick={() => handlePermissionToggle(p.id)}
+                >
+                  {p.name}
+                </span>
+              ))}
+            </div>
+
+            <h4>Available Permissions</h4>
+            <div className="permissions-banners">
+              {permissions.filter(p => !userPermissions.includes(p.id)).map(p => (
+                <span
+                  key={p.id}
+                  className="permission-banner"
+                  onClick={() => handlePermissionToggle(p.id)}
+                >
+                  {p.name}
+                </span>
+              ))}
+            </div>
           </div>
 
-          <div className="permissions-checkboxes">
-            <h4>Groups</h4>
-            {groups.length > 0 ? (
-              groups.map((group) => (
-                <label key={group.id} className="permission-item">
-                  <input
-                    type="checkbox"
-                    value={group.id}
-                    checked={userGroups.includes(group.id)}
-                    onChange={() => handleGroupToggle(group.id)}
-                  />
-                  {group.name}
-                </label>
-              ))
-            ) : (
-              <p>No groups available</p>
-            )}
-          </div>
+
+            <div className="permissions-banner-section">
+              <h4>Selected Groups</h4>
+              <div className="permissions-banners">
+                {groups.filter(g => userGroups.includes(g.id)).map(g => (
+                  <span
+                    key={g.id}
+                    className="permission-banner selected"
+                    onClick={() => handleGroupToggle(g.id)}
+                  >
+                    {g.name}
+                  </span>
+                ))}
+              </div>
+
+              <h4>Available Groups</h4>
+              <div className="permissions-banners">
+                {groups.filter(g => !userGroups.includes(g.id)).map(g => (
+                  <span
+                    key={g.id}
+                    className="permission-banner"
+                    onClick={() => handleGroupToggle(g.id)}
+                  >
+                    {g.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+
 
           <button className="save-button" onClick={handleSave}>
             Save Changes

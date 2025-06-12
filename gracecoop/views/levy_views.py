@@ -8,10 +8,12 @@ from rest_framework.permissions import IsAuthenticated
 from ..permissions import IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
 from ..filters import LevyFilter
+from gracecoop.pagination import StandardResultsSetPagination
 
 class BaseLevyViewSet(viewsets.ModelViewSet):
     queryset = Levy.objects.all()
     serializer_class = LevySerializer
+    pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend]
     ordering_fields = ['date', 'amount']
     ordering = ['-date']

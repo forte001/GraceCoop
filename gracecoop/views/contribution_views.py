@@ -8,10 +8,12 @@ from rest_framework.response import Response
 from django.db.models import Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from ..filters import ContributionFilter
+from gracecoop.pagination import StandardResultsSetPagination
 
 class BaseContributionViewSet(viewsets.ModelViewSet):
     queryset = Contribution.objects.all()
     serializer_class = ContributionSerializer
+    pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend]
     ordering_fields = ['date', 'amount']
     ordering = ['-date']
