@@ -12,13 +12,13 @@ const Permissions = () => {
   const [userGroups, setUserGroups] = useState([]);
   const {
   data: users,
-  count,
+  // count,
   currentPage,
-  pageSize,
+  // pageSize,
   totalPages,
-  loading,
+  // loading,
   setCurrentPage,
-  setPageSize,
+  // setPageSize,
 } = usePaginatedData('/admin/users/');
 
   // Fetch users, all permissions, and all groups

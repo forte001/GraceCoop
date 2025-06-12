@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
 import usePaginatedData from '../../../utils/usePaginatedData';
-import axiosInstance from '../../../utils/axiosInstance';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -19,7 +18,6 @@ const AdminLoanRepaymentList = () => {
 
   const {
     data,
-    count,
     currentPage,
     pageSize,
     totalPages,

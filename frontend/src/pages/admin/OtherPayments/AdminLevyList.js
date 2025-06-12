@@ -24,7 +24,7 @@ const AdminLevyList = () => {
     currentPage,
     totalPages,
     setPage,
-    fetchData,
+    // fetchData,
   } = usePaginatedData('/admin/levy/levy-admin/', filters);
 
   const printRef = useRef();

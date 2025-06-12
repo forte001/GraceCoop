@@ -6,7 +6,7 @@ import axiosInstance from '../../../utils/axiosInstance';
 import { getCSRFToken } from '../../../utils/csrf';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
-import { FaCalendarAlt, FaChartPie, FaMoneyCheckAlt, FaFileExport, FaClock  } from 'react-icons/fa';
+import { FaCalendarAlt, FaChartPie, FaMoneyCheckAlt, FaClock  } from 'react-icons/fa';
 import { Tooltip } from 'react-tooltip';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import * as XLSX from 'xlsx';
@@ -22,9 +22,6 @@ const LoanManagement = () => {
 });
 
   const [activeTab, setActiveTab] = useState('pending');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [disburseAmount, setDisburseAmount] = useState('');
   const [disbursementType, setDisbursementType] = useState('full');

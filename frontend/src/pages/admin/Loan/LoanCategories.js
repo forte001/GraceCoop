@@ -20,13 +20,13 @@ const LoanCategories = () => {
 
   const {
     data: categories,
-    count,
+    // count,
     currentPage,
-    pageSize,
+    // pageSize,
     totalPages,
-    loading,
+    // loading,
     setCurrentPage,
-    setPageSize
+    // setPageSize
   } = usePaginatedData('/admin/loan/loan-categories/');
 
   useEffect(() => {
