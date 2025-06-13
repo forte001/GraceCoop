@@ -13,7 +13,8 @@ from ..utils import (generate_repayment_schedule,
                     apply_loan_repayment
                     )
 from django_filters.rest_framework import DjangoFilterBackend
-from ..filters import RepaymentFilter, LoanFilter
+from ..filters import RepaymentFilter, LoanFilter, LoanApplicationFilter
+from rest_framework.filters import SearchFilter, OrderingFilter
 from gracecoop.pagination import StandardResultsSetPagination
 
 
@@ -220,6 +221,9 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
 class MemberLoanViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = LoanSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class= StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = LoanFilter
 
     def get_queryset(self):
         return Loan.objects.filter(member__user=self.request.user)
@@ -300,6 +304,11 @@ class BaseLoanApplicationViewSet(viewsets.ModelViewSet):
     queryset = LoanApplication.objects.none()  # overridden in child
     serializer_class = LoanApplicationSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class= StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = LoanApplicationFilter 
+    search_fields = ['applicant__username']
+    ordering_fields = ['approval_date', 'application_date', 'amount']
 
     def perform_create(self, serializer):
         category = serializer.validated_data.get('category')
@@ -346,6 +355,11 @@ class AdminLoanApplicationViewSet(BaseLoanApplicationViewSet):
     permission_classes = [IsAdminUser]
     def get_queryset(self):
         return LoanApplication.objects.all()    
+    
+
+    def list(self, request, *args, **kwargs):
+        print("💡 Incoming query params:", request.query_params)
+        return super().list(request, *args, **kwargs)
         
 class MemberLoanApplicationViewSet(BaseLoanApplicationViewSet):
     def get_queryset(self):

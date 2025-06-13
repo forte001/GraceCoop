@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState,useRef } from 'react';
 import axiosInstance from '../../../utils/axiosInstance';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -6,48 +6,35 @@ import autoTable from 'jspdf-autotable';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import usePaginatedData from '../../../utils/usePaginatedData';
 
+// No change to imports...
 const MemberContributionList = () => {
-  const [filters, setFilters] = useState({
+  const [error, setError] = useState(null);
+
+  const {
+    data, // Now just the array of items
+    loading,
+    filters,
+    setFilters,
+    currentPage,
+    totalPages,
+    setCurrentPage,
+  } = usePaginatedData('/members/contribution/contributions-list/', {
     member_name: '',
     payment_date_after: '',
     payment_date_before: '',
     ordering: '-date',
   });
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const printRef = useRef();
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (filters.member_name) params['member_name'] = filters.member_name;
-      if (filters.payment_date_after) params['payment_date_after'] = filters.payment_date_after;
-      if (filters.payment_date_before) params['payment_date_before'] = filters.payment_date_before;
-      if (filters.ordering) params['ordering'] = filters.ordering;
-
-      const response = await axiosInstance.get('/members/contribution/contributions-list/', { params });
-      setData(response.data);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [filters]);
-
   const exportToExcel = () => {
-    if (!data.length) return;
+    if (!data?.length) return;
     const excelData = data.map((item) => ({
       PaidBy: item.member_name || 'N/A',
       Amount: formatNaira(item.amount),
-      PaymentDate: item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
+      PaymentDate: item.date?.split('T')[0] || 'N/A',
     }));
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
@@ -56,7 +43,7 @@ const MemberContributionList = () => {
   };
 
   const exportToPDF = () => {
-    if (!data.length) return;
+    if (!data?.length) return;
     const doc = new jsPDF();
     doc.text('Contributions List', 14, 15);
     autoTable(doc, {
@@ -65,20 +52,20 @@ const MemberContributionList = () => {
       body: data.map((item) => [
         item.member_name || 'N/A',
         formatNaira(item.amount),
-        item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
+        item.date?.split('T')[0] || 'N/A',
       ]),
     });
     doc.save('contributions.pdf');
   };
 
   const exportToCSV = () => {
-    if (!data.length) return;
-    const excelData = data.map((item) => ({
+    if (!data?.length) return;
+    const csvData = data.map((item) => ({
       PaidBy: item.member_name || 'N/A',
       Amount: formatNaira(item.amount),
-      PaymentDate: item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
+      PaymentDate: item.date?.split('T')[0] || 'N/A',
     }));
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const worksheet = XLSX.utils.json_to_sheet(csvData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
     XLSX.writeFile(workbook, 'contributions.csv', { bookType: 'csv' });
@@ -99,7 +86,6 @@ const MemberContributionList = () => {
       <h2>Your Contributions</h2>
 
       <div className="filter-group">
-
         <small className="form-hint">Start Date:</small>
         <input
           type="date"
@@ -120,7 +106,7 @@ const MemberContributionList = () => {
         />
 
         <ExportPrintGroup
-          data={data}
+          data={data || []}
           exportToExcel={exportToExcel}
           exportToPDF={exportToPDF}
           exportToCSV={exportToCSV}
@@ -141,12 +127,12 @@ const MemberContributionList = () => {
             </tr>
           </thead>
           <tbody>
-            {data.length > 0 ? (
+            {data?.length > 0 ? (
               data.map((item) => (
                 <tr key={item.id}>
                   <td>{item.member_name || 'N/A'}</td>
                   <td>{formatNaira(item.amount)}</td>
-                  <td>{item.date?.split('T')[0]}</td>
+                  <td>{item.date?.split('T')[0] || 'N/A'}</td>
                 </tr>
               ))
             ) : (
@@ -159,6 +145,23 @@ const MemberContributionList = () => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
+            Previous
+          </button>
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

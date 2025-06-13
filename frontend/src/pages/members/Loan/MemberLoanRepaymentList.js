@@ -1,112 +1,72 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axiosInstance from '../../../utils/axiosInstance';
+import React, { useState, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import usePaginatedData from '../../../utils/usePaginatedData';
 
 const MemberLoanRepaymentList = () => {
-  const [filters, setFilters] = useState({
-    loan__reference: '',
-    was_late: '',
-    ordering: '-payment_date',
-  });
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+
   const printRef = useRef();
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = {};
-      if (filters.loan__reference) params['loan__reference'] = filters.loan__reference;
-      if (filters.was_late !== '') params['was_late'] = filters.was_late;
-      if (filters.ordering) params['ordering'] = filters.ordering;
-      if (filters.payment_date_after)
-        params['payment_date_after'] = filters.payment_date_after;
+const {
+  data,
+  count,
+  currentPage,
+  pageSize,
+  totalPages,
+  loading,
+  setCurrentPage,
+  setPageSize,
+  filters,
+  setFilters, // ⬅️ use this now
+} = usePaginatedData('/members/loan/repayments/', {
+  loan__reference: '',
+  was_late: '',
+  ordering: '-payment_date',
+});
 
-      if (filters.payment_date_before)
-        params['payment_date_before'] = filters.payment_date_before;
-      const response = await axiosInstance.get('/members/loan/repayments/', { params });
-      setData(response.data);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchData();
-  }, [filters]);
-
-  const exportToExcel = () => {
-    if (!data.length) return;
-    const excelData = data.map((repayment) => ({
+  const exportFormattedData = () => {
+    return data.map((repayment) => ({
       LoanRef: repayment.loan_reference || 'N/A',
       PaidBy: repayment.paid_by_name || 'N/A',
       Amount: `NGN ${Number(repayment.amount).toLocaleString()}`,
-      PaymentDate: repayment.recorded_at?.split('T')[0],  
-      DueDate: repayment.due_date || 'N/A',             
+      PaymentDate: repayment.recorded_at?.split('T')[0],
+      DueDate: repayment.due_date || 'N/A',
       WasLate: repayment.was_late ? 'Yes' : 'No',
     }));
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
+  };
+
+  const exportToExcel = () => {
+    if (!data?.length) return;
+    const worksheet = XLSX.utils.json_to_sheet(exportFormattedData());
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Repayments');
     XLSX.writeFile(workbook, 'member_repayments.xlsx');
   };
 
   const exportToCSV = () => {
-    if (!data.length) return;
-    const excelData = data.map((repayment) => ({
-      LoanRef: repayment.loan_reference || 'N/A',
-      PaidBy: repayment.paid_by_name || 'N/A',
-      Amount: `NGN ${Number(repayment.amount).toLocaleString()}`,
-      PaymentDate: repayment.recorded_at?.split('T')[0],  
-      DueDate: repayment.due_date || 'N/A',             
-      WasLate: repayment.was_late ? 'Yes' : 'No',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    if (!data?.length) return;
+    const worksheet = XLSX.utils.json_to_sheet(exportFormattedData());
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Repayments');
     XLSX.writeFile(workbook, 'member_repayments.csv', { bookType: 'csv' });
   };
 
-
   const exportToPDF = () => {
-    if (!data.length) return;
-  
+    if (!data?.length) return;
     const doc = new jsPDF();
-  
     doc.text('Loan Repayments', 14, 15);
-  
-    const tableColumn = ['Loan Ref', 'Paid By', 'Amount', 'Payment Date', 'Due Date', 'Late?'];
-    const tableRows = [];
-  
-    data.forEach((repayment) => {
-      const repaymentData = [
-        repayment.loan_reference || 'N/A',
-        repayment.paid_by_name || 'N/A',
-        `NGN ${Number(repayment.amount).toLocaleString()}`,
-        repayment.recorded_at?.split('T')[0],
-        repayment.due_date || 'N/A',
-        repayment.was_late ? 'Yes' : 'No',
-      ];
-      tableRows.push(repaymentData);
-    });
-  
     autoTable(doc, {
       startY: 20,
-      head: [tableColumn],
-      body: tableRows,
+      head: [['Loan Ref', 'Paid By', 'Amount', 'Payment Date', 'Due Date', 'Late?']],
+      body: exportFormattedData().map((item) => Object.values(item)),
       styles: { fontSize: 8 },
       headStyles: { fillColor: [76, 175, 80] },
     });
-  
-     doc.save('member_repayments.pdf');
+    doc.save('member_repayments.pdf');
   };
 
   const handlePrint = () => {
@@ -131,24 +91,20 @@ const MemberLoanRepaymentList = () => {
             setFilters((f) => ({ ...f, loan__reference: e.target.value }))
           }
         />
-        <small className="form-hint">
-              Set start date:
-        </small>
-         <input
+        <small className="form-hint">Set start date:</small>
+        <input
           type="date"
           className="filter-input"
-          value={filters.payment_date_after}
+          value={filters.payment_date_after || ''}
           onChange={(e) =>
             setFilters((f) => ({ ...f, payment_date_after: e.target.value }))
           }
         />
-        <small className="form-hint">
-              Set end date:
-        </small>
+        <small className="form-hint">Set end date:</small>
         <input
           type="date"
           className="filter-input"
-          value={filters.payment_date_before}
+          value={filters.payment_date_before || ''}
           onChange={(e) =>
             setFilters((f) => ({ ...f, payment_date_before: e.target.value }))
           }
@@ -156,22 +112,23 @@ const MemberLoanRepaymentList = () => {
         <select
           className="filter-select"
           value={filters.was_late}
-          onChange={(e) => setFilters((f) => ({ ...f, was_late: e.target.value }))}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, was_late: e.target.value }))
+          }
         >
           <option value="">All</option>
           <option value="true">Late</option>
           <option value="false">On Time</option>
         </select>
         <ExportPrintGroup
-        data={data} 
-        exportToExcel={exportToExcel} 
-        exportToPDF={exportToPDF}     
-        exportToCSV={exportToCSV}    
-        handlePrint={handlePrint}    
-      />
+          data={data}
+          exportToExcel={exportToExcel}
+          exportToPDF={exportToPDF}
+          exportToCSV={exportToCSV}
+          handlePrint={handlePrint}
+        />
       </div>
       {loading && <p>Loading...</p>}
-      {error && <p style={{ color: 'red' }}>Error loading repayments.</p>}
       <div ref={printRef}>
         <table className="loan-table">
           <thead>
@@ -185,14 +142,14 @@ const MemberLoanRepaymentList = () => {
             </tr>
           </thead>
           <tbody>
-            {data.length ? (
+            {data?.length ? (
               data.map((repayment) => (
                 <tr key={repayment.id}>
                   <td>{repayment.loan_reference || 'N/A'}</td>
                   <td>{repayment.paid_by_name || 'N/A'}</td>
                   <td>{formatNaira(repayment.amount)}</td>
                   <td>{repayment.recorded_at?.split('T')[0]}</td>
-                  <td>{repayment.due_date? new Date(repayment.due_date).toLocaleDateString() : 'N/A'}</td>
+                  <td>{repayment.due_date ? new Date(repayment.due_date).toLocaleDateString() : 'N/A'}</td>
                   <td>{repayment.was_late ? 'Yes' : 'No'}</td>
                 </tr>
               ))
@@ -206,6 +163,25 @@ const MemberLoanRepaymentList = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="pagination-controls" style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <span>Page {currentPage} of {totalPages}</span>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

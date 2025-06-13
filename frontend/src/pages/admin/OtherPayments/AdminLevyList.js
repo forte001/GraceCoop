@@ -8,24 +8,20 @@ import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData'; 
 
 const AdminLevyList = () => {
-  const [filters, setFilters] = useState({
-    member_name: '',
-    payment_date_after: '',
-    payment_date_before: '',
-    ordering: '-date',
-  });
+
 
   const {
-    data,
-    loading,
-    error,
-    next,
-    previous,
-    currentPage,
-    totalPages,
-    setPage,
-    // fetchData,
-  } = usePaginatedData('/admin/levy/levy-admin/', filters);
+  data,
+  loading,
+  error,
+  next,
+  previous,
+  currentPage,
+  totalPages,
+  setPage,
+  filters,
+  setFilters,
+} = usePaginatedData('/admin/levy/levy-admin/');
 
   const printRef = useRef();
 
@@ -93,31 +89,34 @@ console.log('Error:', error);
 
       <div className="filter-group">
         <input
-          className="filter-input"
-          placeholder="Member name"
-          value={filters.member_name}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, member_name: e.target.value }))
-          }
-        />
-        <small className="form-hint">Start Date:</small>
-        <input
-          type="date"
-          className="filter-input"
-          value={filters.payment_date_after}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, payment_date_after: e.target.value }))
-          }
-        />
-        <small className="form-hint">End Date:</small>
-        <input
-          type="date"
-          className="filter-input"
-          value={filters.payment_date_before}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, payment_date_before: e.target.value }))
-          }
-        />
+            className="filter-input"
+            placeholder="Member name"
+            value={filters.member_name || ''}
+            onChange={(e) =>
+                setFilters((f) => ({ ...f, member_name: e.target.value }))
+            }
+            />
+
+            <small className="form-hint">Start Date:</small>
+            <input
+            type="date"
+            className="filter-input"
+            value={filters.payment_date_after || ''}
+            onChange={(e) =>
+                setFilters((f) => ({ ...f, payment_date_after: e.target.value }))
+            }
+            />
+
+            <small className="form-hint">End Date:</small>
+            <input
+            type="date"
+            className="filter-input"
+            value={filters.payment_date_before || ''}
+            onChange={(e) =>
+                setFilters((f) => ({ ...f, payment_date_before: e.target.value }))
+            }
+            />
+
 
         <ExportPrintGroup
           data={data || { results: [] }}

@@ -15,6 +15,7 @@ class BaseContributionViewSet(viewsets.ModelViewSet):
     serializer_class = ContributionSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend]
+    filterset_class = ContributionFilter
     ordering_fields = ['date', 'amount']
     ordering = ['-date']
 
@@ -27,13 +28,13 @@ class BaseContributionViewSet(viewsets.ModelViewSet):
 
 class AdminContributionViewSet(BaseContributionViewSet):
     permission_classes = [IsAdminUser]
-    filterset_class = ContributionFilter
+    
     
 
 
 class MemberContributionViewSet(BaseContributionViewSet):
     permission_classes = [IsAuthenticated]
-    filterset_class = ContributionFilter
+    
 
     def get_queryset(self):
         return self.queryset.filter(member=self.request.user.memberprofile)

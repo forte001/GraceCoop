@@ -1,52 +1,50 @@
-import { useEffect, useState } from 'react';
+// utils/usePaginatedData.js
+import { useState, useEffect } from 'react';
 import axiosInstance from './axiosInstance';
 
-const usePaginatedData = (url, filters = {}, initialPage = 1) => {
-  const [data, setData] = useState([]);
-  const [count, setCount] = useState(0);
+const usePaginatedData = (url, initialFilters = {}, initialPage = 1) => {
+  const [fullData, setFullData] = useState({ results: [], count: 0 }); // full response
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(10);
+  const [filters, setFilters] = useState({ ...initialFilters });
   const [loading, setLoading] = useState(false);
 
-  const totalPages = Math.ceil(count / pageSize);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // Build query params
-      const params = new URLSearchParams({
-        page: currentPage,
-        page_size: pageSize,
-        ...filters,
-      }).toString();
-
-      const response = await axiosInstance.get(`${url}?${params}`);
-      console.log("Fetched paginated data:", response.data);
-      setData(response.data.results || []);
-      setCount(response.data.count || 0);
-    } catch (error) {
-      console.error('Error fetching paginated data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const totalPages = Math.ceil(fullData.count / pageSize);
 
   useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: currentPage,
+          page_size: pageSize,
+          ...filters,
+        });
+        const response = await axiosInstance.get(`${url}?${params.toString()}`);
+        setFullData(response.data);
+      } catch (err) {
+        console.error('Failed to fetch paginated data:', err);
+        setFullData({ results: [], count: 0 });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchData();
-    // Include JSON.stringify to watch deep equality changes
-  }, [currentPage, pageSize, JSON.stringify(filters)]);
+  }, [url, filters, currentPage, pageSize]);
 
   return {
-    data,
-    count,
-    currentPage,
-    pageSize,
-    totalPages,
+    data: fullData.results,       // ✅ backward-compatible raw array
+    fullData,                     // ✅ full response (e.g. for pagination)
     loading,
+    filters,
+    setFilters,
+    currentPage,
     setCurrentPage,
+    pageSize,
     setPageSize,
+    totalPages,
   };
 };
 
 export default usePaginatedData;
-

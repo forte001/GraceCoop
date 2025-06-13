@@ -13,18 +13,18 @@ const LoanApplicationForm = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load loan categories from the backend
-    const fetchLoanCategories = async () => {
-      try {
-        const response = await axiosInstance.get('/members/loan/loan-categories/');
-        setLoanCategories(response.data);
-      } catch (error) {
-        console.error('Failed to fetch loan categories:', error);
-      }
-    };
+  const fetchLoanCategories = async () => {
+    try {
+      const response = await axiosInstance.get('/members/loan/loan-categories/');
+      setLoanCategories(response.data.results);
+    } catch (error) {
+      console.error('Failed to fetch loan categories:', error);
+    }
+  };
 
-    fetchLoanCategories();
-  }, []);
+  fetchLoanCategories();
+}, []);
+
 
   const handleCategoryChange = (e) => {
     const categoryId = e.target.value;

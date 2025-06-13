@@ -8,23 +8,24 @@ import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
 
 const AdminLoanRepaymentList = () => {
-  const [filters, setFilters] = useState({
-    loan__reference: '',
-    payment_date_after: '',
-    payment_date_before: '',
-    was_late: '',
-    ordering: '-payment_date',
-  });
-
   const {
-    data,
-    currentPage,
-    pageSize,
-    totalPages,
-    loading,
-    setCurrentPage,
-    setPageSize,
-  } = usePaginatedData('/admin/loan/repayments-admin/', filters);
+  data,
+  currentPage,
+  pageSize,
+  totalPages,
+  loading,
+  setCurrentPage,
+  setPageSize,
+  filters,
+  setFilters,
+} = usePaginatedData('/admin/loan/repayments-admin/', {
+  loan__reference: '',
+  payment_date_after: '',
+  payment_date_before: '',
+  was_late: '',
+  ordering: '-payment_date',
+});
+
 
   const printRef = useRef();
 
@@ -85,38 +86,44 @@ const AdminLoanRepaymentList = () => {
         <input
           className="filter-input"
           placeholder="Loan Ref"
-          value={filters.loan__reference}
+          value={filters.loan__reference || ''}
           onChange={(e) =>
             setFilters((f) => ({ ...f, loan__reference: e.target.value }))
           }
         />
+
         <small className="form-hint">Set start date:</small>
         <input
           type="date"
           className="filter-input"
-          value={filters.payment_date_after}
+          value={filters.payment_date_after || ''}
           onChange={(e) =>
             setFilters((f) => ({ ...f, payment_date_after: e.target.value }))
           }
         />
+
         <small className="form-hint">Set end date:</small>
         <input
           type="date"
           className="filter-input"
-          value={filters.payment_date_before}
+          value={filters.payment_date_before || ''}
           onChange={(e) =>
             setFilters((f) => ({ ...f, payment_date_before: e.target.value }))
           }
         />
+
         <select
           className="filter-select"
-          value={filters.was_late}
-          onChange={(e) => setFilters((f) => ({ ...f, was_late: e.target.value }))}
+          value={filters.was_late || ''}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, was_late: e.target.value }))
+          }
         >
           <option value="">All</option>
           <option value="true">Late</option>
           <option value="false">On Time</option>
         </select>
+
 
         <ExportPrintGroup
           data={exportData}

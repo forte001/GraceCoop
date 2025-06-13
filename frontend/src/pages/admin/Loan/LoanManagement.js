@@ -1,6 +1,6 @@
 // src/components/admin/loan/LoanManagement.js
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import axiosInstance from '../../../utils/axiosInstance';
 import { getCSRFToken } from '../../../utils/csrf';
@@ -14,12 +14,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const LoanManagement = () => {
-    const [filters, setFilters] = useState({
-  query: '',
-  approved_at_after: '',
-  approved_at_before: '',
-  ordering: '-approval_date',
-});
+//     const [filters, setFilters] = useState({
+//   query: '',
+//   approved_at_after: '',
+//   approved_at_before: '',
+//   ordering: '-approval_date',
+// });
 
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedLoan, setSelectedLoan] = useState(null);
@@ -32,17 +32,21 @@ const LoanManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [isFullPayment, setIsFullPayment] = useState(false);
 
-  const combinedParams = { ...filters };
-
-
 const {
+  filters,
+  setFilters,
   data: loanApplicationsData,
   count: applicationCount,
   currentPage: applicationPage,
   totalPages: totalApplicationPages,
   setCurrentPage: setApplicationPage,
   refresh: refreshApplications,
-} = usePaginatedData('/admin/loan/loan-applications-admin/', combinedParams);
+} = usePaginatedData('/admin/loan/loan-applications-admin/', {
+  query: '',
+  approved_at_after: '',
+  approved_at_before: '',
+  ordering: '-approval_date',
+});
 
 const {
   data: loansData,
@@ -51,7 +55,9 @@ const {
   totalPages: totalLoanPages,
   setCurrentPage: setLoanPage,
   refresh: refreshLoans,
-} = usePaginatedData('/admin/loan/loans-admin/', combinedParams);
+} = usePaginatedData('/admin/loan/loans-admin/', filters); // use same `filters`
+
+
 
 
   const handleApproveApplication = async (applicationId) => {
@@ -234,26 +240,35 @@ useEffect(() => {
       <div className="filter-section">
        <small className="form-hint">Search with:</small>
        <input
-          className="filter-input"
-          type='text'
-          placeholder="Loan reference or member name"
-          value={filters.query}
-          onChange={(e) => setFilters({ ...filters, query: e.target.value })}
-        />
-        <small className="form-hint">Set start date:</small>
-        <input
-          className="filter-input"
-          type="date"
-          value={filters.approved_at_after}
-          onChange={(e) => setFilters({ ...filters, approved_at_after: e.target.value })}
-        />
-        <small className="form-hint">Set end date:</small>
-        <input
-          className="filter-input"
-          type="date"
-          value={filters.approved_at_before}
-          onChange={(e) => setFilters({ ...filters, approved_at_before: e.target.value })}
-        />
+  className="filter-input"
+  type='text'
+  placeholder="Loan reference or member name"
+  value={filters.query || ''}
+  onChange={(e) =>
+    setFilters((f) => ({ ...f, query: e.target.value }))
+  }
+/>
+
+<small className="form-hint">Set start date:</small>
+<input
+  className="filter-input"
+  type="date"
+  value={filters.approved_at_after || ''}
+  onChange={(e) =>
+    setFilters((f) => ({ ...f, approved_at_after: e.target.value }))
+  }
+/>
+
+<small className="form-hint">Set end date:</small>
+<input
+  className="filter-input"
+  type="date"
+  value={filters.approved_at_before || ''}
+  onChange={(e) =>
+    setFilters((f) => ({ ...f, approved_at_before: e.target.value }))
+  }
+/>
+
 
         <ExportPrintGroup
           data={exportData}

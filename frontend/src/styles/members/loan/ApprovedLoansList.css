@@ -336,3 +336,39 @@
   font-weight: bold;
   align-self: center;
 }
+.filter-form {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;  
+  gap: 8px;
+}
+
+.filter-form input,
+.filter-form select,
+.filter-form button {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  height: 32px;               
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.filter-form input[type="text"] {
+  min-width: 200px;
+}
+
+.filter-form input[type="date"] {
+  min-width: 140px;
+}
+
+.filter-form button {
+  font-weight: bold;
+  line-height: 1;
+  height: 32px;              
+  padding: 4px 12px;
+  margin: 0;                 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

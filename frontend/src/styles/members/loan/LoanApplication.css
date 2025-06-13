@@ -304,3 +304,20 @@ form button:hover {
   padding: 6px 10px;
   text-align: center;
 }
+.filter-form {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap; /* Allow wrapping if needed on smaller screens */
+}
+
+.filter-form select,
+.filter-form input,
+.filter-form button {
+  padding: 2px 6px;         /* Reduced padding */
+  font-size: 0.85rem;       /* Slightly smaller text */
+  height: 25px;             /* More compact height */
+  width: auto;
+  max-width: 140px;
+}

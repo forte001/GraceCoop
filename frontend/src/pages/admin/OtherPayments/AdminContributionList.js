@@ -8,23 +8,25 @@ import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData';
 
 const AdminContributionList = () => {
-  const [filters, setFilters] = useState({
-    member_name: '',
-    payment_date_after: '',
-    payment_date_before: '',
-    ordering: '-date',
-  });
+//   const [filters, setFilters] = useState({
+//     member_name: '',
+//     payment_date_after: '',
+//     payment_date_before: '',
+//     ordering: '-date',
+//   });
 
-  const printRef = useRef();
+ const printRef = useRef();
 
-  const {
-    data,
-    loading,
-    error,
-    currentPage,
-    totalPages,
-    goToPage,
-  } = usePaginatedData('/admin/contribution/contributions-admin/', filters);
+const {
+  data,
+  loading,
+  error,
+  currentPage,
+  totalPages,
+  goToPage,
+  filters,
+  setFilters,
+} = usePaginatedData('/admin/contribution/contributions-admin/');
 
   const exportData = data || [];
 
@@ -86,31 +88,34 @@ const AdminContributionList = () => {
 
       <div className="filter-group">
         <input
-          className="filter-input"
-          placeholder="Member name"
-          value={filters.member_name}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, member_name: e.target.value }))
-          }
-        />
-        <small className="form-hint">Start Date:</small>
-        <input
-          type="date"
-          className="filter-input"
-          value={filters.payment_date_after}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, payment_date_after: e.target.value }))
-          }
-        />
-        <small className="form-hint">End Date:</small>
-        <input
-          type="date"
-          className="filter-input"
-          value={filters.payment_date_before}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, payment_date_before: e.target.value }))
-          }
-        />
+  className="filter-input"
+  placeholder="Member name"
+  value={filters.member_name || ''}
+  onChange={(e) =>
+    setFilters((f) => ({ ...f, member_name: e.target.value }))
+  }
+/>
+
+<small className="form-hint">Start Date:</small>
+<input
+  type="date"
+  className="filter-input"
+  value={filters.payment_date_after || ''}
+  onChange={(e) =>
+    setFilters((f) => ({ ...f, payment_date_after: e.target.value }))
+  }
+/>
+
+<small className="form-hint">End Date:</small>
+<input
+  type="date"
+  className="filter-input"
+  value={filters.payment_date_before || ''}
+  onChange={(e) =>
+    setFilters((f) => ({ ...f, payment_date_before: e.target.value }))
+  }
+/>
+
 
         <ExportPrintGroup
           data={exportData}
@@ -123,7 +128,6 @@ const AdminContributionList = () => {
 
       {loading && <p>Loading...</p>}
       {error && <p style={{ color: 'red' }}>Error loading contributions.</p>}
-
       <div ref={printRef}>
         <table className="loan-table">
           <thead>

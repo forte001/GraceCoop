@@ -3,27 +3,36 @@ import axiosInstance from '../../../utils/axiosInstance';
 import { formatNaira } from '../../../utils/formatCurrency';
 import LoanRepaymentForm from './LoanRepaymentForm';
 import '../../../styles/members/loan/ApprovedLoansList.css';
+import usePaginatedData from '../../../utils/usePaginatedData';
 
 const ApprovedLoansList = () => {
-  const [loans, setLoans] = useState([]);
+//   const [filters, setFilters] = useState({
+//   ref: '',
+//   startDate: '',
+//   endDate: '',
+// });
+
   const [selectedLoanId, setSelectedLoanId] = useState(null);
   const [repaymentSchedule, setRepaymentSchedule] = useState([]);
   const [loanSummary, setLoanSummary] = useState(null);
   const [showRepaymentModal, setShowRepaymentModal] = useState(false);
   const [repaymentTarget, setRepaymentTarget] = useState(null);
 
-  useEffect(() => {
-    const fetchApprovedLoans = async () => {
-      try {
-        const response = await axiosInstance.get('/members/loan/loans/?status=disbursed');
-        setLoans(response.data);
-      } catch (error) {
-        console.error('Error fetching approved loans:', error);
-      }
-    };
+const {
+  data: loans,
+  currentPage,
+  totalPages,
+  setCurrentPage,
+  setFilters,
+  filters,
+} = usePaginatedData('/members/loan/loans/', {
+  status: 'disbursed',
+  query: '',
+  approved_at_after: '',
+  approved_at_before: '',
+});
 
-    fetchApprovedLoans();
-  }, []);
+
 
   useEffect(() => {
     if (selectedLoanId) {
@@ -71,10 +80,80 @@ const ApprovedLoansList = () => {
       </span>
     );
   };
+  // const handleChange = (e) => {
+  //   const { name, value } = e.target;
+  //   setFilters((prev) => ({
+  //     ...prev,
+  //     [name]: value,
+  //   }));
+  // };
+  const handleReset = () => {
+  setFilters({
+    status: 'disbursed',
+    query: '',
+    approved_at_after: '',
+    approved_at_before: '',
+  });
+  setCurrentPage(1);
+};
+
+
+
 
   return (
-    <div className="approved-loans-list">
-      <h2>Your Approved Loans</h2>
+          <div className="approved-loans-list">
+            <h2>Your Approved Loans</h2>
+              <div className="loan-filter-form">
+                <h4>Filter Loans</h4>
+                <form
+                  className="filter-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(1);
+                  }}
+                >
+                  <input
+                type="text"
+                name="query"
+                placeholder="Loan reference or name"
+                value={filters.query || ''}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, query: e.target.value }));
+                  setCurrentPage(1);
+                }}
+              />
+              <input
+                type="date"
+                name="approved_at_after"
+                value={filters.approved_at_after || ''}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, approved_at_after: e.target.value }));
+                  setCurrentPage(1);
+                }}
+              />
+              <input
+                type="date"
+                name="approved_at_before"
+                value={filters.approved_at_before || ''}
+                onChange={(e) => {
+                  setFilters((prev) => ({ ...prev, approved_at_before: e.target.value }));
+                  setCurrentPage(1);
+                }}
+              />
+
+    <button
+      type="button"
+      className="reset-button"
+      onClick={handleReset}
+    >
+      Reset
+    </button>
+  </form>
+</div>
+
+
+
+
 
       {loans.length === 0 ? (
         <p>No approved loans found.</p>
@@ -208,7 +287,26 @@ const ApprovedLoansList = () => {
                 </div>
               )}
             </div>
+            
           ))}
+          <div className="pagination-controls">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+
         </div>
       )}
 

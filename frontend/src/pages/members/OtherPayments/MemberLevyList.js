@@ -1,49 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axiosInstance from '../../../utils/axiosInstance';
+import React, { useRef } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import usePaginatedData from '../../../utils/usePaginatedData';
 
 const MemberLevyList = () => {
-  const [filters, setFilters] = useState({
+  const {
+    data,
+    fullData,
+    loading,
+    filters,
+    setFilters,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+  } = usePaginatedData('/members/levy/levy-list/', {
     member_name: '',
     payment_date_after: '',
     payment_date_before: '',
     ordering: '-date',
   });
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const printRef = useRef();
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (filters.member_name) params['member_name'] = filters.member_name;
-      if (filters.payment_date_after) params['payment_date_after'] = filters.payment_date_after;
-      if (filters.payment_date_before) params['payment_date_before'] = filters.payment_date_before;
-      if (filters.ordering) params['ordering'] = filters.ordering;
-
-      const response = await axiosInstance.get('/members/levy/levy-list/', { params });
-      setData(response.data);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [filters]);
-
   const exportToExcel = () => {
-    if (!data.length) return;
+    if (!data?.length) return;
     const excelData = data.map((item) => ({
       PaidBy: item.member_name || 'N/A',
       Amount: formatNaira(item.amount),
@@ -56,9 +40,9 @@ const MemberLevyList = () => {
   };
 
   const exportToPDF = () => {
-    if (!data.length) return;
+    if (!data?.length) return;
     const doc = new jsPDF();
-    doc.text('Contributions List', 14, 15);
+    doc.text('Levies List', 14, 15);
     autoTable(doc, {
       startY: 20,
       head: [['Paid By', 'Amount', 'Payment Date']],
@@ -72,7 +56,7 @@ const MemberLevyList = () => {
   };
 
   const exportToCSV = () => {
-    if (!data.length) return;
+    if (!data?.length) return;
     const excelData = data.map((item) => ({
       PaidBy: item.member_name || 'N/A',
       Amount: formatNaira(item.amount),
@@ -99,7 +83,6 @@ const MemberLevyList = () => {
       <h2>Your Levies</h2>
 
       <div className="filter-group">
-
         <small className="form-hint">Start Date:</small>
         <input
           type="date"
@@ -129,7 +112,6 @@ const MemberLevyList = () => {
       </div>
 
       {loading && <p>Loading...</p>}
-      {error && <p style={{ color: 'red' }}>Error loading levy.</p>}
 
       <div ref={printRef}>
         <table className="loan-table">
@@ -141,12 +123,12 @@ const MemberLevyList = () => {
             </tr>
           </thead>
           <tbody>
-            {data.length > 0 ? (
+            {data?.length > 0 ? (
               data.map((item) => (
                 <tr key={item.id}>
                   <td>{item.member_name || 'N/A'}</td>
                   <td>{formatNaira(item.amount)}</td>
-                  <td>{item.date?.split('T')[0]}</td>
+                  <td>{item.payment_date || item.recorded_at?.split('T')[0] || 'N/A'}</td>
                 </tr>
               ))
             ) : (
@@ -159,6 +141,26 @@ const MemberLevyList = () => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button
+            onClick={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };
