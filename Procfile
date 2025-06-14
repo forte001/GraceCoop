@@ -1,1 +1,1 @@
-web: gunicorn gracecoop.wsgi
+web: gunicorn grace_coop.wsgi
