@@ -1,1 +1,2 @@
-web: gunicorn grace_coop.wsgi
+web: PYTHONPATH=. gunicorn grace_coop.wsgi
+
