@@ -1,1 +1,1 @@
-web: gunicorn grace_coop.wsgi
+web: python manage.py migrate && gunicorn grace_coop.wsgi
