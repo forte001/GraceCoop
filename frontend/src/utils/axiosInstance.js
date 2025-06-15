@@ -1,8 +1,18 @@
 import axios from 'axios';
 
+const fallbackURL = 'http://localhost:8000/api/';
+const baseURL = process.env.REACT_APP_API_BASE_URL || fallbackURL;
+
+if (!process.env.REACT_APP_API_BASE_URL && process.env.NODE_ENV === 'development') {
+  console.warn(
+    '[Axios Config Warning] Missing REACT_APP_API_BASE_URL. Falling back to:',
+    fallbackURL
+  );
+}
 // ✅ Create Axios instance
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000/api/',
+  baseURL,
+
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

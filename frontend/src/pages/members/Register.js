@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import axiosInstance from "../../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import "../../styles/members/Register.css";
 
@@ -39,25 +39,25 @@ const Register = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess("");
+  e.preventDefault();
+  setError(null);
+  setSuccess("");
 
-    try {
-      const response = await axios.post("http://localhost:8000/api/members/register/", formData);
-      setSuccess(response.data.message || "Registration successful!");
-      
-      setTimeout(() => navigate("/login"), 1500); // redirect after success
-    } catch (err) {
-      if (err.response && err.response.data) {
-        const serverErrors = err.response.data;
-        const firstKey = Object.keys(serverErrors)[0];
-        setError(serverErrors[firstKey][0]);
-      } else {
-        setError("Registration failed. Please try again.");
-      }
+  try {
+    const response = await axiosInstance.post("/members/register/", formData); // baseURL is already set
+    setSuccess(response.data.message || "Registration successful!");
+
+    setTimeout(() => navigate("/login"), 1500); // redirect after success
+  } catch (err) {
+    if (err.response && err.response.data) {
+      const serverErrors = err.response.data;
+      const firstKey = Object.keys(serverErrors)[0];
+      setError(serverErrors[firstKey][0]);
+    } else {
+      setError("Registration failed. Please try again.");
     }
-  };
+  }
+};
 
   return (
     <div className="register-container">
