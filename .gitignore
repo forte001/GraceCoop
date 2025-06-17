@@ -29,7 +29,8 @@ package*.json
 /media/
 /staticfiles/
 /static/
-
+# Exclude real local settings
+grace_coop/settings/local.py
 # === NODE/REACT ===
 frontend/node_modules/
 frontend/build/
