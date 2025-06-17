@@ -1,3 +1,4 @@
+import traceback
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.exceptions import NotFound
@@ -47,37 +48,42 @@ class AdminLoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        serializer = AdminLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.validated_data["user"]
+        try:
+            serializer = AdminLoginSerializer(data=request.data)
+            if serializer.is_valid():
+                user = serializer.validated_data["user"]
 
-            # Check if 2FA is enabled for the user
-            if user.is_2fa_enabled:
-                # Generate a temporary token for 2FA
-                temp_token = AccessToken.for_user(user)
+                # Check if 2FA is enabled for the user
+                if user.is_2fa_enabled:
+                    temp_token = AccessToken.for_user(user)
+                    return Response({
+                        "require_2fa": True,
+                        "user_id": user.id,
+                        "temp_token": str(temp_token),
+                        "is_2fa_setup_complete": user.is_2fa_enabled
+                    }, status=status.HTTP_200_OK)
 
-                # Respond with temp_token and user ID for further OTP verification
+                # If 2FA is not required, issue access and refresh tokens
+                refresh = RefreshToken.for_user(user)
                 return Response({
-                    "require_2fa": True,
-                    "user_id": user.id,
-                    "temp_token": str(temp_token),
-                     "is_2fa_setup_complete": user.is_2fa_enabled
+                    "detail": "Login successful.",
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                    "user": {
+                        "id": user.id,
+                        "username": user.username,
+                        "is_admin": True
+                    }
                 }, status=status.HTTP_200_OK)
 
-            # If 2FA is not required, issue the normal access and refresh tokens
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "detail": "Login successful.",
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "is_admin": True
-                }
-            }, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            print("LOGIN ERROR:\n", traceback.format_exc())
+            return Response(
+                {"detail": "Server error. Please check logs."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class Verify2FALoginView(APIView):
     permission_classes = [AllowAny]
