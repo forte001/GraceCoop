@@ -15,6 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path, include, re_path
 from django.views.generic import TemplateView
 from django.conf import settings
@@ -30,10 +31,8 @@ urlpatterns = [
 
     # Your API URLs
     path('api/members/', include(('gracecoop.urls.member_urls', 'members'), namespace='members')),       # Member-related URLs
-    path('api/', include('gracecoop.urls.contribution_urls')),  # Contribution-related URLs
-    # path('api/', include('gracecoop.urls.transaction_urls')),   # Transaction-related URLs
+    path('', lambda request: JsonResponse({'message': 'GraceCoop API is live'})), #Default API message
     path('api/admin/', include('gracecoop.urls.admin_urls')),   # Admin-related URLs
-
     path('api/csrf-token/', get_csrf_token, name='csrf-token'),
 
    
