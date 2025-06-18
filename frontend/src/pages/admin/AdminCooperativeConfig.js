@@ -1,9 +1,22 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useRef, useState } from 'react';
+import usePaginatedData from '../../utils/usePaginatedData';
 import axiosInstance from '../../utils/axiosInstance';
-import '../../styles/admin/CooperativeConfig.css'; 
+import '../../styles/admin/CooperativeConfig.css';
 
 const AdminCooperativeConfig = () => {
-  const [configs, setConfigs] = useState([]);
+  const {
+    data: configs,
+    currentPage,
+    totalPages,
+    pageSize,
+    loading,
+    setCurrentPage,
+    setPageSize,
+    filters,
+    setFilters
+  } = usePaginatedData('/admin/cooperative-config/', { status: '' });
+
   const [newConfig, setNewConfig] = useState({
     entry_shares_amount: '',
     development_levy_amount: '',
@@ -15,25 +28,8 @@ const AdminCooperativeConfig = () => {
     status: 'active',
     description: '',
   });
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showModal, setShowModal] = useState(false);
-
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
-
-  const fetchConfigs = async () => {
-    setLoading(true);
-    try {
-      const res = await axiosInstance.get('/admin/cooperative-config/');
-      setConfigs(res.data);
-    } catch (error) {
-      console.error('Error fetching configs', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -43,44 +39,42 @@ const AdminCooperativeConfig = () => {
     }));
   };
 
-const handleCreateConfig = async (e) => {
-  e.preventDefault();
-  setMessage('');
+  const handleCreateConfig = async (e) => {
+    e.preventDefault();
+    setMessage('');
 
-  // Frontend check: Prevent duplicate active configs
-  const activeExists = configs.some(cfg => cfg.status === 'active');
-  if (newConfig.status === 'active' && activeExists) {
-    setMessage('❌ There is already an active configuration. Please archive or deactivate it first.');
-    return;
-  }
+    const activeExists = configs.some(cfg => cfg.status === 'active');
+    if (newConfig.status === 'active' && activeExists) {
+      setMessage('❌ There is already an active configuration.');
+      return;
+    }
 
-  try {
-    await axiosInstance.post('/admin/cooperative-config/', newConfig);
-    setMessage('✅ Config created successfully!');
-    setNewConfig({
-      entry_shares_amount: '',
-      development_levy_amount: '',
-      min_contribution_amount: '',
-      max_contribution_amount: '',
-      min_monthly_levy: '',
-      max_monthly_levy: '',
-      enforce_monthly_levy: false,
-      status: 'active',
-      description: '',
-    });
-    setShowModal(false);
-    fetchConfigs();
-  } catch (error) {
-    console.error('Error creating config', error);
-    setMessage('❌ Error creating config.');
-  }
-};
-
+    try {
+      await axiosInstance.post('/admin/cooperative-config/', newConfig);
+      setMessage('✅ Config created successfully!');
+      setNewConfig({
+        entry_shares_amount: '',
+        development_levy_amount: '',
+        min_contribution_amount: '',
+        max_contribution_amount: '',
+        min_monthly_levy: '',
+        max_monthly_levy: '',
+        enforce_monthly_levy: false,
+        status: 'active',
+        description: '',
+      });
+      setShowModal(false);
+      setCurrentPage(1); // refresh data
+    } catch (error) {
+      console.error('Error creating config', error);
+      setMessage('❌ Error creating config.');
+    }
+  };
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await axiosInstance.patch(`/admin/cooperative-config/${id}/`, { status: newStatus });
-      fetchConfigs();
+      setCurrentPage(1);
     } catch (error) {
       console.error('Error updating status', error);
     }
@@ -90,9 +84,20 @@ const handleCreateConfig = async (e) => {
     <div className="admin-config-page">
       <div className="header-row">
         <h2>Cooperative Configurations</h2>
-        <button className="create-button" onClick={() => setShowModal(true)}>
-          + Create Config
-        </button>
+        <button className="create-button" onClick={() => setShowModal(true)}>+ Create Config</button>
+      </div>
+
+      <div className="filter-section">
+        <select
+          className="filter-select"
+          value={filters.status || ''}
+          onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+        >
+          <option value="">All</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="archived">Archived</option>
+        </select>
       </div>
 
       {loading ? (
@@ -118,12 +123,8 @@ const handleCreateConfig = async (e) => {
                 <td>{config.id}</td>
                 <td>{config.entry_shares_amount}</td>
                 <td>{config.development_levy_amount}</td>
-                <td>
-                  {config.min_contribution_amount} / {config.max_contribution_amount}
-                </td>
-                <td>
-                  {config.min_monthly_levy} / {config.max_monthly_levy}
-                </td>
+                <td>{config.min_contribution_amount} / {config.max_contribution_amount}</td>
+                <td>{config.min_monthly_levy} / {config.max_monthly_levy}</td>
                 <td>{config.enforce_monthly_levy ? 'Yes' : 'No'}</td>
                 <td>{config.status}</td>
                 <td>{config.effective_date}</td>
@@ -157,7 +158,28 @@ const handleCreateConfig = async (e) => {
         </table>
       )}
 
-      {showModal && (
+      {/* Pagination Controls */}
+      <div className="pagination-controls">
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+          disabled={currentPage === 1}
+        >Prev</button>
+        <span>Page {currentPage} of {totalPages}</span>
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+          disabled={currentPage === totalPages}
+        >Next</button>
+        <select
+          value={pageSize}
+          onChange={(e) => setPageSize(Number(e.target.value))}
+        >
+          {[5, 10, 20].map((size) => (
+            <option key={size} value={size}>{size} / page</option>
+          ))}
+        </select>
+      </div>
+
+            {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h3>Create New Config</h3>

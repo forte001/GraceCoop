@@ -1,5 +1,10 @@
 import django_filters
-from .models import LoanRepayment, Contribution, Levy, Loan, LoanApplication
+from .models import (LoanRepayment, 
+                     Contribution, 
+                     Levy, Loan, 
+                     LoanApplication,
+                     MemberProfile, 
+                     CooperativeConfig)
 from django.db.models import Q
 
 class LoanApplicationFilter(django_filters.FilterSet):
@@ -93,3 +98,55 @@ class LevyFilter(django_filters.FilterSet):
         Q(member__user__last_name__icontains=value)
     )
     
+class PendingMemberFilter(django_filters.FilterSet):
+    has_paid_shares = django_filters.BooleanFilter()
+    has_paid_levy = django_filters.BooleanFilter()
+    membership_status = django_filters.ChoiceFilter(choices=MemberProfile.MEMBERSHIP_STATUS_CHOICES)
+    joined_on_after = django_filters.DateFilter(field_name='joined_on', lookup_expr='gte')
+    joined_on_before = django_filters.DateFilter(field_name='joined_on', lookup_expr='lte')
+
+    # Full-text search fields
+    full_name = django_filters.CharFilter(field_name='full_name', lookup_expr='icontains')
+    email = django_filters.CharFilter(field_name='email', lookup_expr='icontains')
+
+    class Meta:
+        model = MemberProfile
+        fields = [
+            'has_paid_shares',
+            'has_paid_levy',
+            'membership_status',
+            'joined_on_after',
+            'joined_on_before',
+            'full_name',
+            'email',
+        ]
+
+class MemberFilter(django_filters.FilterSet):
+    full_name = django_filters.CharFilter(lookup_expr='icontains')
+    email = django_filters.CharFilter(lookup_expr='icontains')
+    member_id = django_filters.CharFilter(lookup_expr='icontains')
+    membership_status = django_filters.ChoiceFilter(
+        choices=MemberProfile.MEMBERSHIP_STATUS_CHOICES
+    )
+    joined_on_after = django_filters.DateFilter(field_name='joined_on', lookup_expr='gte')
+    joined_on_before = django_filters.DateFilter(field_name='joined_on', lookup_expr='lte')
+
+    class Meta:
+        model = MemberProfile
+        fields = [
+            'full_name',
+            'email',
+            'member_id',
+            'membership_status',
+            'joined_on_after',
+            'joined_on_before',
+        ]
+
+class CooperativeConfigFilter(django_filters.FilterSet):
+    status = django_filters.CharFilter(lookup_expr='iexact')  # e.g. active, inactive, archived
+    effective_date_after = django_filters.DateFilter(field_name='effective_date', lookup_expr='gte')
+    effective_date_before = django_filters.DateFilter(field_name='effective_date', lookup_expr='lte')
+
+    class Meta:
+        model = CooperativeConfig
+        fields = ['status', 'effective_date_after', 'effective_date_before']

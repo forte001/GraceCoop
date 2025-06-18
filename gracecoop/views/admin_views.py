@@ -8,11 +8,17 @@ from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth.models import Permission, Group
+from django.http import JsonResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_GET
 from gracecoop.models import User, MemberProfile
 from gracecoop.custom_token import CustomTokenRefreshSerializer
 from rest_framework import generics, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from ..permissions import IsAdminUser, IsSuperUser, IsAdminWith2FA
+from django_filters.rest_framework import DjangoFilterBackend
+from ..filters import PendingMemberFilter, MemberFilter, CooperativeConfigFilter
+from gracecoop.pagination import StandardResultsSetPagination
 from gracecoop.serializers import (
 MemberProfileSerializer,
 MemberProfile,
@@ -216,6 +222,9 @@ class AdminDashboardStatsView(APIView):
 class PendingApplicationsView(generics.ListAPIView):
     serializer_class = PendingApprovalSerializer
     permission_classes = [IsAdminUser, CanViewPendingApplications]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PendingMemberFilter
 
     def get_queryset(self):
         return MemberProfile.objects.filter(status='pending')
@@ -233,6 +242,9 @@ class ApproveMemberApplicationView(generics.UpdateAPIView):
 class ApprovedMembersView(generics.ListAPIView):
     serializer_class = MemberProfileSerializer
     permission_classes = [IsAdminUser, CanViewApprovedMembers]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = MemberFilter
 
     def get_queryset(self):
         return MemberProfile.objects.filter(status='approved')
@@ -348,20 +360,22 @@ class UserGroupUpdateView(APIView):
         return Response({'detail': 'Groups updated successfully'})
     
 
-    #######################################
-    ## CSRF
-    #######################################
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_GET
-
+#######################################
+## CSRF
+#######################################
 @require_GET
 @ensure_csrf_cookie
 def get_csrf_token(request):
     return JsonResponse({'detail': 'CSRF cookie set'})
 
+#######################################
+## COOPERATIVE CONFIG
+#######################################
+
 class CooperativeConfigAdminViewSet(viewsets.ModelViewSet):
     queryset = CooperativeConfig.objects.all().order_by('-effective_date')
     serializer_class = CooperativeConfigSerializer
     permission_classes = [IsAdminUser]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = CooperativeConfigFilter

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
 import 'chart.js/auto';
-import axiosInstance from '../../utils/axiosInstance'; // Adjust if needed
+import axiosInstance from '../../utils/axiosInstance'; 
+import '../../styles/admin/AdminStatsDashboard.css'; 
 
-import '../../styles/admin/AdminStatsDashboard.css'; // Importing the CSS
 
 const AdminStatsDashboard = () => {
   const [stats, setStats] = useState({
