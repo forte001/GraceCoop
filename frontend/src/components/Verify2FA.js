@@ -1,7 +1,7 @@
 // src/components/Verify2FA.js
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getAxiosByRole } from '../utils/getAxiosByRole';
+import getAxiosByRole from '../utils/getAxiosByRole';
 
 const Verify2FA = () => {
   const [token, setToken] = useState('');

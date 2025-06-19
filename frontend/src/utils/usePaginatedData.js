@@ -1,6 +1,6 @@
 // src/utils/usePaginatedData.js
 import { useState, useEffect } from 'react';
-import { getAxiosByRole } from './getAxiosByRole';
+import getAxiosByRole from './getAxiosByRole';
 
 const usePaginatedData = (url, initialFilters = {}, initialPage = 1, pathname = window.location.pathname) => {
   const [fullData, setFullData] = useState({ results: [], count: 0 });

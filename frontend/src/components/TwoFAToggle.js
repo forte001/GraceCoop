@@ -1,7 +1,7 @@
 // src/components/TwoFAToggle.js
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { getAxiosByRole } from '../utils/getAxiosByRole';
+import getAxiosByRole from '../utils/getAxiosByRole';
 
 const TwoFAToggle = () => {
   const [enabled, setEnabled] = useState(false);

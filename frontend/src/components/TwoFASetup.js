@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
-import { getAxiosByRole } from '../utils/getAxiosByRole';
+import getAxiosByRole  from '../utils/getAxiosByRole';
 import "../styles/admin/AdminLogin.css";
 
 const TwoFASetup = () => {

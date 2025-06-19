@@ -1,7 +1,7 @@
 // src/utils/usePaystackPayment.js
 
 import { useState } from 'react';
-import { getAxiosByRole } from './getAxiosByRole';
+import getAxiosByRole  from './getAxiosByRole';
 import PaystackPop from '@paystack/inline-js';
 
 // ✅ Normalize endpoint by removing leading slash

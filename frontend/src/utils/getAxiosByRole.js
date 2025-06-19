@@ -7,3 +7,4 @@ export const getAxiosByRole = (pathname = window.location.pathname) => {
   if (pathname.startsWith('/member')) return axiosMemberInstance;
   return null;
 };
+export default getAxiosByRole;
