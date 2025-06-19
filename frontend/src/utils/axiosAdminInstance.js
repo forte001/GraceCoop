@@ -1,7 +1,8 @@
 // utils/axiosAdminInstance.js
 import axios from 'axios';
 
-const baseURL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api/';
+const baseURL =
+  process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api/';
 
 const axiosAdminInstance = axios.create({
   baseURL,
@@ -11,45 +12,50 @@ const axiosAdminInstance = axios.create({
   },
 });
 
+// 🍪 Helper to get CSRF token from cookies
 const getCookie = (name) => {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      const [key, value] = cookie.trim().split('=');
-      if (key === name) {
-        cookieValue = decodeURIComponent(value);
-        break;
-      }
-    }
+  const cookies = document.cookie?.split(';') || [];
+  for (let cookie of cookies) {
+    const [key, value] = cookie.trim().split('=');
+    if (key === name) return decodeURIComponent(value);
   }
-  return cookieValue;
+  return null;
 };
 
+// 🔐 Token getters
 const getAccessToken = () => localStorage.getItem('admin_token');
 const getRefreshToken = () => localStorage.getItem('admin_refresh');
 
+// ✅ Request Interceptor
 axiosAdminInstance.interceptors.request.use((config) => {
-  const csrfToken = getCookie('csrftoken');
   const token = getAccessToken();
+  const csrfToken = getCookie('csrftoken');
+
+  // ❌ Skip adding token for login or token refresh
+  const isAuthEndpoint = config.url.includes('/login') || config.url.includes('/token/refresh/');
+  if (!isAuthEndpoint && token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
 
   if (csrfToken && ['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase())) {
     config.headers['X-CSRFToken'] = csrfToken;
   }
 
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-
   return config;
 });
 
+
+// 🔁 Response Interceptor for 401/400 refresh
 axiosAdminInstance.interceptors.response.use(
-  response => response,
-  async error => {
+  (res) => res,
+  async (error) => {
     const originalRequest = error.config;
 
-    if ((error.response?.status === 401 || error.response?.status === 400) && !originalRequest._retry) {
+    const shouldRetry =
+      (error.response?.status === 401 || error.response?.status === 400) &&
+      !originalRequest._retry;
+
+    if (shouldRetry) {
       originalRequest._retry = true;
 
       const refreshToken = getRefreshToken();
@@ -61,15 +67,17 @@ axiosAdminInstance.interceptors.response.use(
       }
 
       try {
-        const res = await axios.post(`${baseURL}token/refresh/`, {
-          refresh: refreshToken,
-        });
+        const refreshResponse = await axios.post(
+          `${baseURL}token/refresh/`,
+          { refresh: refreshToken },
+          { withCredentials: true }
+        );
 
-        const newAccess = res.data.access;
+        const newAccess = refreshResponse.data.access;
         localStorage.setItem('admin_token', newAccess);
-        axiosAdminInstance.defaults.headers['Authorization'] = `Bearer ${newAccess}`;
-        originalRequest.headers['Authorization'] = `Bearer ${newAccess}`;
 
+        // 🔁 Re-issue original request with updated token
+        originalRequest.headers['Authorization'] = `Bearer ${newAccess}`;
         return axiosAdminInstance(originalRequest);
       } catch (refreshErr) {
         localStorage.removeItem('admin_token');

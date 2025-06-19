@@ -11,6 +11,8 @@ from django.contrib.auth.models import Permission, Group
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from gracecoop.models import User, MemberProfile
 from gracecoop.custom_token import CustomTokenRefreshSerializer
 from rest_framework import generics, permissions
@@ -50,6 +52,7 @@ from gracecoop.models import CooperativeConfig
 ###########################################################
 ### Admin Login View with 2FA implementaion
 ###########################################################
+@method_decorator(csrf_exempt, name='dispatch')
 class AdminLoginView(APIView):
     permission_classes = [AllowAny]
 

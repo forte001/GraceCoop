@@ -3,11 +3,13 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { isTokenValid } from '../utils/auth';
 
 const PrivateRoute = () => {
-  const token = localStorage.getItem('token');
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
 
-  // ✅ Allow this specific 2FA route through
+  // ✅ Dynamically use the correct token key
+  const token = localStorage.getItem(isAdmin ? 'admin_token' : 'member_token');
+
+  // ✅ Allow member 2FA verify route through
   if (location.pathname === '/members/2fa/verify') {
     return <Outlet />;
   }

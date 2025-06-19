@@ -28,24 +28,17 @@ const AdminLogin = () => {
         sessionStorage.setItem('is_awaiting_2fa', 'true');
         sessionStorage.setItem('temp_token', data.temp_token);
 
-        setTimeout(() => {
-          if (data.is_2fa_setup_complete) {
-            navigate('/admin/2fa/verify', { replace: true });
-          } else {
-            navigate('/admin/2fa/setup', { replace: true });
-          }
-        }, 100);
+        navigate(data.is_2fa_setup_complete ? '/admin/2fa/verify' : '/admin/2fa/setup', { replace: true });
         return;
       }
 
-      // ✅ Use admin-specific token keys
       localStorage.setItem('admin_token', data.access);
       localStorage.setItem('admin_refresh', data.refresh);
 
-      // ✅ Set token on axios instance
-      axiosAdminInstance.defaults.headers['Authorization'] = `Bearer ${data.access}`;
-
+      
+      console.log("✅ Login successful — redirecting...");
       navigate('/admin/dashboard');
+
     } catch (error) {
       const detail = error?.response?.data?.detail || 'Login failed.';
       setErrorMsg(detail);
