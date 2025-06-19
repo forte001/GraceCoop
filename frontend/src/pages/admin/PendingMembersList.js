@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import usePaginatedData from '../../utils/usePaginatedData';
 import '../../styles/admin/Members.css';
-import axiosInstance from '../../utils/axiosInstance';
+import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import ExportPrintGroup from '../../components/ExportPrintGroup';
 
 const PendingMemberList = () => {
@@ -37,7 +37,7 @@ const PendingMemberList = () => {
 
   const handleApprove = async (id) => {
     try {
-      await axiosInstance.patch(`/admin/members/${id}/approve/`, {
+      await axiosAdminInstance.patch(`/admin/members/${id}/approve/`, {
         status: 'approved',
         membership_status: 'active',
       });

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import usePaginatedData from '../../../utils/usePaginatedData';
-import axiosInstance from '../../../utils/axiosInstance';
+import axiosAdminInstance from '../../../utils/axiosAdminInstance';
 import { getCSRFToken } from '../../../utils/csrf';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
@@ -14,12 +14,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const LoanManagement = () => {
-//     const [filters, setFilters] = useState({
-//   query: '',
-//   approved_at_after: '',
-//   approved_at_before: '',
-//   ordering: '-approval_date',
-// });
+
 
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedLoan, setSelectedLoan] = useState(null);
@@ -62,7 +57,7 @@ const {
 
   const handleApproveApplication = async (applicationId) => {
     try {
-      await axiosInstance.post(
+      await axiosAdminInstance.post(
         `/admin/loan/loan-applications-admin/${applicationId}/approve/`,
         {},
         { headers: { 'X-CSRFToken': getCSRFToken() } }
@@ -90,7 +85,7 @@ const {
         ? selectedLoan.disbursements_remaining
         : disburseAmount;
 
-      await axiosInstance.post(
+      await axiosAdminInstance.post(
         `/admin/loan/loans-admin/${selectedLoan.id}/disburse/`,
         { amount },
         { headers: { 'X-CSRFToken': getCSRFToken() } }
@@ -108,7 +103,7 @@ const {
     setExpandedSchedules(prev => ({ ...prev, [loanId]: !prev[loanId] }));
     if (!repaymentSchedules[loanId]) {
       try {
-        const res = await axiosInstance.get(`/admin/loan/loans-admin/${loanId}/repayment-schedule/`);
+        const res = await axiosAdminInstance.get(`/admin/loan/loans-admin/${loanId}/repayment-schedule/`);
         setRepaymentSchedules(prev => ({ ...prev, [loanId]: res.data }));
       } catch (err) {
         alert('Failed to load repayment schedule.');
@@ -120,7 +115,7 @@ const {
     setExpandedSummaries(prev => ({ ...prev, [loanId]: !prev[loanId] }));
     if (!loanSummaries[loanId]) {
       try {
-        const res = await axiosInstance.get(`/admin/loan/loans-admin/${loanId}/summary/`);
+        const res = await axiosAdminInstance.get(`/admin/loan/loans-admin/${loanId}/summary/`);
         setLoanSummaries(prev => ({ ...prev, [loanId]: res.data }));
       } catch (err) {
         alert('Failed to load loan summary.');
@@ -133,7 +128,7 @@ const {
     if (!window.confirm('Apply grace period?')) return;
 
     try {
-      const response = await axiosInstance.post(
+      const response = await axiosAdminInstance.post(
         `/admin/loan/loans-admin/${loanId}/apply-grace-period/`,
         {},
         { headers: { 'X-CSRFToken': getCSRFToken() } }

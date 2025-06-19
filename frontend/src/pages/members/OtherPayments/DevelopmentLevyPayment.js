@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosInstance from '../../../utils/axiosInstance';
+import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 import { useLevyPayment } from '../../../utils/useLevyPayment';
 
 const DevelopmentLevyPayment = () => {
@@ -10,7 +10,7 @@ const DevelopmentLevyPayment = () => {
   const { initiateLevyPayment, loading } = useLevyPayment();
 
   useEffect(() => {
-    axiosInstance.get('/members/cooperative-config/active/')
+    axiosMemberInstance.get('/members/cooperative-config/active/')
       .then(res => {
         setMin(res.data.min_monthly_levy);
         setMax(res.data.max_monthly_levy);

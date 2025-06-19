@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import usePaginatedData from '../../utils/usePaginatedData';
 import '../../styles/admin/Members.css';
-import axiosInstance from '../../utils/axiosInstance';
+import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import ExportPrintGroup from '../../components/ExportPrintGroup';
 
 const MembersList = () => {
@@ -56,7 +56,7 @@ const MembersList = () => {
 
   const handleSaveEdit = async (memberId) => {
     try {
-      await axiosInstance.put(`/admin/members/${memberId}/update/`, editFormData);
+      await axiosAdminInstance.put(`/admin/members/${memberId}/update/`, editFormData);
       setEditingMemberId(null);
     } catch (err) {
       console.error('Update failed:', err);

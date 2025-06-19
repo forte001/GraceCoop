@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axiosInstance from '../../../utils/axiosInstance';
+import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 import { formatNaira } from '../../../utils/formatCurrency';
 import LoanRepaymentForm from './LoanRepaymentForm';
 import '../../../styles/members/loan/ApprovedLoansList.css';
 import usePaginatedData from '../../../utils/usePaginatedData';
 
 const ApprovedLoansList = () => {
-//   const [filters, setFilters] = useState({
-//   ref: '',
-//   startDate: '',
-//   endDate: '',
-// });
 
   const [selectedLoanId, setSelectedLoanId] = useState(null);
   const [repaymentSchedule, setRepaymentSchedule] = useState([]);
@@ -43,8 +38,8 @@ const {
   const fetchLoanDetails = async (loanId) => {
     try {
       const [scheduleRes, summaryRes] = await Promise.all([
-        axiosInstance.get(`/members/loan/loans/${loanId}/repayment-schedule/`),
-        axiosInstance.get(`/members/loan/loans/${loanId}/summary/`)
+        axiosMemberInstance.get(`/members/loan/loans/${loanId}/repayment-schedule/`),
+        axiosMemberInstance.get(`/members/loan/loans/${loanId}/summary/`)
       ]);
       setRepaymentSchedule(scheduleRes.data);
       setLoanSummary(summaryRes.data);

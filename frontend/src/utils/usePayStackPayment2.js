@@ -1,5 +1,7 @@
+// src/utils/usePaystackPayment.js
+
 import { useState } from 'react';
-import axiosInstance from './axiosInstance';
+import { getAxiosByRole } from './getAxiosByRole';
 import PaystackPop from '@paystack/inline-js';
 
 // ✅ Normalize endpoint by removing leading slash
@@ -7,6 +9,7 @@ const normalizeUrl = (url) => url.replace(/^\/+/, '');
 
 export const usePaystackPayment = () => {
   const [loading, setLoading] = useState(false);
+  const axios = getAxiosByRole();
 
   const startPayment = async ({
     initiateUrl,
@@ -14,7 +17,7 @@ export const usePaystackPayment = () => {
     referenceData = {},
     isPayoff = false,
     customAmount = null,
-    isEntry = false, 
+    isEntry = false,
     overrideVerifyUrl = null,
   }) => {
     setLoading(true);
@@ -26,11 +29,11 @@ export const usePaystackPayment = () => {
         ...(customAmount && !isPayoff ? { custom_amount: parseFloat(customAmount) } : {}),
       };
 
-      // ✅ Get CSRF token first
-      await axiosInstance.get('csrf-token/', { withCredentials: true });
+      // ✅ Get CSRF token
+      await axios.get('csrf-token/', { withCredentials: true });
 
-      // ✅ Normalize and initiate payment
-      const res = await axiosInstance.post(normalizeUrl(initiateUrl), payload);
+      // ✅ Initiate payment
+      const res = await axios.post(normalizeUrl(initiateUrl), payload);
       const { reference, amount, email, public_key } = res.data;
 
       const payAmount = parseFloat(amount) * 100;
@@ -43,7 +46,14 @@ export const usePaystackPayment = () => {
         reference: reference,
         callback: function (response) {
           console.log('Payment complete!', response);
-          verifyPayment({ reference, verifyUrl, referenceData, isPayoff,isEntry, });
+          verifyPayment({
+            reference,
+            verifyUrl,
+            overrideVerifyUrl,
+            referenceData,
+            isPayoff,
+            isEntry,
+          });
         },
         onClose: function () {
           console.log('Payment window closed.');
@@ -57,72 +67,44 @@ export const usePaystackPayment = () => {
     }
   };
 
-//   const verifyPayment = async ({ reference, verifyUrl, overrideVerifyUrl, referenceData = {}, isPayoff = false }) => {
-//   try {
-//     const finalUrl = overrideVerifyUrl
-//       ? normalizeUrl(overrideVerifyUrl(reference))
-//       : `${normalizeUrl(verifyUrl)}${reference}/`;
+  const verifyPayment = async ({
+    reference,
+    verifyUrl,
+    overrideVerifyUrl,
+    referenceData = {},
+    isPayoff = false,
+    isEntry = false,
+  }) => {
+    try {
+      let finalUrl;
+      let payload;
 
-//     const payload = {
-//       reference,
-//       ...referenceData,
-//       payoff: isPayoff,
-//     };
+      if (isEntry) {
+        finalUrl = overrideVerifyUrl
+          ? normalizeUrl(overrideVerifyUrl(reference))
+          : `${normalizeUrl(verifyUrl)}${reference}/`;
+        payload = {}; // No body for entry payment verification
+      } else {
+        finalUrl = overrideVerifyUrl
+          ? normalizeUrl(overrideVerifyUrl(reference))
+          : normalizeUrl(verifyUrl);
+        payload = {
+          reference,
+          ...referenceData,
+          payoff: isPayoff,
+        };
+      }
 
-//     await axiosInstance.get('csrf-token/', { withCredentials: true });
+      await axios.get('csrf-token/', { withCredentials: true });
+      const res = await axios.post(finalUrl, payload);
 
-//     const res = await axiosInstance.post(finalUrl, payload);
-//     alert(res.data.message || 'Payment verified!');
-//     window.location.reload();
-//   } catch (error) {
-//     console.error('Verification error', error);
-//     alert('Verification failed. Contact admin if payment was successful.');
-//   }
-// };
-const verifyPayment = async ({
-  reference,
-  verifyUrl,
-  overrideVerifyUrl,
-  referenceData = {},
-  isPayoff = false,
-  isEntry = false, // ✅ NEW FLAG
-}) => {
-  try {
-    let finalUrl;
-    let payload;
-
-    if (isEntry) {
-      // ✅ Entry payments use the reference in the URL
-      finalUrl = overrideVerifyUrl
-        ? normalizeUrl(overrideVerifyUrl(reference))
-        : `${normalizeUrl(verifyUrl)}${reference}/`;
-
-      payload = {}; // No body needed for entry
-    } else {
-      // ✅ Other payments send the reference in the body
-      finalUrl = overrideVerifyUrl
-        ? normalizeUrl(overrideVerifyUrl(reference))
-        : normalizeUrl(verifyUrl);
-
-      payload = {
-        reference,
-        ...referenceData,
-        payoff: isPayoff,
-      };
+      alert(res.data.message || 'Payment verified!');
+      window.location.reload();
+    } catch (error) {
+      console.error('Verification error', error);
+      alert('Verification failed. Contact admin if payment was successful.');
     }
-
-    await axiosInstance.get('csrf-token/', { withCredentials: true });
-    const res = await axiosInstance.post(finalUrl, payload);
-
-    alert(res.data.message || 'Payment verified!');
-    window.location.reload();
-  } catch (error) {
-    console.error('Verification error', error);
-    alert('Verification failed. Contact admin if payment was successful.');
-  }
-};
-
-
+  };
 
   return { startPayment, loading };
 };

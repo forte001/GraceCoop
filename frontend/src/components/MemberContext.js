@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import axiosInstance from '../utils/axiosInstance';
+import axiosMemberInstance from '../utils/axiosMemberInstance';
 
 export const MemberContext = createContext();
 
@@ -9,7 +9,7 @@ export const MemberProvider = ({ children }) => {
 
   const fetchMemberProfile = async () => {
     try {
-      const response = await axiosInstance.get('/members/my-profile/');
+      const response = await axiosMemberInstance.get('/members/my-profile/');
       setMemberProfile(response.data);
     } catch (error) {
       console.error('Error fetching member profile:', error);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosInstance from '../../utils/axiosInstance';
+import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import "../../styles/admin/AdminLogin.css";
 
 const AdminLogin = () => {
@@ -16,7 +16,7 @@ const AdminLogin = () => {
     setErrorMsg('');
 
     try {
-      const response = await axiosInstance.post('/admin/login/', {
+      const response = await axiosAdminInstance.post('/admin/login/', {
         login_id: username.trim(),
         password,
       });
@@ -24,7 +24,6 @@ const AdminLogin = () => {
       const data = response.data;
 
       if (data.require_2fa) {
-        // ✅ Store 2FA session values in sessionStorage
         sessionStorage.setItem('2fa_user_id', data.user_id.toString());
         sessionStorage.setItem('is_awaiting_2fa', 'true');
         sessionStorage.setItem('temp_token', data.temp_token);
@@ -39,10 +38,13 @@ const AdminLogin = () => {
         return;
       }
 
-      // ✅ No 2FA required, login as usual
-      localStorage.setItem('token', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
-      axiosInstance.defaults.headers['Authorization'] = `Bearer ${data.access}`;
+      // ✅ Use admin-specific token keys
+      localStorage.setItem('admin_token', data.access);
+      localStorage.setItem('admin_refresh', data.refresh);
+
+      // ✅ Set token on axios instance
+      axiosAdminInstance.defaults.headers['Authorization'] = `Bearer ${data.access}`;
+
       navigate('/admin/dashboard');
     } catch (error) {
       const detail = error?.response?.data?.detail || 'Login failed.';

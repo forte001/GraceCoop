@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
-import axiosInstance from '../../../utils/axiosInstance';
+import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 import '../../../styles/members/loan/LoanApplication.css';
 
 const LoanApplicationForm = () => {
@@ -15,7 +15,7 @@ const LoanApplicationForm = () => {
   useEffect(() => {
   const fetchLoanCategories = async () => {
     try {
-      const response = await axiosInstance.get('/members/loan/loan-categories/');
+      const response = await axiosMemberInstance.get('/members/loan/loan-categories/');
       setLoanCategories(response.data.results);
     } catch (error) {
       console.error('Failed to fetch loan categories:', error);
@@ -46,7 +46,7 @@ const LoanApplicationForm = () => {
   }
 
   try {
-    await axiosInstance.post('/members/loan/loan-applications/', {
+    await axiosMemberInstance.post('/members/loan/loan-applications/', {
       amount,
       repayment_months: repaymentMonths,
       category_id: selectedCategoryId,

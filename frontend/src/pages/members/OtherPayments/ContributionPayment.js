@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosInstance from '../../../utils/axiosInstance';
+import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 import { useContributionPayment } from '../../../utils/useContributionPayment';
 
 const ContributionPayment = () => {
@@ -11,7 +11,7 @@ const ContributionPayment = () => {
 
   useEffect(() => {
     // Fetch min/max config using axiosInstance
-    axiosInstance.get('/members/cooperative-config/active/')
+    axiosMemberInstance.get('/members/cooperative-config/active/')
       .then(res => {
         setMin(res.data.min_contribution_amount);
         setMax(res.data.max_contribution_amount);

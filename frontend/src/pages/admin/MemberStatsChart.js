@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
 import 'chart.js/auto';
-import axiosInstance from '../../utils/axiosInstance'; 
+import axiosAdminInstance from '../../utils/axiosAdminInstance'; 
 
 const MemberStatsChart = () => {
   const [chartData, setChartData] = useState([]);
@@ -10,7 +10,7 @@ const MemberStatsChart = () => {
   useEffect(() => {
     const fetchMemberStats = async () => {
       try {
-        const response = await axiosInstance.get('/admin/dashboard-stats/');
+        const response = await axiosAdminInstance.get('/admin/dashboard-stats/');
         const stats = response.data;
 
         // Transform data into chart-friendly format

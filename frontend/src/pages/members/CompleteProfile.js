@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../utils/axiosInstance";
+import axiosMemberInstance from "../../utils/axiosMemberInstance";
 import "../../styles/members/CompleteProfile.css";
 
 const CompleteProfile = () => {
@@ -20,7 +20,7 @@ const CompleteProfile = () => {
     // Fetch existing profile data
     const fetchProfile = async () => {
       try {
-        const response = await axiosInstance.get("/members/my-profile/");
+        const response = await axiosMemberInstance.get("/members/my-profile/");
         const { full_name, phone_number, address } = response.data;
         setFormData({ full_name, phone_number, address });
       } catch (err) {
@@ -48,7 +48,7 @@ const CompleteProfile = () => {
     setSuccess("");
 
     try {
-      await axiosInstance.patch("/members/my-profile/", formData);
+      await axiosMemberInstance.patch("/members/my-profile/", formData);
       setSuccess("Profile updated successfully!");
       setTimeout(() => navigate("/member/dashboard"), 1000);
     } catch (err) {

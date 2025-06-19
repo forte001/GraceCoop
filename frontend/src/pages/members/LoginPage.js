@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from '../../utils/axiosInstance'; 
+import axiosMemberInstance from '../../utils/axiosMemberInstance'; 
 import "../../styles/members/LoginPage.css";
 
 const LoginPage = () => {
@@ -17,7 +17,7 @@ const LoginPage = () => {
 
     try {
       // Make request to the backend to login the user
-      const response = await axiosInstance.post('/members/login/', {
+      const response = await axiosMemberInstance.post('/members/login/', {
         login_id: loginId.trim(),
         password,
       });
@@ -46,10 +46,10 @@ const LoginPage = () => {
       localStorage.setItem('refreshToken', data.refresh);
 
       // Set the authorization header for axiosInstance globally
-      axiosInstance.defaults.headers['Authorization'] = `Bearer ${data.access}`;
+      axiosMemberInstance.defaults.headers['Authorization'] = `Bearer ${data.access}`;
 
       // Fetch the user profile after login
-      const profileResponse = await axiosInstance.get('/members/my-profile/');
+      const profileResponse = await axiosMemberInstance.get('/members/my-profile/');
       const profile = profileResponse.data;
 
       // Check if profile is complete or needs further information

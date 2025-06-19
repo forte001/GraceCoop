@@ -9,7 +9,6 @@ LoanRepayment,
 LoanRepaymentSchedule,
 DisbursementLog,
 Contribution, 
-Transaction, 
 User,
 CooperativeConfig,
 Payment,
@@ -189,7 +188,6 @@ admin.site.register(LoanApplication, LoanApplicationAdmin),
 admin.site.register(DisbursementLog, DisbursementLogAdmin),
 admin.site.register(LoanCategory, LoanCategoryAdmin),
 admin.site.register(MemberProfile,  MemberProfileAdmin)
-admin.site.register(Loan, LoanAdmin)
-admin.site.register(Contribution, ContributionAdmin)
-admin.site.register(Transaction)
+admin.site.register(Loan, LoanAdmin),
+admin.site.register(Contribution, ContributionAdmin),
 admin.site.register(User, UserAdmin)

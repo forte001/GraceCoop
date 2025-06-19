@@ -1,7 +1,7 @@
 // src/pages/members/EditProfilePage.js
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../utils/axiosInstance";
+import axiosMemberInstance from "../../utils/axiosMemberInstance";
 import "../../styles/members/EditProfilePage.css";
 
 const EditProfilePage = () => {
@@ -18,7 +18,7 @@ const EditProfilePage = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await axiosInstance.get("/members/my-profile/");
+        const response = await axiosMemberInstance.get("/members/my-profile/");
         setProfile(response.data);
         setFormData({
           full_name: response.data.full_name || "",
@@ -45,7 +45,7 @@ const EditProfilePage = () => {
     setSuccess("");
 
     try {
-      await axiosInstance.put("/members/update-profile/", formData);
+      await axiosMemberInstance.put("/members/update-profile/", formData);
       setSuccess("Profile updated successfully!");
       setTimeout(() => navigate("/member/profile"), 1500);
     } catch (err) {

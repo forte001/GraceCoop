@@ -7,7 +7,6 @@ from .loan import (Loan,
                    LoanRepaymentSchedule)
 from .cooperative_config import CooperativeConfig
 from .levy import Levy
-from .transaction import Transaction
 from .contribution import Contribution
 from .user import User
 from .payment import Payment

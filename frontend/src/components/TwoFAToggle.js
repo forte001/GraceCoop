@@ -1,17 +1,16 @@
+// src/components/TwoFAToggle.js
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import axiosInstance from '../utils/axiosInstance';
+import { getAxiosByRole } from '../utils/getAxiosByRole';
 
 const TwoFAToggle = () => {
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const location = useLocation();
+  const axios = getAxiosByRole(location.pathname);
 
-  // Determine if the user is admin or member based on path
   const isAdmin = location.pathname.includes('/admin');
-
-  // Define endpoints dynamically
   const statusEndpoint = isAdmin ? '/admin/2fa/status/' : '/members/2fa/status/';
   const disableEndpoint = isAdmin ? '/admin/2fa/disable/' : '/members/2fa/disable/';
   const setupPath = isAdmin ? '/admin/2fa/setup' : '/member/2fa/setup';
@@ -19,7 +18,7 @@ const TwoFAToggle = () => {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await axiosInstance.get(statusEndpoint);
+        const response = await axios.get(statusEndpoint);
         setEnabled(response.data.is_2fa_enabled);
       } catch (error) {
         console.error("Failed to fetch 2FA status", error);
@@ -29,19 +28,20 @@ const TwoFAToggle = () => {
     };
 
     fetchStatus();
-  }, [statusEndpoint]);
+  }, [axios, statusEndpoint]);
 
   const handleToggle = async () => {
     setLoading(true);
     try {
       if (enabled) {
-        await axiosInstance.post(disableEndpoint);
+        await axios.post(disableEndpoint);
         setEnabled(false);
         setMessage('2FA disabled.');
       } else {
-        window.location.href = setupPath; // redirect to QR setup
+        window.location.href = setupPath;
       }
     } catch (error) {
+      console.error("Toggle failed:", error);
       setMessage('Failed to update 2FA setting.');
     } finally {
       setLoading(false);

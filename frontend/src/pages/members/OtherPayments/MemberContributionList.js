@@ -1,5 +1,4 @@
 import React, { useState,useRef } from 'react';
-import axiosInstance from '../../../utils/axiosInstance';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -13,7 +12,7 @@ const MemberContributionList = () => {
   const [error, setError] = useState(null);
 
   const {
-    data, // Now just the array of items
+    data, // array of items
     loading,
     filters,
     setFilters,

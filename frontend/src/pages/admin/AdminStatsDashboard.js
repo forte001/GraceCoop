@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
 import 'chart.js/auto';
-import axiosInstance from '../../utils/axiosInstance'; 
+import axiosAdminInstance from '../../utils/axiosAdminInstance'; 
 import '../../styles/admin/AdminStatsDashboard.css'; 
 
 
@@ -19,7 +19,7 @@ const AdminStatsDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axiosInstance.get('/admin/dashboard-stats/');
+        const res = await axiosAdminInstance.get('/admin/dashboard-stats/');
         const data = res.data;
         setStats(data);
 

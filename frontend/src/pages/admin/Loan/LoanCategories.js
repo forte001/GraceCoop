@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axiosInstance from '../../../utils/axiosInstance';
+import axiosAdminInstance from '../../../utils/axiosAdminInstance';
 import { getCSRFToken } from '../../../utils/csrf';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import '../../../styles/admin/loan/LoanCategories.css';
@@ -32,7 +32,7 @@ const LoanCategories = () => {
   useEffect(() => {
     const fetchCSRFToken = async () => {
       try {
-        await axiosInstance.get('/csrf-token/');
+        await axiosAdminInstance.get('/csrf-token/');
       } catch (error) {
         console.error('Error fetching CSRF token:', error);
       }
@@ -95,13 +95,13 @@ const LoanCategories = () => {
 
     try {
       if (isEditing && selectedCategory) {
-        const response = await axiosInstance.put(
+        const response = await axiosAdminInstance.put(
           `/admin/loan/loan-categories/${selectedCategory.id}/`,
           payload,
           { headers: { 'X-CSRFToken': getCSRFToken() } }
         );
       } else {
-        await axiosInstance.post(
+        await axiosAdminInstance.post(
           '/admin/loan/loan-categories/',
           payload,
           { headers: { 'X-CSRFToken': getCSRFToken() } }
@@ -117,7 +117,7 @@ const LoanCategories = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this category?')) return;
     try {
-      await axiosInstance.delete(`/admin/loan/loan-categories/${id}/`, {
+      await axiosAdminInstance.delete(`/admin/loan/loan-categories/${id}/`, {
         headers: { 'X-CSRFToken': getCSRFToken() },
       });
     } catch (error) {

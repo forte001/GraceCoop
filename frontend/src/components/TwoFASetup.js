@@ -1,7 +1,8 @@
+// src/components/TwoFASetup.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosInstance from '../utils/axiosInstance';
 import { QRCodeCanvas } from 'qrcode.react';
+import { getAxiosByRole } from '../utils/getAxiosByRole';
 import "../styles/admin/AdminLogin.css";
 
 const TwoFASetup = () => {
@@ -13,37 +14,31 @@ const TwoFASetup = () => {
   const navigate = useNavigate();
 
   const isAdmin = window.location.pathname.startsWith('/admin');
+  const axios = getAxiosByRole();
 
   useEffect(() => {
     const initializeSetup = async () => {
       try {
-        // 1. Fetch current user to check if 2FA is enabled
-        const userResponse = await axiosInstance.get(isAdmin ? '/admin/2fa/status/' : '/members/2fa/status/');
-        const { is_2fa_enabled } = userResponse.data;
-
-        // 2. If 2FA is already enabled, redirect to the dashboard
-        if (is_2fa_enabled) {
-          const dashboardPath = isAdmin ? '/admin/dashboard/' : '/member/dashboard';
-          navigate(dashboardPath);
+        const userResponse = await axios.get(isAdmin ? '/admin/2fa/status/' : '/members/2fa/status/');
+        if (userResponse.data.is_2fa_enabled) {
+          navigate(isAdmin ? '/admin/dashboard' : '/member/dashboard');
           return;
         }
 
-        // 3. Continue with 2FA setup (generate the TOTP URI)
-        const setupEndpoint = isAdmin ? '/admin/2fa/setup/' : '/members/2fa/setup/';
-        const setupResponse = await axiosInstance.get(setupEndpoint);
+        const setupResponse = await axios.get(isAdmin ? '/admin/2fa/setup/' : '/members/2fa/setup/');
         if (setupResponse.data?.totp_uri) {
           setTotpUri(setupResponse.data.totp_uri);
         } else {
           throw new Error("Missing TOTP URI in response.");
         }
       } catch (error) {
-        console.error("Error during 2FA setup initialization:", error);
+        console.error("2FA setup error:", error);
         setErrorMsg("Failed to initialize 2FA setup.");
       }
     };
 
     initializeSetup();
-  }, [isAdmin, navigate]);
+  }, [axios, isAdmin, navigate]);
 
   const handleVerify = async (e) => {
     e.preventDefault();
@@ -52,17 +47,16 @@ const TwoFASetup = () => {
     setSuccessMsg('');
 
     try {
-      const endpoint = isAdmin ? '/admin/2fa/setup-verify/' : '/members/2fa/setup-verify/';
-      await axiosInstance.post(endpoint, { otp: token });
+      await axios.post(isAdmin ? '/admin/2fa/setup-verify/' : '/members/2fa/setup-verify/', {
+        otp: token,
+      });
 
-      setSuccessMsg("2FA setup successful! Redirecting to your dashboard...");
-
+      setSuccessMsg("2FA setup successful! Redirecting...");
       setTimeout(() => {
-        const redirectPath = isAdmin ? '/admin/dashboard' : '/member/dashboard';
-        navigate(redirectPath);
+        navigate(isAdmin ? '/admin/dashboard' : '/member/dashboard');
       }, 2000);
     } catch (error) {
-      console.error("Verification failed:", error);
+      console.error("2FA verification failed:", error);
       setErrorMsg("Invalid code. Please try again.");
     } finally {
       setLoading(false);
@@ -72,7 +66,6 @@ const TwoFASetup = () => {
   return (
     <div className="login-container">
       <h2>Set Up Two-Factor Authentication</h2>
-
       {totpUri ? (
         <>
           <p>Scan this QR code using an authenticator app:</p>
@@ -85,8 +78,8 @@ const TwoFASetup = () => {
               type="text"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              required
               placeholder="123456"
+              required
               disabled={loading}
             />
             {errorMsg && <p className="error-msg">{errorMsg}</p>}

@@ -1,14 +1,7 @@
 // src/components/Verify2FA.js
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axiosInstance from '../utils/axiosInstance';
-
-const getUserRoleFromPath = (pathname) => {
-  if (pathname.startsWith('/admin')) return 'admin';
-  if (pathname.startsWith('/member')) return 'member';
-  return 'unknown';
-};
+import { getAxiosByRole } from '../utils/getAxiosByRole';
 
 const Verify2FA = () => {
   const [token, setToken] = useState('');
@@ -16,9 +9,9 @@ const Verify2FA = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const userRole = getUserRoleFromPath(location.pathname);
-  const isAdmin = userRole === 'admin';
   const isSetupFlow = location.pathname.includes('setup');
+  const isAdmin = location.pathname.startsWith('/admin');
+  const axios = getAxiosByRole(location.pathname);
 
   useEffect(() => {
     if (isSetupFlow) return;
@@ -27,38 +20,26 @@ const Verify2FA = () => {
     const userId = sessionStorage.getItem('2fa_user_id');
     const tempToken = sessionStorage.getItem('temp_token');
 
-    console.log("👀 On 2FA Page:", { awaiting2FA, userId, tempToken });
-
     const isValidSession = awaiting2FA && userId && tempToken;
 
     if (!isValidSession) {
-      const redirectPath = isAdmin ? '/admin/login' : '/login';
-      console.log("🔴 Invalid session. Redirecting to:", redirectPath);
-      navigate(redirectPath, { replace: true });
+      navigate(isAdmin ? '/admin/login' : '/login', { replace: true });
     }
-  }, [location.pathname, navigate, isSetupFlow, isAdmin]);
+  }, [location.pathname, navigate, isAdmin, isSetupFlow]);
 
   const handleVerify = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
-    const loginEndpoint = isAdmin
-      ? '/admin/2fa/verify/'
-      : '/members/2fa/verify/';
-    const setupEndpoint = isAdmin
-      ? '/admin/2fa/setup-verify/'
-      : '/members/2fa/setup-verify/';
+    const loginEndpoint = isAdmin ? '/admin/2fa/verify/' : '/members/2fa/verify/';
+    const setupEndpoint = isAdmin ? '/admin/2fa/setup-verify/' : '/members/2fa/setup-verify/';
 
     try {
       let response;
 
       if (isSetupFlow) {
-        // 2FA setup flow
-        response = await axiosInstance.post(setupEndpoint, {
-          otp: token,
-        });
+        response = await axios.post(setupEndpoint, { otp: token });
       } else {
-        // 2FA login flow
         const userId = sessionStorage.getItem('2fa_user_id');
         const tempToken = sessionStorage.getItem('temp_token');
 
@@ -66,7 +47,7 @@ const Verify2FA = () => {
           throw new Error('Missing user ID or temporary token.');
         }
 
-        response = await axiosInstance.post(
+        response = await axios.post(
           loginEndpoint,
           { otp: token, user_id: userId },
           {
@@ -82,20 +63,18 @@ const Verify2FA = () => {
       if (access && refresh) {
         localStorage.setItem('token', access);
         localStorage.setItem('refreshToken', refresh);
-        axiosInstance.defaults.headers['Authorization'] = `Bearer ${access}`;
+        axios.defaults.headers['Authorization'] = `Bearer ${access}`;
       }
 
       if (user) {
         localStorage.setItem('user', JSON.stringify(user));
       }
 
-      // ✅ Clean up temp session data
       sessionStorage.removeItem('is_awaiting_2fa');
       sessionStorage.removeItem('2fa_user_id');
       sessionStorage.removeItem('temp_token');
 
-      const dashboardPath = isAdmin ? '/admin/dashboard' : '/member/dashboard';
-      navigate(dashboardPath);
+      navigate(isAdmin ? '/admin/dashboard' : '/member/dashboard');
     } catch (error) {
       console.error('2FA verification failed:', error);
       setErrorMsg('Invalid code. Please try again.');
