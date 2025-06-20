@@ -787,7 +787,28 @@ class LevySerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("You have already paid this month's levy.")
         return attrs
 
+class PaymentSerializer(serializers.ModelSerializer):
+    member_name = serializers.CharField(source='member.full_name', read_only=True)
+    loan_reference = serializers.CharField(source='loan.reference', read_only=True)
 
+    class Meta:
+        model = Payment
+        fields = [
+            'id',
+            'member',
+            'member_name',
+            'payment_type',
+            'loan',
+            'loan_reference',
+            'reference',
+            'source_reference',
+            'amount',
+            'verified',
+            'repayment_applied',
+            'created_at',
+            'verified_at',
+            'payoff',
+        ]
 # =======================
 # USER PERMISSIONS
 # =======================

@@ -42,8 +42,9 @@ const LoginPage = () => {
       }
 
       // If 2FA is not required, proceed with regular login
-      localStorage.setItem('token', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
+      localStorage.setItem('member_token', data.access);
+      localStorage.setItem('member_refresh', data.refresh);
+
 
       // Set the authorization header for axiosInstance globally
       axiosMemberInstance.defaults.headers['Authorization'] = `Bearer ${data.access}`;

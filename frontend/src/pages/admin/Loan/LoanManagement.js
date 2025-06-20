@@ -12,6 +12,8 @@ import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { toast } from 'react-toastify';
+import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 
 const LoanManagement = () => {
 
@@ -26,6 +28,7 @@ const LoanManagement = () => {
   const [loanSummaries, setLoanSummaries] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [isFullPayment, setIsFullPayment] = useState(false);
+  
 
 const {
   filters,
@@ -51,6 +54,7 @@ const {
   setCurrentPage: setLoanPage,
   refresh: refreshLoans,
 } = usePaginatedData('/admin/loan/loans-admin/', filters); // use same `filters`
+
 
 
 
@@ -163,37 +167,67 @@ const {
     );
   };
 
-  const printRef = useRef();
+const printRef = useRef();
 
-  const exportData = (loansData || []).map((loan) => ({
-    LoanRef: loan.reference || 'N/A',
-    Member: loan.applicant_name || 'N/A',
-    Amount: `NGN ${Number(loan.amount).toLocaleString()}`,
-    InterestRate: `${loan.interest_rate}%`,
-    Duration: `${loan.duration_months} mo`,
-    Status: loan.status.toUpperCase(),
-    Start: loan.approval_date?.split('T')[0] || 'N/A',
-    DisbursedAmount: formatNaira(loan.total_disbursed),
-  }));
+const transformExportLoan = (loan) => ({
+  LoanRef: loan.reference || 'N/A',
+  Member: loan.applicant_name || 'N/A',
+  Amount: `NGN ${Number(loan.amount || 0).toLocaleString()}`,
+  InterestRate: loan.interest_rate !== undefined ? `${loan.interest_rate}%` : 'N/A',
+  Duration: loan.duration_months !== undefined ? `${loan.duration_months} mo` : 'N/A',
+  Status: loan.status ? loan.status.toUpperCase() : 'N/A',
+  Start: loan.approval_date?.split('T')[0] || 'N/A',
+  DisbursedAmount: formatNaira(loan.total_disbursed ?? 0),
+});
 
-  const exportToExcel = () => {
-    if (!exportData.length) return;
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Loans');
-    XLSX.writeFile(workbook, 'loans.xlsx');
-  };
+const previewExportData = (loansData || []).map(transformExportLoan);
 
-  const exportToCSV = () => {
-    if (!exportData.length) return;
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Loans');
-    XLSX.writeFile(workbook, 'loans.csv', { bookType: 'csv' });
-  };
+const exportToExcel = async () => {
+  toast.info('Preparing Excel export...');
+  const exportData = await getAllPaginatedDataForExport({
+    url: '/admin/loan/loans-admin/',
+    filters,
+    transformFn: transformExportLoan,
+  });
+  if (!exportData?.length) return toast.warn('No data to export.');
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Loans');
+  XLSX.writeFile(workbook, 'loans.xlsx');
+  toast.success('Excel export complete.');
+};
 
-  const exportToPDF = () => {
-    if (!exportData.length) return;
+
+const exportToCSV = async () => {
+  toast.info('Preparing CSV export...');
+  const exportData = await getAllPaginatedDataForExport({
+    url: '/admin/loan/loans-admin/',
+    filters,
+    transformFn: transformExportLoan,
+  });
+  if (!exportData?.length) return toast.warn('No data to export.');
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Loans');
+  XLSX.writeFile(workbook, 'loans.csv', { bookType: 'csv' });
+  toast.success('CSV export complete.');
+};
+
+const exportToPDF = async () => {
+  toast.info('Preparing PDF export...');
+  try {
+    const exportData = await getAllPaginatedDataForExport({
+      url: '/admin/loan/loans-admin/',
+      filters,
+      transformFn: transformExportLoan,
+    });
+
+    if (!exportData || !Array.isArray(exportData) || exportData.length === 0) {
+      toast.warn('No data to export.');
+      return;
+    }
+
     const doc = new jsPDF();
     doc.text('Loan Management', 14, 15);
     autoTable(doc, {
@@ -204,17 +238,12 @@ const {
       headStyles: { fillColor: [63, 81, 181] },
     });
     doc.save('loans.pdf');
-  };
-
-  const handlePrint = () => {
-    if (!printRef.current) return;
-    const printContents = printRef.current.innerHTML;
-    const originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
-  };
+    toast.success('PDF export complete.');
+  } catch (err) {
+    console.error('PDF export failed:', err);
+    toast.error('Failed to export PDF.');
+  }
+};
 
 
   const renderPagination = (page, totalPages, setPage) => (
@@ -224,15 +253,15 @@ const {
       <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</button>
     </div>
   );
-useEffect(() => {
-  setApplicationPage(1);
-  setLoanPage(1);
-}, [filters]);
+    useEffect(() => {
+      setApplicationPage(1);
+      setLoanPage(1);
+    }, [filters]);
   return (
     <div className="loan-management">
       <h2>Loan Management</h2>
 
-      <div className="filter-section">
+  <div className="filter-section">
        <small className="form-hint">Search with:</small>
        <input
   className="filter-input"
@@ -266,11 +295,10 @@ useEffect(() => {
 
 
         <ExportPrintGroup
-          data={exportData}
+          data={previewExportData}
           exportToExcel={exportToExcel}
           exportToPDF={exportToPDF}
           exportToCSV={exportToCSV}
-          handlePrint={handlePrint}
         />
       </div>
       

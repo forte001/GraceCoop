@@ -6,8 +6,10 @@ import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData';
+import { toast } from 'react-toastify';
+import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 
-// No change to imports...
+
 const MemberContributionList = () => {
   const [error, setError] = useState(null);
 
@@ -28,57 +30,63 @@ const MemberContributionList = () => {
 
   const printRef = useRef();
 
-  const exportToExcel = () => {
-    if (!data?.length) return;
-    const excelData = data.map((item) => ({
-      PaidBy: item.member_name || 'N/A',
-      Amount: formatNaira(item.amount),
-      PaymentDate: item.date?.split('T')[0] || 'N/A',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
-    XLSX.writeFile(workbook, 'contributions.xlsx');
-  };
+  const transformExportContribution = (item) => ({
+  PaidBy: item.member_name || 'N/A',
+  Amount: `NGN ${(item.amount)}`,
+  PaymentDate: item.date?.split('T')[0] || 'N/A',
+});
 
-  const exportToPDF = () => {
-    if (!data?.length) return;
-    const doc = new jsPDF();
-    doc.text('Contributions List', 14, 15);
-    autoTable(doc, {
-      startY: 20,
-      head: [['Paid By', 'Amount', 'Payment Date']],
-      body: data.map((item) => [
-        item.member_name || 'N/A',
-        formatNaira(item.amount),
-        item.date?.split('T')[0] || 'N/A',
-      ]),
-    });
-    doc.save('contributions.pdf');
-  };
+const previewExportData = (data || []).map(transformExportContribution);
 
-  const exportToCSV = () => {
-    if (!data?.length) return;
-    const csvData = data.map((item) => ({
-      PaidBy: item.member_name || 'N/A',
-      Amount: formatNaira(item.amount),
-      PaymentDate: item.date?.split('T')[0] || 'N/A',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(csvData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
-    XLSX.writeFile(workbook, 'contributions.csv', { bookType: 'csv' });
-  };
+const exportToExcel = async () => {
+  toast.info('Preparing Excel export...');
+  const exportData = await getAllPaginatedDataForExport({
+    url: '/members/contribution/contributions-list/',
+    filters,
+    transformFn: transformExportContribution,
+  });
+  if (!exportData.length) return toast.warn('No data to export.');
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
+  XLSX.writeFile(workbook, 'contributions.xlsx');
+  toast.success('Excel export complete.');
+};
 
-  const handlePrint = () => {
-    if (!printRef.current) return;
-    const printContents = printRef.current.innerHTML;
-    const originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
-  };
+const exportToCSV = async () => {
+  toast.info('Preparing CSV export...');
+  const exportData = await getAllPaginatedDataForExport({
+    url: '/members/contribution/contributions-list/',
+    filters,
+    transformFn: transformExportContribution,
+  });
+  if (!exportData.length) return toast.warn('No data to export.');
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
+  XLSX.writeFile(workbook, 'contributions.csv', { bookType: 'csv' });
+  toast.success('CSV export complete.');
+};
+
+const exportToPDF = async () => {
+  toast.info('Preparing PDF export...');
+  const exportData = await getAllPaginatedDataForExport({
+    url: '/members/contribution/contributions-list/',
+    filters,
+    transformFn: transformExportContribution,
+  });
+  if (!exportData.length) return toast.warn('No data to export.');
+  const doc = new jsPDF();
+  doc.text('Contributions List', 14, 15);
+  autoTable(doc, {
+    startY: 20,
+    head: [['Paid By', 'Amount', 'Payment Date']],
+    body: exportData.map((item) => Object.values(item)),
+  });
+  doc.save('contributions.pdf');
+  toast.success('PDF export complete.');
+};
+
 
   return (
     <div className="loan-management">
@@ -105,11 +113,10 @@ const MemberContributionList = () => {
         />
 
         <ExportPrintGroup
-          data={data || []}
+          data={previewExportData}
           exportToExcel={exportToExcel}
           exportToPDF={exportToPDF}
           exportToCSV={exportToCSV}
-          handlePrint={handlePrint}
         />
       </div>
 

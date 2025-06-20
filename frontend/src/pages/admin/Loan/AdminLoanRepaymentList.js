@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -6,66 +6,96 @@ import autoTable from 'jspdf-autotable';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
+import { toast } from 'react-toastify';
 
 const AdminLoanRepaymentList = () => {
-  const {
-  data,
-  currentPage,
-  pageSize,
-  totalPages,
-  loading,
-  setCurrentPage,
-  setPageSize,
-  filters,
-  setFilters,
-} = usePaginatedData('/admin/loan/repayments-admin/', {
-  loan__reference: '',
-  payment_date_after: '',
-  payment_date_before: '',
-  was_late: '',
-  ordering: '-payment_date',
-});
-
-
   const printRef = useRef();
 
-  const exportData = data.map((repayment) => ({
+  const {
+    data,
+    currentPage,
+    pageSize,
+    totalPages,
+    loading,
+    setCurrentPage,
+    setPageSize,
+    filters,
+    setFilters,
+  } = usePaginatedData('/admin/loan/repayments-admin/', {
+    loan__reference: '',
+    payment_date_after: '',
+    payment_date_before: '',
+    was_late: '',
+    ordering: '-payment_date',
+  });
+
+  const transformFn = (repayment) => ({
     LoanRef: repayment.loan_reference || 'N/A',
     PaidBy: repayment.paid_by_name || 'N/A',
     Amount: `NGN ${Number(repayment.amount).toLocaleString()}`,
-    PaymentDate: repayment.recorded_at?.split('T')[0],
+    PaymentDate: repayment.recorded_at?.split('T')[0] || 'N/A',
     DueDate: repayment.due_date || 'N/A',
     WasLate: repayment.was_late ? 'Yes' : 'No',
-  }));
+  });
 
-  const exportToExcel = () => {
-    if (!exportData.length) return;
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Repayments');
-    XLSX.writeFile(workbook, 'repayments.xlsx');
-  };
+  const handleExport = async (format) => {
+    toast.loading(`Exporting as ${format.toUpperCase()}...`, { toastId: 'loan-export' });
 
-  const exportToCSV = () => {
-    if (!exportData.length) return;
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Repayments');
-    XLSX.writeFile(workbook, 'repayments.csv', { bookType: 'csv' });
-  };
-
-  const exportToPDF = () => {
-    if (!exportData.length) return;
-    const doc = new jsPDF();
-    doc.text('Loan Repayments', 14, 15);
-    autoTable(doc, {
-      startY: 20,
-      head: [['Loan Ref', 'Paid By', 'Amount', 'Payment Date', 'Due Date', 'Late?']],
-      body: exportData.map((repayment) => Object.values(repayment)),
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [76, 175, 80] },
+    const exportData = await getAllPaginatedDataForExport({
+      url: '/admin/loan/repayments-admin/',
+      filters,
+      transformFn,
     });
-    doc.save('repayments.pdf');
+
+    if (!exportData.length) {
+      toast.update('loan-export', {
+        render: 'No data to export.',
+        type: 'warning',
+        isLoading: false,
+        autoClose: 3000,
+      });
+      return;
+    }
+
+    try {
+      if (format === 'excel') {
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Repayments');
+        XLSX.writeFile(workbook, 'repayments.xlsx');
+      } else if (format === 'csv') {
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Repayments');
+        XLSX.writeFile(workbook, 'repayments.csv', { bookType: 'csv' });
+      } else if (format === 'pdf') {
+        const doc = new jsPDF();
+        doc.text('Loan Repayments', 14, 15);
+        autoTable(doc, {
+          startY: 20,
+          head: [['Loan Ref', 'Paid By', 'Amount', 'Payment Date', 'Due Date', 'Late?']],
+          body: exportData.map((item) => Object.values(item)),
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [76, 175, 80] },
+        });
+        doc.save('repayments.pdf');
+      }
+
+      toast.update('loan-export', {
+        render: `Exported as ${format.toUpperCase()}`,
+        type: 'success',
+        isLoading: false,
+        autoClose: 3000,
+      });
+    } catch (err) {
+      toast.update('loan-export', {
+        render: `Failed to export ${format.toUpperCase()}`,
+        type: 'error',
+        isLoading: false,
+        autoClose: 3000,
+      });
+    }
   };
 
   const handlePrint = () => {
@@ -124,12 +154,11 @@ const AdminLoanRepaymentList = () => {
           <option value="false">On Time</option>
         </select>
 
-
         <ExportPrintGroup
-          data={exportData}
-          exportToExcel={exportToExcel}
-          exportToPDF={exportToPDF}
-          exportToCSV={exportToCSV}
+          data={data}
+          exportToExcel={() => handleExport('excel')}
+          exportToPDF={() => handleExport('pdf')}
+          exportToCSV={() => handleExport('csv')}
           handlePrint={handlePrint}
         />
       </div>
@@ -175,7 +204,6 @@ const AdminLoanRepaymentList = () => {
         </table>
       </div>
 
-      {/* Pagination Controls */}
       <div className="pagination-controls">
         <button
           onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}

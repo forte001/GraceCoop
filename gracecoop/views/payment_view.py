@@ -3,24 +3,30 @@ import uuid
 from django.shortcuts import get_object_or_404
 import requests
 from django.conf import settings
-from rest_framework import status, views,serializers
+from rest_framework import status, views,serializers, viewsets
 from rest_framework.response import Response
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 import json, hmac, hashlib
 from django.http import JsonResponse
 from django.utils import timezone
-from gracecoop.models import Payment, CooperativeConfig, Loan, MemberProfile, Contribution, Levy
+from gracecoop.models import Payment, Contribution, Levy
 from ..serializers import (LoanPaymentInitiateSerializer, 
                            LoanPaymentVerifySerializer, 
                            ContributionPaymentInitiateSerializer,
                            LevyPaymentInitiateSerializer,
-                           EntryPaymentInitiateSerializer)
+                           EntryPaymentInitiateSerializer,
+                           PaymentSerializer)
 from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from ..utils import apply_loan_repayment, generate_payment_reference
 from decimal import Decimal
 from django.db.models import Sum
+from django_filters.rest_framework import DjangoFilterBackend
+from ..filters import PaymentFilter
+from ..permissions import IsAdminUser
+from gracecoop.pagination import StandardResultsSetPagination
+from rest_framework.filters import SearchFilter, OrderingFilter
 
 
 ####################################################
@@ -432,3 +438,13 @@ class PaystackWebhookView(views.APIView):
 
         return JsonResponse({'status': 'success'})
 
+
+class AdminPaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Payment.objects.select_related('member', 'loan').all().order_by('-created_at')
+    serializer_class = PaymentSerializer
+    permission_classes = [IsAdminUser]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = PaymentFilter
+    search_fields = ['reference', 'source_reference', 'member__full_name']
+    ordering_fields = ['created_at', 'amount']

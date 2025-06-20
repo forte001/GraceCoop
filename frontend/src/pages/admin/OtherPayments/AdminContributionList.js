@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -6,80 +6,79 @@ import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData';
+import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
+import { toast } from 'react-toastify';
 
 const AdminContributionList = () => {
-//   const [filters, setFilters] = useState({
-//     member_name: '',
-//     payment_date_after: '',
-//     payment_date_before: '',
-//     ordering: '-date',
-//   });
+  const printRef = useRef();
 
- const printRef = useRef();
+  const {
+    data: contributions,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    goToPage,
+    filters,
+    setFilters,
+  } = usePaginatedData('/admin/contribution/contributions-admin/');
 
-const {
-  data,
-  loading,
-  error,
-  currentPage,
-  totalPages,
-  goToPage,
-  filters,
-  setFilters,
-} = usePaginatedData('/admin/contribution/contributions-admin/');
+  const transformExportContribution = (item) => ({
+    PaidBy: item.member_name || 'N/A',
+    Amount: `NGN ${(item.amount)}`,
+    PaymentDate: item.date?.split('T')[0] || 'N/A',
+  });
 
-  const exportData = data || [];
+  const previewExportData = (contributions || []).map(transformExportContribution);
 
-  const exportToExcel = () => {
-    if (!exportData.length) return;
-    const excelData = exportData.map((item) => ({
-      PaidBy: item.member_name || 'N/A',
-      Amount: formatNaira(item.amount),
-      PaymentDate: item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
+  const exportToExcel = async () => {
+    toast.info('Preparing Excel export...');
+    const exportData = await getAllPaginatedDataForExport({
+      url: '/admin/contribution/contributions-admin/',
+      filters,
+      transformFn: transformExportContribution,
+    });
+    if (!exportData?.length) return toast.warn('No data to export.');
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
     XLSX.writeFile(workbook, 'contributions.xlsx');
+    toast.success('Excel export complete.');
   };
 
-  const exportToPDF = () => {
-    if (!exportData.length) return;
+  const exportToCSV = async () => {
+    toast.info('Preparing CSV export...');
+    const exportData = await getAllPaginatedDataForExport({
+      url: '/admin/contribution/contributions-admin/',
+      filters,
+      transformFn: transformExportContribution,
+    });
+    if (!exportData?.length) return toast.warn('No data to export.');
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
+    XLSX.writeFile(workbook, 'contributions.csv', { bookType: 'csv' });
+    toast.success('CSV export complete.');
+  };
+
+  const exportToPDF = async () => {
+    toast.info('Preparing PDF export...');
+    const exportData = await getAllPaginatedDataForExport({
+      url: '/admin/contribution/contributions-admin/',
+      filters,
+      transformFn: transformExportContribution,
+    });
+
+    if (!exportData?.length) return toast.warn('No data to export.');
     const doc = new jsPDF();
     doc.text('Contributions List', 14, 15);
     autoTable(doc, {
       startY: 20,
       head: [['Paid By', 'Amount', 'Payment Date']],
-      body: exportData.map((item) => [
-        item.member_name || 'N/A',
-        formatNaira(item.amount),
-        item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
-      ]),
+      body: exportData.map((item) => Object.values(item)),
     });
     doc.save('contributions.pdf');
-  };
-
-  const exportToCSV = () => {
-    if (!exportData.length) return;
-    const excelData = exportData.map((item) => ({
-      PaidBy: item.member_name || 'N/A',
-      Amount: formatNaira(item.amount),
-      PaymentDate: item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
-    XLSX.writeFile(workbook, 'contributions.csv', { bookType: 'csv' });
-  };
-
-  const handlePrint = () => {
-    if (!printRef.current) return;
-    const printContents = printRef.current.innerHTML;
-    const originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
+    toast.success('PDF export complete.');
   };
 
   return (
@@ -88,46 +87,38 @@ const {
 
       <div className="filter-group">
         <input
-  className="filter-input"
-  placeholder="Member name"
-  value={filters.member_name || ''}
-  onChange={(e) =>
-    setFilters((f) => ({ ...f, member_name: e.target.value }))
-  }
-/>
-
-<small className="form-hint">Start Date:</small>
-<input
-  type="date"
-  className="filter-input"
-  value={filters.payment_date_after || ''}
-  onChange={(e) =>
-    setFilters((f) => ({ ...f, payment_date_after: e.target.value }))
-  }
-/>
-
-<small className="form-hint">End Date:</small>
-<input
-  type="date"
-  className="filter-input"
-  value={filters.payment_date_before || ''}
-  onChange={(e) =>
-    setFilters((f) => ({ ...f, payment_date_before: e.target.value }))
-  }
-/>
-
+          className="filter-input"
+          placeholder="Member name"
+          value={filters.member_name || ''}
+          onChange={(e) => setFilters((f) => ({ ...f, member_name: e.target.value }))}
+        />
+        <small className="form-hint">Start Date:</small>
+        <input
+          type="date"
+          className="filter-input"
+          value={filters.payment_date_after || ''}
+          onChange={(e) => setFilters((f) => ({ ...f, payment_date_after: e.target.value }))}
+        />
+        <small className="form-hint">End Date:</small>
+        <input
+          type="date"
+          className="filter-input"
+          value={filters.payment_date_before || ''}
+          onChange={(e) => setFilters((f) => ({ ...f, payment_date_before: e.target.value }))}
+        />
 
         <ExportPrintGroup
-          data={exportData}
+          data={previewExportData}
           exportToExcel={exportToExcel}
           exportToPDF={exportToPDF}
           exportToCSV={exportToCSV}
-          handlePrint={handlePrint}
+          
         />
       </div>
 
       {loading && <p>Loading...</p>}
       {error && <p style={{ color: 'red' }}>Error loading contributions.</p>}
+
       <div ref={printRef}>
         <table className="loan-table">
           <thead>
@@ -138,12 +129,12 @@ const {
             </tr>
           </thead>
           <tbody>
-            {exportData.length > 0 ? (
-              exportData.map((item) => (
+            {contributions?.length > 0 ? (
+              contributions.map((item) => (
                 <tr key={item.id}>
                   <td>{item.member_name || 'N/A'}</td>
                   <td>{formatNaira(item.amount)}</td>
-                  <td>{item.date?.split('T')[0]}</td>
+                  <td>{item.date?.split('T')[0] || 'N/A'}</td>
                 </tr>
               ))
             ) : (
@@ -157,19 +148,15 @@ const {
         </table>
       </div>
 
-      {/* {totalPages > 1 && ( */}
-        <div className="pagination">
-          <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
-            Previous
-          </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
-            Next
-          </button>
-        </div>
-    {/* //   )} */}
+      <div className="pagination">
+        <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+          Previous
+        </button>
+        <span>Page {currentPage} of {totalPages}</span>
+        <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
+          Next
+        </button>
+      </div>
     </div>
   );
 };

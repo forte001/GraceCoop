@@ -4,7 +4,8 @@ from .models import (LoanRepayment,
                      Levy, Loan, 
                      LoanApplication,
                      MemberProfile, 
-                     CooperativeConfig)
+                     CooperativeConfig,
+                     Payment)
 from django.db.models import Q
 
 class LoanApplicationFilter(django_filters.FilterSet):
@@ -150,3 +151,14 @@ class CooperativeConfigFilter(django_filters.FilterSet):
     class Meta:
         model = CooperativeConfig
         fields = ['status', 'effective_date_after', 'effective_date_before']
+
+
+class PaymentFilter(django_filters.FilterSet):
+    payment_type = django_filters.CharFilter(lookup_expr='iexact')
+    verified = django_filters.BooleanFilter()
+    member__full_name = django_filters.CharFilter(field_name='member__full_name', lookup_expr='icontains')
+    created_at = django_filters.DateFromToRangeFilter()
+
+    class Meta:
+        model = Payment
+        fields = ['payment_type', 'verified', 'member__full_name', 'created_at']

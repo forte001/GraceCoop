@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-function ExportPrintGroup({ data, exportToExcel, exportToPDF, exportToCSV, handlePrint }) {
+function ExportPrintGroup({ data, exportToExcel, exportToPDF, exportToCSV}) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -83,18 +83,7 @@ function ExportPrintGroup({ data, exportToExcel, exportToPDF, exportToCSV, handl
               Export to CSV
             </button>
           </li>
-          <li>
-            <button
-              onClick={() => {
-                handlePrint();
-                setOpen(false);
-              }}
-              style={dropdownButtonStyle}
-              disabled={disabled}
-            >
-              Print Table
-            </button>
-          </li>
+          
         </ul>
       )}
     </div>

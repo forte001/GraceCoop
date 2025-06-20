@@ -6,6 +6,8 @@ import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData';
+import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
+import { toast } from 'react-toastify';
 
 const MemberLevyList = () => {
   const {
@@ -26,57 +28,63 @@ const MemberLevyList = () => {
 
   const printRef = useRef();
 
-  const exportToExcel = () => {
-    if (!data?.length) return;
-    const excelData = data.map((item) => ({
-      PaidBy: item.member_name || 'N/A',
-      Amount: formatNaira(item.amount),
-      PaymentDate: item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Levies');
-    XLSX.writeFile(workbook, 'levies.xlsx');
-  };
+const transformExportLevy = (item) => ({
+  PaidBy: item.member_name || 'N/A',
+  Amount: `NGN ${(item.amount)}`,
+  PaymentDate: item.date?.split('T')[0] || 'N/A',
+});
 
-  const exportToPDF = () => {
-    if (!data?.length) return;
-    const doc = new jsPDF();
-    doc.text('Levies List', 14, 15);
-    autoTable(doc, {
-      startY: 20,
-      head: [['Paid By', 'Amount', 'Payment Date']],
-      body: data.map((item) => [
-        item.member_name || 'N/A',
-        formatNaira(item.amount),
-        item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
-      ]),
-    });
-    doc.save('levies.pdf');
-  };
+const previewExportData = (data || []).map(transformExportLevy);
 
-  const exportToCSV = () => {
-    if (!data?.length) return;
-    const excelData = data.map((item) => ({
-      PaidBy: item.member_name || 'N/A',
-      Amount: formatNaira(item.amount),
-      PaymentDate: item.payment_date || item.recorded_at?.split('T')[0] || 'N/A',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Levies');
-    XLSX.writeFile(workbook, 'levies.csv', { bookType: 'csv' });
-  };
+const exportToExcel = async () => {
+  toast.info('Preparing Excel export...');
+  const exportData = await getAllPaginatedDataForExport({
+    url: '/members/levy/levy-list/',
+    filters,
+    transformFn: transformExportLevy,
+  });
+  if (!exportData.length) return toast.warn('No data to export.');
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Levies');
+  XLSX.writeFile(workbook, 'levies.xlsx');
+  toast.success('Excel export complete.');
+};
 
-  const handlePrint = () => {
-    if (!printRef.current) return;
-    const printContents = printRef.current.innerHTML;
-    const originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
-  };
+const exportToCSV = async () => {
+  toast.info('Preparing CSV export...');
+  const exportData = await getAllPaginatedDataForExport({
+    url: '/members/levy/levy-list/',
+    filters,
+    transformFn: transformExportLevy,
+  });
+  if (!exportData.length) return toast.warn('No data to export.');
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Levies');
+  XLSX.writeFile(workbook, 'levies.csv', { bookType: 'csv' });
+  toast.success('CSV export complete.');
+};
+
+const exportToPDF = async () => {
+  toast.info('Preparing PDF export...');
+  const exportData = await getAllPaginatedDataForExport({
+    url: '/members/levy/levy-list/',
+    filters,
+    transformFn: transformExportLevy,
+  });
+  if (!exportData.length) return toast.warn('No data to export.');
+  const doc = new jsPDF();
+  doc.text('Levies List', 14, 15);
+  autoTable(doc, {
+    startY: 20,
+    head: [['Paid By', 'Amount', 'Payment Date']],
+    body: exportData.map((item) => Object.values(item)),
+  });
+  doc.save('levies.pdf');
+  toast.success('PDF export complete.');
+};
+
 
   return (
     <div className="loan-management">
@@ -103,11 +111,10 @@ const MemberLevyList = () => {
         />
 
         <ExportPrintGroup
-          data={data}
+          data={previewExportData}
           exportToExcel={exportToExcel}
           exportToPDF={exportToPDF}
           exportToCSV={exportToCSV}
-          handlePrint={handlePrint}
         />
       </div>
 
@@ -128,7 +135,7 @@ const MemberLevyList = () => {
                 <tr key={item.id}>
                   <td>{item.member_name || 'N/A'}</td>
                   <td>{formatNaira(item.amount)}</td>
-                  <td>{item.payment_date || item.recorded_at?.split('T')[0] || 'N/A'}</td>
+                  <td>{item.date?.split('T')[0] || 'N/A'}</td>
                 </tr>
               ))
             ) : (

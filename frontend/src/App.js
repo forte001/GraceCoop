@@ -39,6 +39,7 @@ import AdminContributionList from './pages/admin/OtherPayments/AdminContribution
 import MemberContributionList from './pages/members/OtherPayments/MemberContributionList';
 import MemberLevyList from './pages/members/OtherPayments/MemberLevyList';
 import AdminLevyList from './pages/admin/OtherPayments/AdminLevyList';
+import AdminAllPayments from './pages/admin/OtherPayments/AdminAllPayments';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -151,6 +152,7 @@ const App = () => {
         <Route path="loan/repayment-list" element={<AdminLoanRepaymentList />} />
         <Route path="payments/contributions" element={<AdminContributionList />} />
         <Route path="payments/levies" element={<AdminLevyList />} />
+        <Route path="all-payments" element={<AdminAllPayments/>} />
         <Route path="settings/theme" element={<ThemeSwitcher />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="2fa/setup" element={<TwoFASetup />} />

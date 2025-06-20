@@ -63,6 +63,11 @@ urlpatterns = [
    ### Admin levy-related routes
    path('levy/', include('gracecoop.urls.levy_urls')),
 
+    ### Admin payment-related routes
+   path('payment/', include('gracecoop.urls.payment_urls')),
+
+
+
    ### Cooperative admin config urls
    path('', include(router.urls)),
   
