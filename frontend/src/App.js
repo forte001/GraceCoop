@@ -40,6 +40,7 @@ import MemberContributionList from './pages/members/OtherPayments/MemberContribu
 import MemberLevyList from './pages/members/OtherPayments/MemberLevyList';
 import AdminLevyList from './pages/admin/OtherPayments/AdminLevyList';
 import AdminAllPayments from './pages/admin/OtherPayments/AdminAllPayments';
+import MemberAllPaymentsList from './pages/members/OtherPayments/MemberAllPaymentsList';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -135,7 +136,8 @@ const App = () => {
       <Route path="pay/contribution" element={<ContributionPayment />} />
       <Route path="pay/levy" element={<DevelopmentLevyPayment />} />
       <Route path="contribution-list" element={<MemberContributionList />} />
-       <Route path="levy-list" element={<MemberLevyList />} />
+      <Route path="levy-list" element={<MemberLevyList />} />
+      <Route path="all-payments" element={<MemberAllPaymentsList/>} />
       <Route path="edit-profile" element={<EditProfilePage />} />
       <Route path="settings/2fa" element={<TwoFAToggle />} />
       <Route path="2fa/setup" element={<TwoFASetup />} />

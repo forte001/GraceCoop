@@ -20,7 +20,8 @@ from gracecoop.views.payment_view import (LoanPaymentInitiateView,
                                           LevyPaymentInitiateView,
                                           LevyPaymentVerifyView,
                                           EntryPaymentInitiateView,
-                                          EntryPaymentVerifyView)
+                                          EntryPaymentVerifyView,
+                                          MemberPaymentViewSet)
 
 router = DefaultRouter()
 router.register(r'profiles', MemberViewSet, basename='member-profile')
@@ -67,6 +68,8 @@ urlpatterns = [
     path('levy/pay/initiate/', LevyPaymentInitiateView.as_view(), name='levy-initiate'),
     path('levy/pay/verify/', LevyPaymentVerifyView.as_view(), name='levy-verify'),
 
+    ### Payment-related endpoints
+    path('payment/', include('gracecoop.urls.payment_urls')),
 
 
     ### New member entry payments endpoints

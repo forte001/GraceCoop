@@ -96,6 +96,7 @@ const MemberLayout = () => {
                   </button>
                   {isPaymentsOpen && (
                     <ul className="submenu">
+                      <li><Link to="/member/all-payments">All Payments</Link></li>
                       <li><Link to="/member/loan-repayments">Loan Repayments</Link></li>
                       <li><Link to="/member/contribution-list">Contribution</Link></li>
                       <li><Link to="/member/levy-list">Development Levy</Link></li>

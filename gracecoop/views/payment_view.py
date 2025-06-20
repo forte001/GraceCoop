@@ -448,3 +448,19 @@ class AdminPaymentViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = PaymentFilter
     search_fields = ['reference', 'source_reference', 'member__full_name']
     ordering_fields = ['created_at', 'amount']
+
+class MemberPaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = PaymentFilter
+    search_fields = ['reference', 'source_reference']
+    ordering_fields = ['created_at', 'amount']
+
+    def get_queryset(self):
+        return (
+            Payment.objects.select_related('member', 'loan')
+            .filter(member=self.request.user.memberprofile)
+            .order_by('-created_at')
+        )
