@@ -1,161 +1,186 @@
 /* src/components/admin/AdminLayout.css */
 
 .admin-layout {
-    display: flex;
-    height: 100vh;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  }
-  
-  .sidebar {
-    width: 240px;
-    background-color: #c4ccdd;
-    color: #f9fafb;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  }
-  
-  .sidebar-nav {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-top: 40px;
-  }
-  
-  .sidebar h3 {
-    font-size: 1.4rem;
-    color: #23314c;
-    margin: 0;
-  }
-  
-  .sidebar ul {
-    list-style: none;
-    padding: 0;
-    margin: 20px 0 0 0;
-  }
-  
-  .sidebar li {
-    margin-bottom: 10px;
-    
-  }
-  
-  .sidebar a {
-    color: #f3f4f6;
-    text-decoration: none;
-    display: block;
-    padding: 10px 15px;
-    border-radius: 8px;
-    transition: background 0.3s ease, color 0.3s ease;
-  }
-  
-  .sidebar a:hover,
-  .sidebar a:focus,
-  .sidebar a.active {
-    background-color: #2563eb;
-    color: #ffffff;
-  }
-  
-  .logout-button {
-    background-color: #ef4444;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
-  }
-  
-  .logout-button:hover {
-    background-color: #dc2626;
-  }
-  
-  .main-content {
-    flex-grow: 1;
-    background-color: #f9fafb;
-    padding: 30px;
-    overflow-y: auto;
-    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.05);
-  }
-  
-  .sidebar-link {
-    padding: 10px 15px;
-    color: #23314c;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: background 0.3s ease;
-  }
-  
-  .sidebar-link:hover {
-    background-color: #2563eb;
-    color: white;
-  }
-  
-  .collapsible {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .submenu {
-    list-style: none;
-    padding-left: 15px;
-    margin-top: 5px;
-  }
-  
-  .submenu li {
-    margin-bottom: 6px;
-  }
-  
-  .submenu a {
-    display: block;
-    padding: 8px 15px;
-    font-size: 0.95rem;
-    color: #cbd5e1;
-    border-radius: 6px;
-    transition: background 0.3s ease;
-  }
-  
-  .submenu a:hover,
-  .submenu a.active {
-    background-color: #3b82f6;
-    color: white;
-  }
-  
-  .sidebar-link.collapsible {
-    background: none;
-    border: none;
-    color: #23314c;
-    padding: 10px 15px;
-    text-align: left;
-    width: 100%;
-    cursor: pointer;
-    font-size: 1rem;
-    border-radius: 8px;
-    transition: background 0.3s ease;
-  }
-  
-  .sidebar-link.collapsible:hover {
-    background-color: #2563eb;
-    color: #ffffff;
-  }
-  
-  .submenu {
-    list-style: none;
-    padding-left: 20px;
-    margin-top: 5px;
-  }
-  
-  .submenu li {
-    margin-bottom: 8px;
-  }
-  
-  .submenu select {
-    width: 100%;
-    padding: 6px;
-    margin-top: 4px;
-  }
-  
+  display: flex;
+  height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.sidebar {
+  width: 240px;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h3 {
+  font-size: 1.4rem;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.sidebar-nav {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 40px;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0 0;
+}
+
+.sidebar li {
+  margin-bottom: 10px;
+  color: var(--text-color); 
+}
+
+.sidebar a:visited,
+.submenu a:visited {
+  color: var(--text-color);
+}
+
+.sidebar a,
+.sidebar-link,
+.submenu a {
+  display: block;
+  padding: 10px 15px;
+  font-size: 0.95rem;
+  color: var(--text-color);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.sidebar a:hover,
+.sidebar a:focus,
+.sidebar a.active,
+.sidebar-link:hover,
+.sidebar-link:focus,
+.sidebar-link.active {
+  background-color: #2563eb;
+  color: #ffffff !important; 
+}
+
+
+.sidebar-link.collapsible {
+  background: none;
+  border: none;
+  padding: 10px 15px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.collapsible {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.submenu {
+  list-style: none;
+  padding-left: 20px;
+  margin-top: 5px;
+}
+
+.submenu li {
+  margin-bottom: 8px;
+}
+
+.submenu label,
+.submenu select {
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.submenu select {
+  width: 100%;
+  padding: 6px;
+  margin-top: 4px;
+  background-color: var(--bg-color);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.logout-button {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.logout-button:hover {
+  background-color: #dc2626;
+}
+
+.main-content {
+  flex-grow: 1;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  padding: 30px;
+  overflow-y: auto;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.main-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.theme-toggle-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.theme-toggle-floating {
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  z-index: 999;
+  display: flex;
+  gap: 8px;
+  background-color: var(--bg-color);
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.theme-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--text-color);
+  color: var(--text-color);
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  font-size: 16px;
+}
+
+.theme-toggle-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.theme-toggle-btn.active {
+  background-color: var(--accent-dark, #2563eb);
+  color: white;
+  border-color: transparent;
+}
+
+
+

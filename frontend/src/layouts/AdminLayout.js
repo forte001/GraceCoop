@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
+import { ThemeContext } from '../components/ThemeContext';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { setTheme, getInitialTheme } from '../utils/theme';
 import '../styles/admin/AdminLayout.css';
 
 const AdminLayout = () => {
@@ -20,11 +20,7 @@ const AdminLayout = () => {
     location.pathname.startsWith('/admin/settings')
   );
 
-  const [theme, setThemeState] = useState(getInitialTheme());
-
-  useEffect(() => {
-    setTheme(theme);
-  }, [theme]);
+  const { theme, setTheme } = useContext(ThemeContext);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -36,11 +32,6 @@ const AdminLayout = () => {
   const toggleLoanMenu = () => setIsLoanOpen(prev => !prev);
   const togglePaymentsMenu = () => setIsPaymentsOpen(prev => !prev);
   const toggleSettingsMenu = () => setIsSettingsOpen(prev => !prev);
-
-  const handleThemeChange = (e) => {
-    const selectedTheme = e.target.value;
-    setThemeState(selectedTheme);
-  };
 
   return (
     <div className="admin-layout">
@@ -97,14 +88,6 @@ const AdminLayout = () => {
               </button>
               {isSettingsOpen && (
                 <ul className="submenu">
-                  <li>
-                    <label htmlFor="theme-select">Theme:</label>
-                    <select id="theme-select" value={theme} onChange={handleThemeChange}>
-                      <option value="light">Light</option>
-                      <option value="dark">Dark</option>
-                      <option value="system">System</option>
-                    </select>
-                  </li>
                   <li><Link to="/admin/settings/2fa">Two-Factor Auth</Link></li>
                   <li><Link to="/admin/coop-config">Cooperative Config</Link></li>
                 </ul>
@@ -119,6 +102,30 @@ const AdminLayout = () => {
       </aside>
 
       <main className="main-content">
+        <div className="theme-toggle-floating">
+          <button
+            className={`theme-toggle-btn ${theme === 'light' ? 'active' : ''}`}
+            onClick={() => setTheme('light')}
+            title="Light mode"
+          >
+            🌞
+          </button>
+          <button
+            className={`theme-toggle-btn ${theme === 'dark' ? 'active' : ''}`}
+            onClick={() => setTheme('dark')}
+            title="Dark mode"
+          >
+            🌙
+          </button>
+          <button
+            className={`theme-toggle-btn ${theme === 'system' ? 'active' : ''}`}
+            onClick={() => setTheme('system')}
+            title="System default"
+          >
+            🖥
+          </button>
+        </div>
+
         <Outlet />
       </main>
     </div>

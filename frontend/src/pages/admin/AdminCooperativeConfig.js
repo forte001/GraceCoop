@@ -1,7 +1,7 @@
 
 import React, { useRef, useState } from 'react';
 import usePaginatedData from '../../utils/usePaginatedData';
-import axiosInstance from '../../utils/axiosInstance';
+import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import '../../styles/admin/CooperativeConfig.css';
 
 const AdminCooperativeConfig = () => {
@@ -50,7 +50,7 @@ const AdminCooperativeConfig = () => {
     }
 
     try {
-      await axiosInstance.post('/admin/cooperative-config/', newConfig);
+      await axiosAdminInstance.post('/admin/cooperative-config/', newConfig);
       setMessage('✅ Config created successfully!');
       setNewConfig({
         entry_shares_amount: '',
@@ -73,7 +73,7 @@ const AdminCooperativeConfig = () => {
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      await axiosInstance.patch(`/admin/cooperative-config/${id}/`, { status: newStatus });
+      await axiosAdminInstance.patch(`/admin/cooperative-config/${id}/`, { status: newStatus });
       setCurrentPage(1);
     } catch (error) {
       console.error('Error updating status', error);

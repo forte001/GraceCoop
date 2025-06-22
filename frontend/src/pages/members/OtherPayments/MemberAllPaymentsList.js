@@ -32,10 +32,10 @@ const MemberAllPaymentsList = () => {
 
   const transformExportPayment = (payment) => ({
     Type: payment.payment_type.toUpperCase() || 'N/A',
-    Amount: `NGN ${Number(payment.amount).toLocaleString()}`,
-    Verified: payment.verified ? 'Yes' : 'No',
-    CreatedAt: payment.created_at?.split('T')[0] || 'N/A',
     Reference: payment.reference || 'N/A',
+    Amount: `NGN ${Number(payment.amount).toLocaleString()}`,
+    CreatedAt: payment.created_at?.split('T')[0] || 'N/A',
+    Verified: payment.verified ? 'Yes' : 'No',
   });
 
   const previewExportData = (data || []).map(transformExportPayment);
@@ -177,10 +177,11 @@ const MemberAllPaymentsList = () => {
           <thead>
             <tr>
               <th>Type</th>
-              <th>Amount</th>
-              <th>Verified</th>
-              <th>Created At</th>
               <th>Ref</th>
+              <th>Amount</th>
+              <th>Created At</th>
+              <th>Verified</th>
+              
             </tr>
           </thead>
           <tbody>
@@ -188,10 +189,11 @@ const MemberAllPaymentsList = () => {
               data.map((p) => (
                 <tr key={p.id}>
                   <td>{p.payment_type?.toUpperCase()}</td>
-                  <td>{formatNaira(p.amount)}</td>
-                  <td>{p.verified ? 'Yes' : 'No'}</td>
-                  <td>{p.created_at?.split('T')[0]}</td>
                   <td>{p.reference}</td>
+                  <td>{formatNaira(p.amount)}</td>
+                  <td>{p.created_at?.split('T')[0]}</td>
+                  <td>{p.verified ? 'Yes' : 'No'}</td>
+                  
                 </tr>
               ))
             ) : (

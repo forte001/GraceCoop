@@ -5,7 +5,11 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
+
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
@@ -16,22 +20,24 @@ code {
 :root {
   --bg-color: #ffffff;
   --text-color: #111827;
+  --link-hover-bg: #2563eb;
+  --link-hover-text: #ffffff;
+  --sidebar-bg-color: #e5e7eb;
+  --accent: #d1fae5;
+  --accent-dark: #10b981;
 }
 
 [data-theme='dark'] {
   --bg-color: #111827;
   --text-color: #f9fafb;
+  --link-hover-bg: #3b82f6;
+  --link-hover-text: #ffffff;
+  --sidebar-bg-color: #111827;
+  --accent: #374151;
+  --accent-dark: #2563eb;
 }
 
-body {
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  transition: background-color 0.3s ease, color 0.3s ease;
+html, body, #root {
+  height: 100%;
 }
 
-.admin-layout,
-.sidebar,
-.main-content {
-  background-color: var(--bg-color);
-  color: var(--text-color);
-}

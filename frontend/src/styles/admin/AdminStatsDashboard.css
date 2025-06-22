@@ -7,11 +7,12 @@
 }
 
 .stat-card {
-  background-color: #fff;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  box-shadow: 0 2px 6px var(--card-shadow);
   border-left: 6px solid #ccc;
   border-radius: 10px;
   padding: 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease-in-out;
 }
 

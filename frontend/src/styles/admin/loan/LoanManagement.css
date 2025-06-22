@@ -1,516 +1,425 @@
-/* LoanManagement.css */
+/* Light mode (default) */
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f9f9f9;
+  --text: #333;
+  --text-light: #666;
+  --primary: #4caf50;
+  --primary-dark: #45a049;
+  --danger: #f44336;
+  --danger-dark: #d32f2f;
+  --accent: #007bff;
+  --accent-dark: #0056b3;
+}
 
-/* Main container styling */
+/* Dark mode */
+[data-theme="dark"] {
+  --bg: #121212;
+  --bg-alt: #1e1e1e;
+  --text: #f1f1f1;
+  --text-light: #ccc;
+  --primary: #81c784;
+  --primary-dark: #66bb6a;
+  --danger: #e57373;
+  --danger-dark: #d32f2f;
+  --accent: #64b5f6;
+  --accent-dark: #1976d2;
+}
+
+
+/* ============================================
+   Loan Management
+============================================ */
 .loan-management {
-    padding: 20px;
-    font-family: 'Arial', sans-serif;
-    background-color: #f4f4f9;  /* Light background for the whole page */
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  /* Header Styling */
-  .loan-management h2 {
-    font-size: 24px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 20px;
-  }
-  
-  /* Table styling */
-  .loan-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for the table */
-    border-radius: 8px; /* Rounded corners for the table */
-  }
-  
-  /* Table Header Styling */
-  .loan-table th {
-    background-color: #4CAF50; /* Green background for table headers */
-    color: white;
-    font-weight: bold;
-    padding: 14px 16px;
-    text-align: left;
-    text-transform: uppercase; /* Uppercase for better emphasis */
-    border-radius: 8px 8px 0 0; /* Rounded top corners */
-  }
-  
-  /* Table Cell Styling */
-  .loan-table th, .loan-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  /* Alternate Row Coloring */
-  .loan-table tr:nth-child(even) {
-    background-color: #f9f9f9; /* Light gray background for even rows */
-  }
-  
-  .loan-table tr:nth-child(odd) {
-    background-color: #ffffff; /* White background for odd rows */
-  }
-  
-  /* Hover Effect for Rows */
-  .loan-table tr:hover {
-    background-color: #e8f5e9; /* Light green when hovering */
-  }
-  
-  /* Action Buttons */
-  .loan-table button {
-    padding: 8px 16px;
-    margin-right: 10px;
-    border: none;
-    background-color: #007BFF; /* Blue color for buttons */
-    color: white;
-    cursor: pointer;
-    border-radius: 5px;
-    font-size: 14px;
-    transition: background-color 0.2s ease-in-out;
-  }
-  
-  .loan-table button:hover {
-    background-color: #0056b3; /* Darker blue on hover */
-  }
-  
-  /* Modal overlay */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-  }
-  
-  /* Modal */
-  .modal {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: 400px;
-    animation: modalIn 0.3s ease-out;
-  }
-  
-  @keyframes modalIn {
-    0% {
-      transform: scale(0.9);
-      opacity: 0;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-  
-  .modal h3 {
-    font-size: 22px;
-    font-weight: 600;
-    margin-bottom: 20px;
-    color: #333;
-    text-align: center;
-  }
-  
-  /* Modal Form Inputs */
-  .modal input,
-  .modal textarea {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-    font-size: 14px;
-  }
-  
-  .modal input:focus,
-  .modal textarea:focus {
-    outline: none;
-    border-color: #4caf50;
-    box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
-  }
-  
-  /* Submit and Cancel Buttons */
-  .modal button[type='submit'],
-  .modal button[type='button'] {
-    width: 48%;
-    padding: 10px;
-    margin: 10px 1%;
-    font-size: 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
-  }
-  
-  .modal button[type='submit'] {
-    background-color: #4CAF50; /* Green */
-    color: white;
-  }
-  
-  .modal button[type='submit']:hover {
-    background-color: #45a049;
-  }
-  
-  .modal button[type='button'] {
-    background-color: #f44336; /* Red */
-    color: white;
-  }
-  
-  .modal button[type='button']:hover {
-    background-color: #d32f2f;
-  }
-  
-  /* Repayment Schedule Section */
-  .repayment-schedule {
-    margin-top: 30px;
-  }
-  
-  .repayment-schedule table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  
-  .repayment-schedule th, .repayment-schedule td {
-    padding: 10px;
-    text-align: left;
-    border: 1px solid #ddd;
-  }
-  
-  .repayment-schedule th {
-    background-color: #4CAF50; /* Green header */
-    color: white;
-  }
-  
-  .repayment-schedule td {
-    background-color: #fff;
-  }
-  
-  .repayment-schedule tr:nth-child(even) {
-    background-color: #f9f9f9;
-  }
-  
-  .repayment-schedule tr:hover {
-    background-color: #e8f5e9;
-  }
-  
-  /* Loan Summary Section */
-  .loan-summary {
-    margin-top: 30px;
-    background-color: #f9f9f9;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .loan-summary h3 {
-    margin-bottom: 15px;
-  }
-  
-  .loan-summary p {
-    font-size: 16px;
-    margin: 10px 0;
-  }
-  
-  .loan-summary strong {
-    font-weight: bold;
-  }
-  
-  /* Button Styles for Grace Period Approval */
-  button {
-    background-color: #007BFF;
-    border: none;
-    color: white;
-    padding: 8px 16px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 5px;
-    margin-top: 10px;
-  }
-  
-  button:hover {
-    background-color: #0056b3;
-  }
-  
-  /* Adjustments for responsive design */
-  @media screen and (max-width: 768px) {
-    .loan-table th,
-    .loan-table td {
-      padding: 10px;
-    }
-  
-    .loan-table button {
-      padding: 8px 16px;
-      font-size: 14px;
-    }
-  
-    .modal {
-      width: 90%;
-      padding: 15px;
-    }
-  
-    .modal input,
-    .modal button {
-      width: 100%;
-      font-size: 14px;
-    }
-  
-    .repayment-schedule table,
-    .loan-summary {
-      margin-top: 20px;
-    }
-  }
-  
-/* Additional styles for disbursement list under each loan (if displayed) */
+  padding: 20px;
+  font-family: 'Arial', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.loan-management h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+/* ============================================
+   Loan Table
+============================================ */
+.loan-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.loan-table th,
+.loan-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  color: var(--text);
+}
+
+.loan-table th {
+  background-color: #4CAF50;
+  color: white;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-radius: 8px 8px 0 0;
+}
+
+.loan-table tr:nth-child(even),
+.loan-table tr:nth-child(odd) {
+  background-color: var(--bg-alt);
+}
+
+.loan-table tr:hover {
+  background-color: var(--bg-alt);
+}
+
+.loan-table button {
+  padding: 8px 16px;
+  margin-right: 10px;
+  border: none;
+  background-color: #007BFF;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 14px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.loan-table button:hover {
+  background-color: #0056b3;
+}
+
+/* ============================================
+   Repayment Schedule
+============================================ */
+.repayment-schedule {
+  margin-top: 30px;
+}
+
+.repayment-schedule table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.repayment-schedule th,
+.repayment-schedule td {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid #ddd;
+}
+
+.repayment-schedule th {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.repayment-schedule td {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+.repayment-schedule tr:nth-child(even) {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+.repayment-schedule tr:hover {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+/* ============================================
+   Loan Summary
+============================================ */
+.loan-summary {
+  margin-top: 30px;
+  background-color: var(--bg);
+  color: var(--text);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.loan-summary h3 {
+  margin-bottom: 15px;
+}
+
+.loan-summary p {
+  font-size: 16px;
+  margin: 10px 0;
+}
+
+.loan-summary strong {
+  font-weight: bold;
+}
+
+/* ============================================
+   Disbursement Details
+============================================ */
 .disbursement-details {
-    background-color: #eef7f1;
-    margin: 10px 0;
-    padding: 10px 15px;
-    border-left: 4px solid #4CAF50;
-    border-radius: 6px;
-    font-size: 14px;
-  }
-  
-  .disbursement-details p {
-    margin: 4px 0;
-    color: #333;
-  }
-  
-  /* Grace period status and approval */
-  .grace-period {
-    margin-top: 10px;
-    font-size: 14px;
-    color: #666;
-  }
-  
-  .grace-period .approved {
-    color: green;
-    font-weight: bold;
-  }
-  
-  .grace-period .not-approved {
-    color: #d9534f;
-    font-weight: bold;
-  }
-  
-  /* Installments label (clarified for partial disbursement) */
-  .modal label[for="installments"] {
-    display: block;
-    margin-top: 10px;
-    color: #333;
-  }
-  
-  /* Responsive tweak: show fewer actions in stacked layout */
-  @media screen and (max-width: 600px) {
-    .loan-table td button {
-      margin-top: 5px;
-      display: block;
-      width: 100%;
-    }
-  
-    .loan-summary, .repayment-schedule {
-      font-size: 14px;
-    }
-  
-    .repayment-schedule th, .repayment-schedule td {
-      font-size: 13px;
-      padding: 6px;
-    }
-  }
-  
-  /* Consistent button group styling in action column */
-  .loan-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  
-  .loan-actions button {
-    flex: 1 1 auto;
-    min-width: 90px;
-  }
+  background-color: var(--bg-alt);
+  color: var(--text);
+  border-left: 4px solid var(--primary);
+  margin: 10px 0;
+  padding: 10px 15px;
+  border-radius: 6px;
+  font-size: 14px;
+}
 
-  .loan-tabs {
-    margin-bottom: 1rem;
-  }
-  
-  .loan-tabs button {
-    padding: 10px 20px;
-    margin-right: 10px;
-    background-color: #f5f5f5;
-    border: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-    color: #333; /* Adding this line to makes the text dark */
-  }
-  
-  .loan-tabs button.active {
-    border-bottom: 2px solid #007bff;
-    background-color: #e8f0fe;
-    font-weight: bold;
-    color: #000; /* Ensure active tab text is black */
-  }
-  
-  .status-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-weight: bold;
-    color: white;
-    text-transform: capitalize;
-  }
-  
-  .status-pending {
-    background-color: #f0ad4e; /* amber */
-  }
-  
-  .status-approved {
-    background-color: #5bc0de; /* blue */
-  }
-  
-  .status-disbursed {
-    background-color: #5cb85c; /* green */
-  }
-  
-  .status-partially_disbursed {
-    background-color: #f7a35c; /* light orange */
-  }
-  
-  .status-grace_applied {
-    background-color: #9370DB; /* purple */
-  }
-  
-  .status-paid_off {
-    background-color: #333; /* dark gray */
-  }
-  
-  .status-rejected {
-    background-color: #d9534f; /* red */
-  }
+.disbursement-details p {
+  margin: 4px 0;
+  color: #333;
+}
 
-  Style for active and toggled buttons
-button.active {
-    background-color: #007bff;
-    color: white;
-  }
-  
-  button:hover {
-    background-color: #0056b3;
-    cursor: pointer;
-  }
-  
-  Modal overlay and modal styles
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  .modal {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    max-width: 500px;
-    width: 100%;
-  }
-  
-  .loan-summary {
-    background-color: #f9f9f9;
-    padding: 15px;
-    border-radius: 4px;
-  }
-  
-  .loan-table th, .loan-table td {
-    padding: 12px;
-    text-align: center;
-  }
-  
-  .loan-tabs button.active {
-    font-weight: bold;
-    background-color: #0056b3;
-    color: #fff;
-  }
+/* ============================================
+   Grace Period
+============================================ */
+.grace-period {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+}
 
-  button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
+.grace-period .approved {
+  color: green;
+  font-weight: bold;
+}
 
-  input[type="number"] {
-    padding: 8px;
-    margin-bottom: 10px;
-    width: 100%;
-  }
-  
-  input:disabled {
-    background-color: #f0f0f0;
-  }
+.grace-period .not-approved {
+  color: #d9534f;
+  font-weight: bold;
+}
 
-  .summary-row td, .schedule-row td {
-    background-color: #fafafa;
-    border-top: 2px solid #eee;
-    padding-top: 10px;
-  }
-  
-  .loan-summary {
-    padding: 10px;
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-  
-  .repayment-schedule {
-    margin-top: 10px;
-  }
-
-  .loan-table.inner {
-    margin-top: 10px;
-    background-color: #f9f9f9;
-  }
-  
-  .loan-summary {
-    margin-top: 10px;
-    padding: 10px;
-    background-color: #eef;
-    border-radius: 5px;
-  }
-  
-  button.disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
-
-  .modal form label {
-    display: block;
-    margin-top: 10px;
-  }
-  
-  .modal form input,
-  .modal form select {
-    width: 100%;
-    padding: 6px;
-    margin-top: 4px;
-    margin-bottom: 10px;
-  }
-.loan-actions.compact {
- 
-  gap: 4px;
-  flex-wrap: wrap;
+/* ============================================
+   Modal
+============================================ */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
   align-items: center;
+  z-index: 9999;
+}
+
+.modal {
+  background-color: var(--bg);
+  color: var(--text);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  animation: modalIn 0.3s ease-out;
+  max-width: 500px;
+}
+
+.modal h3 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+  color: var(--text);
+}
+
+.modal input,
+.modal textarea,
+.modal select {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  background-color: var(--bg-alt);
+  color: var(--text);
+}
+
+.modal input:focus,
+.modal textarea:focus,
+.modal select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.modal label {
+  display: block;
+  margin-top: 10px;
+  color: var(--text);
+}
+
+.modal button[type='submit'],
+.modal button[type='button'] {
+  width: 48%;
+  padding: 10px;
+  margin: 10px 1%;
+  font-size: 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.modal button[type='submit'] {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.modal button[type='submit']:hover {
+  background-color: #45a049;
+}
+
+.modal button[type='button'] {
+  background-color: #f44336;
+  color: white;
+}
+
+.modal button[type='button']:hover {
+  background-color: #d32f2f;
+}
+
+@keyframes modalIn {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   Tabs
+============================================ */
+.loan-tabs {
+  margin-bottom: 1rem;
+}
+
+.loan-tabs button {
+  padding: 10px 20px;
+  margin-right: 10px;
+  background-color: var(--bg-alt);
+  color: var(--text);
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.loan-tabs button.active {
+  background-color: var(--accent);
+  color: var(--text);
+  border-bottom: 2px solid var(--accent-dark);
+  font-weight: bold;
+}
+
+/* ============================================
+   Status Badges
+============================================ */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  color: white;
+  text-transform: capitalize;
+}
+
+.status-pending { background-color: #f0ad4e; }
+.status-approved { background-color: #5bc0de; }
+.status-disbursed { background-color: #5cb85c; }
+.status-partially_disbursed { background-color: #f7a35c; }
+.status-grace_applied { background-color: #9370DB; }
+.status-paid_off { background-color: #333; }
+.status-rejected { background-color: #d9534f; }
+
+/* ============================================
+   Filters and Export
+============================================ */
+.filter-input,
+.filter-select {
+  padding: 8px 12px;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.filter-input {
+  max-width: 250px;
+}
+
+.filter-select {
+  min-width: 120px;
+  cursor: pointer;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.export-button {
+  padding: 8px 16px;
+  border: none;
+  background-color: #007BFF;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 14px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.export-button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.export-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ============================================
+   Actions & Buttons
+============================================ */
+button {
+  background-color: #007BFF;
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: var(--accent-dark);
+}
+
+button.active {
+  background-color: #007bff;
+  color: white;
+}
+
+button:disabled,
+button.disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
 .icon-button {
@@ -527,65 +436,90 @@ button.active {
   background-color: #f0f0f0;
 }
 
-.icon-button:disabled,
-.icon-button.disabled {
+.icon-button:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
-/* Filters input styling */
-.filter-input {
-  padding: 8px 12px;
-  border-radius: 5px;
-  border: 1px solid #ddd;
-  font-size: 14px;
-  max-width: 250px;
-  transition: border-color 0.2s ease-in-out;
+/* ============================================
+   Miscellaneous
+============================================ */
+input[type="number"] {
+  padding: 8px;
+  margin-bottom: 10px;
+  width: 100%;
 }
 
-.filter-input:focus {
-  outline: none;
-  border-color: #4caf50;
-  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+input:disabled {
+  background-color: #f0f0f0;
 }
 
-/* Filters select styling */
-.filter-select {
-  padding: 8px 12px;
-  border-radius: 5px;
-  border: 1px solid #ddd;
-  font-size: 14px;
-  min-width: 120px;
-  cursor: pointer;
-  transition: border-color 0.2s ease-in-out;
+.summary-row td,
+.schedule-row td {
+  background-color: var(--bg);
+  color: var(--text);
+  border-top: 2px solid #eee;
+  padding-top: 10px;
 }
 
-.filter-select:focus {
-  outline: none;
-  border-color: #4caf50;
-  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+.loan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-/* Export button styling */
-.export-button {
-  padding: 8px 16px;
-  border: none;
-  background-color: #007BFF; /* Blue */
-  color: white;
-  cursor: pointer;
-  border-radius: 5px;
-  font-size: 14px;
-  transition: background-color 0.2s ease-in-out;
+.loan-actions button {
+  flex: 1 1 auto;
+  min-width: 90px;
 }
 
-.export-button:hover:not(:disabled) {
-  background-color: #0056b3; /* Darker blue on hover */
+.loan-actions.compact {
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.export-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+/* ============================================
+   Responsive
+============================================ */
+@media screen and (max-width: 768px) {
+  .loan-table th,
+  .loan-table td {
+    padding: 10px;
+  }
+
+  .loan-table button {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .modal {
+    width: 90%;
+    padding: 15px;
+  }
+
+  .modal input,
+  .modal button {
+    width: 100%;
+    font-size: 14px;
+  }
+
+  .loan-summary,
+  .repayment-schedule {
+    margin-top: 20px;
+    font-size: 14px;
+  }
 }
 
+@media screen and (max-width: 600px) {
+  .loan-table td button {
+    margin-top: 5px;
+    display: block;
+    width: 100%;
+  }
 
-  
+  .repayment-schedule th,
+  .repayment-schedule td {
+    font-size: 13px;
+    padding: 6px;
+  }
+}

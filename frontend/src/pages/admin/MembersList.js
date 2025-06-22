@@ -3,6 +3,8 @@ import usePaginatedData from '../../utils/usePaginatedData';
 import '../../styles/admin/Members.css';
 import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import ExportPrintGroup from '../../components/ExportPrintGroup';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const MembersList = () => {
   const {
@@ -89,17 +91,16 @@ const MembersList = () => {
   };
 
   const exportToPDF = () => {
-    const jsPDF = require('jspdf');
-    const autoTable = require('jspdf-autotable');
-    const doc = new jsPDF();
-    doc.text('Approved Members', 14, 15);
-    autoTable(doc, {
-      startY: 20,
-      head: [['Name', 'ID', 'Email', 'Phone', 'Status', 'Joined']],
-      body: exportData.map(row => Object.values(row)),
-    });
-    doc.save('approved_members.pdf');
-  };
+  const doc = new jsPDF();
+  doc.text('Approved Members', 14, 15);
+  autoTable(doc, {
+    startY: 20,
+    head: [['Name', 'ID', 'Email', 'Phone', 'Status', 'Joined']],
+    body: exportData.map(row => Object.values(row)),
+  });
+  doc.save('approved_members.pdf');
+};
+
 
   const handlePrint = () => {
     if (!printRef.current) return;

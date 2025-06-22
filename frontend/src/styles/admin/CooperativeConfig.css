@@ -1,5 +1,7 @@
 .admin-config-page {
   padding: 20px;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .header-row {
@@ -29,6 +31,8 @@
 .config-table th, .config-table td {
   border: 1px solid #ddd;
   padding: 8px;
+  background-color: var(--card-bg);
+  color: var(--text-color);
 }
 
 .modal-overlay {

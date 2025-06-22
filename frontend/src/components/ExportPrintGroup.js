@@ -28,7 +28,7 @@ function ExportPrintGroup({ data, exportToExcel, exportToPDF, exportToCSV}) {
         }}
         title="Export or Print options"
       >
-        Export / Print ▾
+        Export ▾
       </button>
 
       {open && (

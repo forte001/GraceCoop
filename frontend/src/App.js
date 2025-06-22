@@ -15,7 +15,7 @@ import AdminLayout from './layouts/AdminLayout';
 import MemberLayout from './layouts/MemberLayout';
 import './App.css';
 import ThemeSwitcher from './components/ThemeSwitcher';
-import { getInitialTheme, applyTheme } from './utils/theme';
+// import { getInitialTheme, applyTheme } from './utils/theme';
 import CompleteProfile from './pages/members/CompleteProfile';
 import EditProfilePage from "./pages/members/EditProfilePage";
 import Permissions from './pages/admin/Permissions';
@@ -49,10 +49,10 @@ const MainPage = () => {
   ensureCsrf();
 }, []);
 
-  useEffect(() => {
-    const savedTheme = getInitialTheme();
-    applyTheme(savedTheme);
-  }, []);
+  // useEffect(() => {
+  //   const savedTheme = getInitialTheme();
+  //   applyTheme(savedTheme);
+  // }, []);
 
   return (
     <div className="landing-container">
