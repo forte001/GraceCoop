@@ -3,13 +3,13 @@
   max-width: 600px;
   margin: 30px auto;
   padding: 20px;
-  background-color: #f7f7f7;
+  background-color: var(--bg-color);
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .loan-application-form-container h2 {
-  color: #333;
+  color: var(--text-color);
   text-align: center;
   margin-bottom: 20px;
 }
@@ -18,18 +18,23 @@ form label {
   display: block;
   margin-bottom: 8px;
   font-weight: 600;
+  color: var(--text-color);
 }
 
-form input, form select {
+form input,
+form select {
   width: 100%;
   padding: 10px;
   margin-bottom: 20px;
   border-radius: 5px;
   border: 1px solid #ddd;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
-form input:focus, form select:focus {
-  border-color: #007bff;
+form input:focus,
+form select:focus {
+  border-color: var(--primary-button-bg);
   outline: none;
 }
 
@@ -50,35 +55,31 @@ form button:hover {
 
 .form-message {
   margin-top: 10px;
-  color: #ff6f61;
+  color: var(--error-text);
   text-align: center;
+  font-weight: bold;
+}
+
+.form-message.success {
+  color: var(--success-text);
 }
 
 /* Styling for Loan Category and Interest Rate */
 .loan-application-form-container input[readonly] {
-  background-color: #f1f1f1;
+  background-color: var(--sidebar-bg-color);
   cursor: not-allowed;
-}
-
-/* Error and Success Messages */
-.form-message {
-  font-weight: bold;
-  color: #e74c3c;
-}
-
-.form-message.success {
-  color: #28a745;
 }
 
 /* Loan Application History Card Styles */
 .loan-application-history-container {
   margin: 40px auto;
-  max-width: 900px;
+  max-width: 1500px;
+  padding: 0 20px;
 }
 
 .loan-application-history-container h2 {
   text-align: center;
-  color: #333;
+  color: var(--text-color);
   margin-bottom: 20px;
 }
 
@@ -88,7 +89,7 @@ form button:hover {
   justify-content: space-between;
   margin-bottom: 20px;
   padding: 20px;
-  background-color: #fff;
+  background-color: var(--bg-color);
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -107,21 +108,21 @@ form button:hover {
 .loan-application-card .card-item h4 {
   font-size: 16px;
   font-weight: 600;
-  color: #555;
+  color: var(--text-color);
 }
 
 .loan-application-card .card-item p {
   font-size: 14px;
-  color: #777;
+  color: var(--text-color);
 }
 
 .loan-application-card .card-item span {
   font-weight: bold;
-  color: #333;
+  color: var(--text-color);
 }
 
 .loan-application-card .status-pending {
-  background-color: #ffc107;
+  background-color: var(--alert-border);
   color: #fff;
   padding: 4px 8px;
   border-radius: 4px;
@@ -145,113 +146,9 @@ form button:hover {
 }
 
 .loan-application-card .view-details {
-  text-align: center;
   padding: 8px 12px;
-  background-color: #007bff;
-  color: white;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 10px;
-  text-decoration: none;
-}
-
-.loan-application-card .view-details:hover {
-  background-color: #0056b3;
-}
-
-/* Loan Application History Container */
-.loan-application-history-container {
-  margin: 40px auto;
-  max-width: 1500px; /* Expanded the width for better spacing */
-  padding: 0 20px;
-}
-
-.loan-application-history-container h2 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-/* Loan Application Card - Displaying fields in a single row */
-.loan-application-card {
-  display: flex;
-  justify-content: space-between; /* Distribute items evenly */
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  flex-wrap: wrap; /* Allow items to wrap in smaller screens */
-}
-
-/* Each field item inside the card */
-.loan-application-card .card-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-right: 20px;
-  text-align: center;
-  min-width: 130px; /* Ensures proper width for all fields in one row */
-  flex: 1;
-}
-
-/* Avoid extra space on the last card item */
-.loan-application-card .card-item:last-child {
-  margin-right: 0;
-}
-
-/* Headings in the card items */
-.loan-application-card .card-item h4 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #555;
-  margin-bottom: 8px;
-}
-
-/* Paragraphs in the card items (Loan amount, category, etc.) */
-.loan-application-card .card-item p {
-  font-size: 14px;
-  color: #777;
-  margin: 0;
-}
-
-/* Bold text for values */
-.loan-application-card .card-item span {
-  font-weight: bold;
-  color: #333;
-}
-
-/* Loan status tags */
-.loan-application-card .status-pending {
-  background-color: #ffc107;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
-.loan-application-card .status-approved {
-  background-color: #28a745;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
-.loan-application-card .status-rejected {
-  background-color: #dc3545;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
-/* Button styling */
-.loan-application-card .view-details {
-  padding: 8px 12px;
-  background-color: #007bff;
-  color: white;
+  background-color: var(--primary-button-bg);
+  color: var(--primary-button-text);
   border-radius: 5px;
   cursor: pointer;
   margin-top: 10px;
@@ -260,19 +157,19 @@ form button:hover {
 }
 
 .loan-application-card .view-details:hover {
-  background-color: #0056b3;
+  background-color: var(--primary-button-hover-bg);
 }
 
 /* Responsive design for smaller screens */
 @media (max-width: 768px) {
   .loan-application-card {
-    flex-direction: column; /* Stack items vertically on small screens */
+    flex-direction: column;
   }
 
   .loan-application-card .card-item {
     margin-right: 0;
-    min-width: 100%; /* Allow each item to take up full width on smaller screens */
-    text-align: left; /* Left-align the text for better readability */
+    min-width: 100%;
+    text-align: left;
   }
 }
 
@@ -287,7 +184,7 @@ form button:hover {
 
 .loan-details-section {
   margin-top: 20px;
-  background: #f9f9f9;
+  background: var(--accent);
   padding: 12px;
   border-radius: 8px;
 }
@@ -303,21 +200,37 @@ form button:hover {
   border: 1px solid #ccc;
   padding: 6px 10px;
   text-align: center;
+  color: var(--text-color);
+  background-color: var(--bg-color);
 }
+
 .filter-form {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap; /* Allow wrapping if needed on smaller screens */
 }
 
 .filter-form select,
 .filter-form input,
 .filter-form button {
-  padding: 2px 6px;         /* Reduced padding */
-  font-size: 0.85rem;       /* Slightly smaller text */
-  height: 25px;             /* More compact height */
+  padding: 2px 6px;
+  font-size: 0.85rem;
+  height: 25px;
   width: auto;
   max-width: 140px;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  border: 1px solid #ccc;
+}
+
+.filter-form button {
+  background-color: var(--primary-button-bg);
+  color: var(--primary-button-text);
+  border: none;
+  cursor: pointer;
+}
+
+.filter-form button:hover {
+  background-color: var(--primary-button-hover-bg);
 }

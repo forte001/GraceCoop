@@ -1,55 +1,108 @@
 .member-layout {
-    display: flex;
-    min-height: 100vh;
-    font-family: sans-serif;
-  }
-  
-  .member-sidebar {
-    width: 220px;
-    background-color: #f8fafc;
-    padding: 1rem;
-    border-right: 1px solid #e5e7eb;
-  }
-  
-  .member-content {
-    flex-grow: 1;
-    padding: 2rem;
-    background-color: #ffffff;
-  }
-  
-  .sidebar-nav {
-    list-style: none;
-    padding: 0;
-  }
-  
-  .sidebar-nav li {
-    margin: 10px 0;
-  }
-  
-  .sidebar-nav a {
-    color: #111827;
-    text-decoration: none;
-    font-weight: 500;
-  }
-  
-  .sidebar-nav a:hover {
-    text-decoration: underline;
-  }
-  
-  .logout-button {
-    margin-top: 20px;
-    background-color: #ef4444;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  
-  .member-fullname {
+  display: flex;
+  min-height: 100vh;
+  font-family: sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+.member-sidebar {
+  width: 220px;
+  background-color: var(--sidebar-bg);
+  padding: 1rem;
+  border-right: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+.member-content {
+  flex-grow: 1;
+  padding: 2rem;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+.sidebar-nav {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar-nav li {
+  margin: 10px 0;
+}
+
+.sidebar-nav a,
+.sidebar-link {
+  color: var(--text-color);
+  text-decoration: none;
+  font-weight: 500;
+  display: block;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-nav a:hover,
+.sidebar-link:hover {
+  background-color: var(--hover-bg-color);
+}
+
+.submenu {
+  padding-left: 10px;
+  margin-top: 5px;
+}
+
+.submenu li {
+  margin-bottom: 8px;
+}
+
+.submenu a {
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.logout-button {
+  margin-top: 20px;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: #dc2626;
+}
+
+.member-fullname {
   margin: 1rem 0;
   padding: 0.5rem;
   font-size: 1rem;
-  color: #fff; /*adjust to your theme*/
+  color: var(--text-color);
   text-align: center;
+}
+
+.theme-toggle-container {
+  position: sticky;
+  top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  z-index: 20;
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: var(--text-color);
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
 }

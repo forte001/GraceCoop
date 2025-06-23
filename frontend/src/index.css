@@ -25,6 +25,18 @@ code {
   --sidebar-bg-color: #e5e7eb;
   --accent: #d1fae5;
   --accent-dark: #10b981;
+  --primary-button-bg: #007bff;
+  --primary-button-hover-bg: #0056b3;
+  --primary-button-text: #ffffff;
+
+  --alert-bg: #fff3cd;
+  --alert-border: #ffc107;
+  --alert-text: #856404;
+  --alert-heading: #856404;
+
+  --error-text: red;
+  --success-text: green;
+  
 }
 
 [data-theme='dark'] {
@@ -35,6 +47,17 @@ code {
   --sidebar-bg-color: #111827;
   --accent: #374151;
   --accent-dark: #2563eb;
+  --primary-button-bg: #2563eb;
+  --primary-button-hover-bg: #1d4ed8;
+  --primary-button-text: #ffffff;
+
+  --alert-bg: #3b3b1d;
+  --alert-border: #facc15;
+  --alert-text: #fef08a;
+  --alert-heading: #fde047;
+
+  --error-text: #f87171;
+  --success-text: #4ade80;
 }
 
 html, body, #root {

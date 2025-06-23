@@ -1,33 +1,26 @@
 import React, { useContext, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MemberContext } from '../components/MemberContext';
+import { ThemeContext } from '../components/ThemeContext';
+import { FaMoon, FaSun, FaDesktop } from 'react-icons/fa';
 import '../styles/members/MemberLayout.css';
 
 const MemberLayout = () => {
   const { memberProfile, loading } = useContext(MemberContext);
+  const { theme, setTheme } = useContext(ThemeContext);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [isLoanOpen, setIsLoanOpen] = useState(
-    location.pathname.startsWith('/member/loans')
-  );
+  const [isLoanOpen, setIsLoanOpen] = useState(location.pathname.startsWith('/member/loans'));
   const [isOtherPaymentsOpen, setIsOtherPaymentsOpen] = useState(
-    location.pathname.startsWith('/member/pay-contribution') ||
-    location.pathname.startsWith('/member/pay-development-levy')
+    location.pathname.startsWith('/member/pay-contribution') || location.pathname.startsWith('/member/pay-development-levy')
   );
   const [isPaymentsOpen, setIsPaymentsOpen] = useState(
     location.pathname.startsWith('/member/contribution') ||
     location.pathname.startsWith('/member/development_levy') ||
     location.pathname.startsWith('/member/loan-repayments')
   );
-  const [isSettingsOpen, setIsSettingsOpen] = useState(
-    location.pathname.startsWith('/member/settings')
-  );
-
-  const toggleLoanMenu = () => setIsLoanOpen(prev => !prev);
-  const toggleOtherPaymentsMenu = () => setIsOtherPaymentsOpen(prev => !prev);
-  const togglePaymentsMenu = () => setIsPaymentsOpen(prev => !prev);
-  const toggleSettingsMenu = () => setIsSettingsOpen(prev => !prev);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(location.pathname.startsWith('/member/settings'));
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -38,27 +31,37 @@ const MemberLayout = () => {
     navigate('/login');
   };
 
-  if (loading) {
-    return <div className="member-layout">Loading member data...</div>;
-  }
+  const toggleLoanMenu = () => setIsLoanOpen(prev => !prev);
+  const toggleOtherPaymentsMenu = () => setIsOtherPaymentsOpen(prev => !prev);
+  const togglePaymentsMenu = () => setIsPaymentsOpen(prev => !prev);
+  const toggleSettingsMenu = () => setIsSettingsOpen(prev => !prev);
 
   const fullName = memberProfile?.user?.username || '';
   const membershipStatus = memberProfile?.membership_status || '';
   const approvalStatus = memberProfile?.status || '';
   const isActiveMember = approvalStatus === 'approved' && membershipStatus === 'active';
 
+  const renderThemeIcon = () => {
+    switch (theme) {
+      case 'light': return <FaSun />;
+      case 'dark': return <FaMoon />;
+      default: return <FaDesktop />;
+    }
+  };
+
+  const cycleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    setTheme(nextTheme);
+  };
+
+  if (loading) return <div className="member-layout">Loading member data...</div>;
+
   return (
     <div className="member-layout">
       <aside className="member-sidebar">
         <div>
           <h3>Member Panel</h3>
-
-          {fullName && (
-            <div className="member-fullname">
-              <strong>{fullName}</strong>
-            </div>
-          )}
-
+          
           <ul className="sidebar-nav">
             <li><Link to="/member/dashboard">Dashboard</Link></li>
             <li><Link to="/member/profile">Profile</Link></li>
@@ -77,7 +80,6 @@ const MemberLayout = () => {
                     </ul>
                   )}
                 </li>
-
                 <li>
                   <button onClick={toggleOtherPaymentsMenu} className="sidebar-link collapsible">
                     Other Payments {isOtherPaymentsOpen ? '▾' : '▸'}
@@ -89,7 +91,6 @@ const MemberLayout = () => {
                     </ul>
                   )}
                 </li>
-
                 <li>
                   <button onClick={togglePaymentsMenu} className="sidebar-link collapsible">
                     Payments {isPaymentsOpen ? '▾' : '▸'}
@@ -103,9 +104,7 @@ const MemberLayout = () => {
                     </ul>
                   )}
                 </li>
-
                 <li><Link to="/member/reports">Reports</Link></li>
-
                 <li>
                   <button onClick={toggleSettingsMenu} className="sidebar-link collapsible">
                     Settings {isSettingsOpen ? '▾' : '▸'}
@@ -120,13 +119,20 @@ const MemberLayout = () => {
             )}
           </ul>
         </div>
-        <p>Logged in as: {fullName}</p>
+        
+        
+        <p>Logged in as: <strong>{fullName}</strong></p>
         <button onClick={handleLogout} className="logout-button">
           Logout
         </button>
       </aside>
 
       <main className="member-content">
+        <div className="theme-toggle-container">
+          <button className="theme-toggle-btn" onClick={cycleTheme} title={`Theme: ${theme}`}>
+            {renderThemeIcon()}
+          </button>
+        </div>
         <Outlet />
       </main>
     </div>
