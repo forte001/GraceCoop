@@ -484,6 +484,7 @@ class PaymentReceiptView(views.APIView):
     
 
 class VerifyReceiptView(views.APIView):
+    permission_classes = [AllowAny]
     def get(self, request, reference):
         payment = get_object_or_404(Payment, source_reference=reference, verified=True)
 

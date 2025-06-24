@@ -24,6 +24,7 @@ const MemberLevyList = () => {
     member_name: '',
     payment_date_after: '',
     payment_date_before: '',
+    source_reference: '',
     ordering: '-date',
   });
 
@@ -111,6 +112,16 @@ const downloadReceipt = async (sourceReference) => {
       <h2>Your Levies</h2>
 
       <div className="filter-group">
+        <small className="form-hint">Reference:</small>
+        <input
+          type="text"
+          className="filter-input"
+          placeholder="Enter reference"
+          value={filters.source_reference}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, source_reference: e.target.value }))
+          }
+        />
         <small className="form-hint">Start Date:</small>
         <input
           type="date"
@@ -144,7 +155,7 @@ const downloadReceipt = async (sourceReference) => {
         <table className="loan-table">
           <thead>
             <tr>
-              <th>Paid By</th>
+              <th>Reference</th>
               <th>Amount</th>
               <th>Payment Date</th>
               <th>Receipt</th>
@@ -154,7 +165,7 @@ const downloadReceipt = async (sourceReference) => {
             {data?.length > 0 ? (
               data.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.member_name || 'N/A'}</td>
+                  <td>{item.source_reference || 'N/A'}</td>
                   <td>{formatNaira(item.amount)}</td>
                   <td>{item.date?.split('T')[0] || 'N/A'}</td>
                   <td>

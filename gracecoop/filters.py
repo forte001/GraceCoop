@@ -72,10 +72,11 @@ class ContributionFilter(django_filters.FilterSet):
     member_name = django_filters.CharFilter(method='filter_by_member_name', label='Member Name')
     payment_date_after = django_filters.DateFilter(field_name='date', lookup_expr='gte')
     payment_date_before = django_filters.DateFilter(field_name='date', lookup_expr='lte')
+    source_reference = django_filters.CharFilter(field_name='source_reference', lookup_expr='icontains')
 
     class Meta:
         model = Contribution
-        fields = ['member_name', 'payment_date_after', 'payment_date_before']
+        fields = ['member_name', 'payment_date_after', 'payment_date_before', 'source_reference']
 
     def filter_by_member_name(self, queryset, name, value):
         return queryset.filter(
@@ -88,10 +89,11 @@ class LevyFilter(django_filters.FilterSet):
     member_name = django_filters.CharFilter(method='filter_by_member_name', label='Member Name')
     payment_date_after = django_filters.DateFilter(field_name='date', lookup_expr='gte')
     payment_date_before = django_filters.DateFilter(field_name='date', lookup_expr='lte')
+    source_reference = django_filters.CharFilter(field_name='source_reference', lookup_expr='icontains')
 
     class Meta:
         model = Levy
-        fields = ['member_name', 'payment_date_after', 'payment_date_before']
+        fields = ['member_name', 'payment_date_after', 'payment_date_before', 'source_reference']
 
     def filter_by_member_name(self, queryset, name, value):
         return queryset.filter(
