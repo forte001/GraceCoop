@@ -268,28 +268,35 @@ def generate_payment_reference(member, payment_type):
 
 def generate_payment_receipt(payment):
     base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
-    verify_url = f"{base_url}/api/members/payment/verify-receipt/{payment.source_reference}/"
-    # Generate QR code
+
+    # Generate QR code for receipt verification
+    verify_url = f"{base_url}/api/members/payment/verify-receipt/{payment.reference}/"
     qr = qrcode.make(verify_url)
     small_qr = qr.resize((100, 100), Image.Resampling.LANCZOS)
     qr_buffer = BytesIO()
     small_qr.save(qr_buffer, format="PNG")
     qr_b64 = base64.b64encode(qr_buffer.getvalue()).decode()
 
-    # Render HTML template
-    html_string = render_to_string("receipt_template.html", {
-    "payment": payment,
-    "qr_code": qr_b64,
-    "amount_words": payment.amount_to_words(),
-    "coop_name": "Grace Coop",
-    "verify_url": verify_url,
-    "logo_url": f"{settings.BASE_URL}/static/images/logo.png",
-    "loan_reference": payment.loan.reference if payment.payment_type == "loan_repayment" and payment.loan else None,
-    "payment_source_reference": payment.source_reference,
-})
+    # Determine loan reference if applicable
+    loan_reference = getattr(payment, "loan", None)
+    loan_reference = loan_reference.reference if loan_reference else None
+
+    # Render the receipt template with context
+    context = {
+        "coop_name": "Grace Coop",
+        "payment": payment,
+        "amount_words": payment.amount_to_words(),
+        "qr_code": qr_b64,
+        "verify_url": verify_url,
+        "logo_url": f"{base_url}/static/images/logo.png",
+        "loan_reference": loan_reference,
+        "payment_source_reference": payment.source_reference or payment.reference,  # fallback
+    }
+
+    html_string = render_to_string("receipt_template.html", context)
 
     # Convert HTML to PDF
     pdf_buffer = BytesIO()
-    HTML(string=html_string, base_url=settings.BASE_DIR).write_pdf(pdf_buffer)
+    HTML(string=html_string, base_url=base_url).write_pdf(pdf_buffer)
 
     return pdf_buffer
