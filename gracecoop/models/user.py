@@ -60,7 +60,7 @@ class User(AbstractUser):
 
     @property
     def is_approved_member(self):
-        return hasattr(self, 'memberprofile') and self.profile.status == 'approved'
+        return hasattr(self, 'memberprofile') and self.memberprofile.status == 'approved'
     
     def generate_otp_secret(self):
         if not self.otp_secret:

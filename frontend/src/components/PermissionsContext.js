@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import axiosInstance from '../utils/axiosInstance';
+import axiosAdminInstance from '../utils/axiosAdminInstance';
 
 const PermissionsContext = createContext();
 
@@ -16,7 +16,7 @@ export const PermissionsProvider = ({ children }) => {
   
     const fetchPermissions = async () => {
       try {
-        const res = await axiosInstance.get('/admin/permissions/check/');
+        const res = await axiosAdminInstance.get('/admin/permissions/check/');
         console.log("PERMISSIONS RESPONSE:", res);
         setPermissions(res.data.custom_permissions || {});
       } catch (error) {

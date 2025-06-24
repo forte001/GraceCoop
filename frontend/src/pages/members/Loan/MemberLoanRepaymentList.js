@@ -7,6 +7,7 @@ import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
+import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 
 const MemberLoanRepaymentList = () => {
 
@@ -91,6 +92,30 @@ const exportToPDF = async () => {
   doc.save('member_repayments.pdf');
   toast.success('PDF export complete.');
 };
+const downloadReceipt = async (sourceReference, loanReference = '') => {
+  try {
+    const response = await axiosMemberInstance.get(
+      `/members/payment/receipt/${sourceReference}/`,
+      { responseType: 'blob' }
+    );
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    const fileName = loanReference
+      ? `loan_receipt_${loanReference}_${sourceReference}.pdf`
+      : `receipt_${sourceReference}.pdf`;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error('Failed to download receipt:', error);
+    toast.error('Could not download receipt. Please try again.');
+  }
+};
+
+
 
 
   return (
@@ -152,6 +177,7 @@ const exportToPDF = async () => {
               <th>Payment Date</th>
               <th>Due Date</th>
               <th>Late?</th>
+              <th>Receipt</th>
             </tr>
           </thead>
           <tbody>
@@ -164,6 +190,19 @@ const exportToPDF = async () => {
                   <td>{repayment.recorded_at?.split('T')[0]}</td>
                   <td>{repayment.due_date ? new Date(repayment.due_date).toLocaleDateString() : 'N/A'}</td>
                   <td>{repayment.was_late ? 'Yes' : 'No'}</td>
+                  <td>
+                    {repayment.source_reference ? (
+                      <button
+                        className="download-btn"
+                        onClick={() => downloadReceipt(repayment.source_reference, repayment.loan_reference)}
+                      >
+                        Download
+                      </button>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+
                 </tr>
               ))
             ) : (

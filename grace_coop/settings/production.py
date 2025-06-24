@@ -24,3 +24,5 @@ ALLOWED_PAYSTACK_IPS = ['*']
 
 SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=True, cast=bool)
 CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=True, cast=bool)
+
+BASE_URL = "https://gracecoop.onrender.com"

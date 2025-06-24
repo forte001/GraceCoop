@@ -131,14 +131,12 @@ const Permissions = () => {
         <label>Select User:</label>
         <select value={selectedUserId} onChange={handleUserChange}>
           <option value="">-- Choose a User --</option>
-          {filteredUsers.map((user) => {
-            const profile = user.memberprofile || {};
-            return (
-              <option key={user.id} value={user.id}>
-                {profile.full_name || user.username} ({profile.member_id || 'No ID'})
-              </option>
-            );
-          })}
+          {filteredUsers.map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.full_name || user.username} ({user.member_id || 'No ID'})
+            </option>
+          ))}
+
         </select>
       </div>
 

@@ -1,4 +1,5 @@
 from django.db import models
+from num2words import num2words
 
 class Payment(models.Model):
     PAYMENT_TYPE_CHOICES = [
@@ -21,3 +22,14 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.member.full_name} - {self.payment_type} - {self.amount}"
+    
+    # def amount_to_words(self):
+    #     return num2words(self.amount, to='currency', lang='en', currency='NGN').capitalize()
+
+    def amount_to_words(self):
+        naira = int(self.amount)
+        kobo = int(round((self.amount - naira) * 100))
+        words = f"{num2words(naira)} naira"
+        if kobo > 0:
+            words += f" and {num2words(kobo)} kobo"
+        return words.upper()

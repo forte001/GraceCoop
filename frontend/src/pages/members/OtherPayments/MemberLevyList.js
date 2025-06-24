@@ -8,6 +8,7 @@ import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 import { toast } from 'react-toastify';
+import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 
 const MemberLevyList = () => {
   const {
@@ -84,6 +85,25 @@ const exportToPDF = async () => {
   doc.save('levies.pdf');
   toast.success('PDF export complete.');
 };
+const downloadReceipt = async (sourceReference) => {
+  try {
+    const response = await axiosMemberInstance.get(`/members/payment/receipt/${sourceReference}/`, {
+      responseType: 'blob',  // important to treat as binary
+    });
+
+    // Create a blob URL and force download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `receipt_${sourceReference}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error('Failed to download receipt:', error);
+    toast.error('Could not download receipt. Please try again.');
+  }
+};
 
 
   return (
@@ -127,6 +147,7 @@ const exportToPDF = async () => {
               <th>Paid By</th>
               <th>Amount</th>
               <th>Payment Date</th>
+              <th>Receipt</th>
             </tr>
           </thead>
           <tbody>
@@ -136,6 +157,19 @@ const exportToPDF = async () => {
                   <td>{item.member_name || 'N/A'}</td>
                   <td>{formatNaira(item.amount)}</td>
                   <td>{item.date?.split('T')[0] || 'N/A'}</td>
+                  <td>
+                    {item.source_reference ? (
+                      <button
+                        className="download-btn"
+                        onClick={() => downloadReceipt(item.source_reference)}
+                      >
+                        Download
+                      </button>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+
                 </tr>
               ))
             ) : (

@@ -10,7 +10,7 @@ const ContributionPayment = () => {
   const { initiateContributionPayment, loading } = useContributionPayment();
 
   useEffect(() => {
-    // Fetch min/max config using axiosInstance
+    // Fetch min/max config using axiosMemberInstance
     axiosMemberInstance.get('/members/cooperative-config/active/')
       .then(res => {
         setMin(res.data.min_contribution_amount);

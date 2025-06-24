@@ -15,7 +15,6 @@ import AdminLayout from './layouts/AdminLayout';
 import MemberLayout from './layouts/MemberLayout';
 import './App.css';
 import ThemeSwitcher from './components/ThemeSwitcher';
-// import { getInitialTheme, applyTheme } from './utils/theme';
 import CompleteProfile from './pages/members/CompleteProfile';
 import EditProfilePage from "./pages/members/EditProfilePage";
 import Permissions from './pages/admin/Permissions';
@@ -49,10 +48,6 @@ const MainPage = () => {
   ensureCsrf();
 }, []);
 
-  // useEffect(() => {
-  //   const savedTheme = getInitialTheme();
-  //   applyTheme(savedTheme);
-  // }, []);
 
   return (
     <div className="landing-container">
@@ -87,7 +82,7 @@ const App = () => {
             localStorage.setItem('token', data.access);
             localStorage.setItem('refreshToken', data.refresh);
           } else if (data.access) {
-            // fallback if only access is returned (some settings return only access)
+            // fallback if only access is returned
             localStorage.setItem('token', data.access);
           } else {
             localStorage.clear();

@@ -8,6 +8,8 @@
   --border-color-light: #eee;
   --input-bg: #ffffff;
   --banner-bg: #f0f0f0;
+  --input-text-color: #222;
+   --banner-bg: #f0f0f0;
 }
 
 [data-theme="dark"] {
@@ -19,7 +21,7 @@
   --border-color: #4b5563;
   --border-color-light: #374151;
   --input-bg: #374151;
-  --input-text-color: #f1f1f1;
+  --input-text-color: #222;
   --banner-bg: #2d3748;
 }
 
@@ -143,4 +145,6 @@
   background-color: var(--input-bg, #fff);
   color: var(--input-text-color, var(--text-color, #111));
   font-size: 14px;
+  outline: none;
 }
+

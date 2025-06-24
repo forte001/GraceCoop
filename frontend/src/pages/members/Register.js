@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axiosInstance from "../../utils/axiosInstance";
+import axiosMemberInstance from "../../utils/axiosMemberInstance";
 import { useNavigate } from "react-router-dom";
 import "../../styles/members/Register.css";
 
@@ -44,7 +44,7 @@ const Register = () => {
   setSuccess("");
 
   try {
-    const response = await axiosInstance.post("/members/register/", formData); // baseURL is already set
+    const response = await axiosMemberInstance.post("/members/register/", formData); // baseURL is already set
     setSuccess(response.data.message || "Registration successful!");
 
     setTimeout(() => navigate("/login"), 1500); // redirect after success

@@ -1,4 +1,4 @@
-import React, { useState,useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -8,13 +8,13 @@ import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
-
+import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 
 const MemberContributionList = () => {
   const [error, setError] = useState(null);
 
   const {
-    data, // array of items
+    data,
     loading,
     filters,
     setFilters,
@@ -31,60 +31,80 @@ const MemberContributionList = () => {
   const printRef = useRef();
 
   const transformExportContribution = (item) => ({
-  PaidBy: item.member_name || 'N/A',
-  Amount: `NGN ${(item.amount)}`,
-  PaymentDate: item.date?.split('T')[0] || 'N/A',
-});
-
-const previewExportData = (data || []).map(transformExportContribution);
-
-const exportToExcel = async () => {
-  toast.info('Preparing Excel export...');
-  const exportData = await getAllPaginatedDataForExport({
-    url: '/members/contribution/contributions-list/',
-    filters,
-    transformFn: transformExportContribution,
+    PaidBy: item.member_name || 'N/A',
+    Amount: `NGN ${(item.amount)}`,
+    PaymentDate: item.date?.split('T')[0] || 'N/A',
   });
-  if (!exportData.length) return toast.warn('No data to export.');
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
-  XLSX.writeFile(workbook, 'contributions.xlsx');
-  toast.success('Excel export complete.');
-};
 
-const exportToCSV = async () => {
-  toast.info('Preparing CSV export...');
-  const exportData = await getAllPaginatedDataForExport({
-    url: '/members/contribution/contributions-list/',
-    filters,
-    transformFn: transformExportContribution,
-  });
-  if (!exportData.length) return toast.warn('No data to export.');
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
-  XLSX.writeFile(workbook, 'contributions.csv', { bookType: 'csv' });
-  toast.success('CSV export complete.');
-};
+  const previewExportData = (data || []).map(transformExportContribution);
 
-const exportToPDF = async () => {
-  toast.info('Preparing PDF export...');
-  const exportData = await getAllPaginatedDataForExport({
-    url: '/members/contribution/contributions-list/',
-    filters,
-    transformFn: transformExportContribution,
-  });
-  if (!exportData.length) return toast.warn('No data to export.');
-  const doc = new jsPDF();
-  doc.text('Contributions List', 14, 15);
-  autoTable(doc, {
-    startY: 20,
-    head: [['Paid By', 'Amount', 'Payment Date']],
-    body: exportData.map((item) => Object.values(item)),
-  });
-  doc.save('contributions.pdf');
-  toast.success('PDF export complete.');
+  const exportToExcel = async () => {
+    toast.info('Preparing Excel export...');
+    const exportData = await getAllPaginatedDataForExport({
+      url: '/members/contribution/contributions-list/',
+      filters,
+      transformFn: transformExportContribution,
+    });
+    if (!exportData.length) return toast.warn('No data to export.');
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
+    XLSX.writeFile(workbook, 'contributions.xlsx');
+    toast.success('Excel export complete.');
+  };
+
+  const exportToCSV = async () => {
+    toast.info('Preparing CSV export...');
+    const exportData = await getAllPaginatedDataForExport({
+      url: '/members/contribution/contributions-list/',
+      filters,
+      transformFn: transformExportContribution,
+    });
+    if (!exportData.length) return toast.warn('No data to export.');
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
+    XLSX.writeFile(workbook, 'contributions.csv', { bookType: 'csv' });
+    toast.success('CSV export complete.');
+  };
+
+  const exportToPDF = async () => {
+    toast.info('Preparing PDF export...');
+    const exportData = await getAllPaginatedDataForExport({
+      url: '/members/contribution/contributions-list/',
+      filters,
+      transformFn: transformExportContribution,
+    });
+    if (!exportData.length) return toast.warn('No data to export.');
+    const doc = new jsPDF();
+    doc.text('Contributions List', 14, 15);
+    autoTable(doc, {
+      startY: 20,
+      head: [['Paid By', 'Amount', 'Payment Date']],
+      body: exportData.map((item) => Object.values(item)),
+    });
+    doc.save('contributions.pdf');
+    toast.success('PDF export complete.');
+  };
+
+const downloadReceipt = async (sourceReference) => {
+  try {
+    const response = await axiosMemberInstance.get(`/members/payment/receipt/${sourceReference}/`, {
+      responseType: 'blob',  // important to treat as binary
+    });
+
+    // Create a blob URL and force download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `receipt_${sourceReference}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error('Failed to download receipt:', error);
+    toast.error('Could not download receipt. Please try again.');
+  }
 };
 
 
@@ -130,6 +150,7 @@ const exportToPDF = async () => {
               <th>Paid By</th>
               <th>Amount</th>
               <th>Payment Date</th>
+              <th>Receipt</th>
             </tr>
           </thead>
           <tbody>
@@ -139,11 +160,23 @@ const exportToPDF = async () => {
                   <td>{item.member_name || 'N/A'}</td>
                   <td>{formatNaira(item.amount)}</td>
                   <td>{item.date?.split('T')[0] || 'N/A'}</td>
+                  <td>
+                    {item.source_reference ? (
+                      <button
+                        className="download-btn"
+                        onClick={() => downloadReceipt(item.source_reference)}
+                      >
+                        Download
+                      </button>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="3" style={{ textAlign: 'center' }}>
+                <td colSpan="4" style={{ textAlign: 'center' }}>
                   No contribution records found.
                 </td>
               </tr>

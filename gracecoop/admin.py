@@ -111,7 +111,7 @@ class LoanApplicationAdmin(admin.ModelAdmin):
 
 class LoanRepaymentAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'loan__reference', 'loan_id', 'member_full_name', 'amount', 'principal_component',
+        'id', 'loan__reference', 'loan_id','source_reference', 'member_full_name', 'amount', 'principal_component',
         'interest_component', 'payment_date', 'was_late', 'paid_by_email', 'recorded_at'
     )
     search_fields = ('loan__id', 'loan__member__user__first_name', 'loan__member__user__last_name')

@@ -521,7 +521,7 @@ class RepaymentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'loan', 'amount', 'principal_component', 'interest_component',
             'paid_by_name', 'payment_date', 'recorded_at', 'was_late',
-            'member_name', 'loan_reference', 'due_date'
+            'member_name', 'loan_reference', 'due_date', 'source_reference'
         ]
         read_only_fields = [
             'id', 'loan', 'recorded_at', 'paid_by', 'was_late',
@@ -716,7 +716,7 @@ class ContributionSerializer(serializers.ModelSerializer):
     member_name = serializers.CharField(source='member.user.get_full_name', read_only=True)
     class Meta:
         model = Contribution
-        fields = ['id', 'member', 'member_name', 'amount', 'date']
+        fields = ['id', 'member', 'member_name', 'amount', 'date', 'source_reference']
         read_only_fields = ['member', 'date']
 
     def validate_amount(self, value):
@@ -756,7 +756,7 @@ class LevySerializer(serializers.ModelSerializer):
     member_name = serializers.CharField(source='member.user.get_full_name', read_only=True)
     class Meta:
         model = Levy
-        fields = ['id', 'member', 'member_name', 'amount', 'date']
+        fields = ['id', 'member', 'member_name', 'amount', 'date', 'source_reference']
         read_only_fields = ['member', 'date']
 
     def validate_amount(self, value):
@@ -818,9 +818,11 @@ class UserPermissionsSerializer(serializers.Serializer):
     all_permissions = serializers.ListField(child=serializers.CharField())
 
 class AdminUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='memberprofile.full_name', read_only=True)
+    member_id = serializers.CharField(source='memberprofile.member_id', read_only=True)
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'user_permissions']
+        fields = ['id', 'username', 'email', 'role', 'user_permissions', 'full_name', 'member_id']
 
 class PermissionSerializer(serializers.ModelSerializer):
     app_label = serializers.CharField(source='content_type.app_label')

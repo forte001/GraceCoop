@@ -80,7 +80,7 @@ const AdminLayout = () => {
             </li>
 
             <li><Link to="/admin/report">Reports</Link></li>
-            <li><Link to="/admin/permissions">Permissions</Link></li>
+           
 
             <li>
               <button onClick={toggleSettingsMenu} className="sidebar-link collapsible">
@@ -90,6 +90,7 @@ const AdminLayout = () => {
                 <ul className="submenu">
                   <li><Link to="/admin/settings/2fa">Two-Factor Auth</Link></li>
                   <li><Link to="/admin/coop-config">Cooperative Config</Link></li>
+                   <li><Link to="/admin/permissions">Permissions</Link></li>
                 </ul>
               )}
             </li>

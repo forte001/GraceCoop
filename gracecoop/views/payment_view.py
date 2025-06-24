@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 import json, hmac, hashlib
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from gracecoop.models import Payment, Contribution, Levy
 from ..serializers import (LoanPaymentInitiateSerializer, 
@@ -19,7 +19,7 @@ from ..serializers import (LoanPaymentInitiateSerializer,
                            PaymentSerializer)
 from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from ..utils import apply_loan_repayment, generate_payment_reference
+from ..utils import apply_loan_repayment, generate_payment_reference, generate_payment_receipt
 from decimal import Decimal
 from django.db.models import Sum
 from django_filters.rest_framework import DjangoFilterBackend
@@ -310,6 +310,7 @@ class EntryPaymentVerifyView(views.APIView):
                     member=member,
                     amount=payment.amount,
                     source_reference=payment.reference,
+                    reference=payment.reference,
                     defaults={'date': timezone.now()}
                 )
                 member.has_paid_shares = True
@@ -320,6 +321,7 @@ class EntryPaymentVerifyView(views.APIView):
                     member=member,
                     amount=payment.amount,
                     source_reference=payment.reference,
+                    reference=payment.reference,
                     defaults={'date': timezone.now()}
                 )
                 member.has_paid_levy = True
@@ -464,3 +466,18 @@ class MemberPaymentViewSet(viewsets.ReadOnlyModelViewSet):
             .filter(member=self.request.user.memberprofile)
             .order_by('-created_at')
         )
+
+class PaymentReceiptView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, source_reference):
+        try:
+            payment = Payment.objects.get(source_reference=source_reference, verified=True)
+        except Payment.DoesNotExist:
+            return Response({'detail': 'Receipt not available.'}, status=404)
+
+        pdf_buffer = generate_payment_receipt(payment)
+
+        response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="receipt_{payment.reference}.pdf"'
+        return response

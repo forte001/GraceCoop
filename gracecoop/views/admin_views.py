@@ -261,7 +261,7 @@ class AdminMemberUpdateView(generics.RetrieveUpdateAPIView):
 
 # List all admin users
 class AdminUserListView(generics.ListAPIView):
-    queryset = User.objects.filter(role='admin')
+    queryset = User.objects.filter(memberprofile__status='approved').distinct()
     serializer_class = AdminUserSerializer
     permission_classes = [permissions.IsAdminUser]
 

@@ -46,7 +46,7 @@ const LoginPage = () => {
       localStorage.setItem('member_refresh', data.refresh);
 
 
-      // Set the authorization header for axiosInstance globally
+     
       axiosMemberInstance.defaults.headers['Authorization'] = `Bearer ${data.access}`;
 
       // Fetch the user profile after login

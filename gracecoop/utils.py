@@ -11,6 +11,13 @@ from django.db.models import Sum
 import datetime
 from django.utils.crypto import get_random_string
 from django.db import transaction
+from io import BytesIO
+from django.template.loader import render_to_string
+from weasyprint import HTML, CSS
+from grace_coop.settings import production as settings
+import qrcode
+import base64
+from PIL import Image
 
 def create_member_profile_if_not_exists(user):
     # Check if the profile already exists
@@ -258,3 +265,31 @@ def generate_payment_reference(member, payment_type):
     member_id_str = str(member.id).zfill(6)  # Ensures 6-digit format
     unique_suffix = uuid.uuid4().hex[:6].upper()
     return f"GC-{payment_type.upper()}-{member_id_str}-{unique_suffix}"
+
+def generate_payment_receipt(payment):
+    base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
+    verify_url = f"{base_url}/api/verify-receipt/{payment.reference}/"
+    # Generate QR code
+    qr = qrcode.make(verify_url)
+    small_qr = qr.resize((100, 100), Image.Resampling.LANCZOS)
+    qr_buffer = BytesIO()
+    small_qr.save(qr_buffer, format="PNG")
+    qr_b64 = base64.b64encode(qr_buffer.getvalue()).decode()
+
+    # Render HTML template
+    html_string = render_to_string("receipt_template.html", {
+    "payment": payment,
+    "qr_code": qr_b64,
+    "amount_words": payment.amount_to_words(),
+    "coop_name": "Grace Coop",
+    "verify_url": verify_url,
+    "logo_url": f"{settings.BASE_URL}/static/images/logo.png",
+    "loan_reference": payment.loan.reference if payment.payment_type == "loan_repayment" and payment.loan else None,
+    "payment_source_reference": payment.source_reference,
+})
+
+    # Convert HTML to PDF
+    pdf_buffer = BytesIO()
+    HTML(string=html_string, base_url=settings.BASE_DIR).write_pdf(pdf_buffer)
+
+    return pdf_buffer
