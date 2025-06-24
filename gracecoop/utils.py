@@ -268,7 +268,7 @@ def generate_payment_reference(member, payment_type):
 
 def generate_payment_receipt(payment):
     base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
-    verify_url = f"{base_url}/api/verify-receipt/{payment.reference}/"
+    verify_url = f"{base_url}/api/members/payment/verify-receipt/{payment.source_reference}/"
     # Generate QR code
     qr = qrcode.make(verify_url)
     small_qr = qr.resize((100, 100), Image.Resampling.LANCZOS)

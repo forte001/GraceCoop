@@ -1,6 +1,6 @@
 
 import uuid
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 import requests
 from django.conf import settings
 from rest_framework import status, views,serializers, viewsets
@@ -481,3 +481,21 @@ class PaymentReceiptView(views.APIView):
         response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="receipt_{payment.reference}.pdf"'
         return response
+    
+
+class VerifyReceiptView(views.APIView):
+    def get(self, request, reference):
+        payment = get_object_or_404(Payment, source_reference=reference, verified=True)
+
+        context = {
+            "payment": payment,
+            "amount_words": payment.amount_to_words(),
+            "coop_name": "Grace Coop",
+            "logo_url": f"{settings.BASE_URL}/static/images/logo.png",
+            "loan_reference": (
+                payment.loan.reference if payment.payment_type == "loan_repayment" and payment.loan else None
+            ),
+            "payment_source_reference": payment.source_reference,
+        }
+
+        return render(request, "verify_receipt.html", context)
