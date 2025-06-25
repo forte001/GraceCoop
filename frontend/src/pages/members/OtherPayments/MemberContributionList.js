@@ -9,6 +9,7 @@ import usePaginatedData from '../../../utils/usePaginatedData';
 import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 import axiosMemberInstance from '../../../utils/axiosMemberInstance';
+import Spinner from '../../../components/Spinner';
 
 const MemberContributionList = () => {
   const [error, setError] = useState(null);
@@ -152,7 +153,7 @@ const downloadReceipt = async (sourceReference) => {
         />
       </div>
 
-      {loading && <p>Loading...</p>}
+      {loading && <Spinner />}
       {error && <p style={{ color: 'red' }}>Error loading contributions.</p>}
 
       <div ref={printRef}>

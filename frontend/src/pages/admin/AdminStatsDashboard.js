@@ -3,6 +3,7 @@ import { Pie } from 'react-chartjs-2';
 import 'chart.js/auto';
 import axiosAdminInstance from '../../utils/axiosAdminInstance'; 
 import '../../styles/admin/AdminStatsDashboard.css'; 
+import Spinner from '../../components/Spinner';
 
 
 const AdminStatsDashboard = () => {
@@ -40,7 +41,7 @@ const AdminStatsDashboard = () => {
     fetchStats();
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <Spinner />;
   if (!chartData.length) return <p>No data available.</p>;
 
   // Chart configuration

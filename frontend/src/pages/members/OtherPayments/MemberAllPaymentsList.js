@@ -8,6 +8,7 @@ import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
+import Spinner from '../../../components/Spinner';
 
 const MemberAllPaymentsList = () => {
   const {
@@ -170,7 +171,7 @@ const MemberAllPaymentsList = () => {
         />
       </div>
 
-      {loading && <p>Loading...</p>}
+      {loading && <Spinner />}
 
       <div ref={printRef}>
         <table className="loan-table">

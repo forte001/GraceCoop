@@ -2,11 +2,20 @@ import React, { useContext } from 'react';
 import { MemberContext } from '../../components/MemberContext';
 import "../../styles/members/DashboardPage.css";
 import PayButtons from "../../components/PayButton";
+import Spinner from '../../components/Spinner';
 
 const DashboardPage = () => {
   const { memberProfile, loading } = useContext(MemberContext);
 
-  if (loading) return <div className="dashboard-container">Loading...</div>;
+  if (loading) {
+      return (
+        <div className="dashboard-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Spinner size={24} />
+          <span>Loading dashboard...</span>
+        </div>
+      );
+    }
+
   if (!memberProfile) {
     return (
       <div className="dashboard-container">

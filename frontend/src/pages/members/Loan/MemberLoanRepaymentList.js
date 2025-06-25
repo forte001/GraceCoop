@@ -8,6 +8,7 @@ import usePaginatedData from '../../../utils/usePaginatedData';
 import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 import axiosMemberInstance from '../../../utils/axiosMemberInstance';
+import Spinner from '../../../components/Spinner';
 
 const MemberLoanRepaymentList = () => {
 
@@ -15,13 +16,10 @@ const MemberLoanRepaymentList = () => {
 
 const {
   data,
-  count,
   currentPage,
-  pageSize,
   totalPages,
   loading,
   setCurrentPage,
-  setPageSize,
   filters,
   setFilters, 
 } = usePaginatedData('/members/loan/repayments/', {
@@ -115,9 +113,6 @@ const downloadReceipt = async (sourceReference, loanReference = '') => {
   }
 };
 
-
-
-
   return (
     <div className="loan-management">
       <h2>Your Loan Repayments</h2>
@@ -166,7 +161,7 @@ const downloadReceipt = async (sourceReference, loanReference = '') => {
           exportToCSV={exportToCSV}
         />
       </div>
-      {loading && <p>Loading...</p>}
+      {loading && <Spinner />}
       <div ref={printRef}>
         <table className="loan-table">
           <thead>

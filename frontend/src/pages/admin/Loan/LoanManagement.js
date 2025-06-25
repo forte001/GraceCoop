@@ -34,7 +34,6 @@ const {
   filters,
   setFilters,
   data: loanApplicationsData,
-  count: applicationCount,
   currentPage: applicationPage,
   totalPages: totalApplicationPages,
   setCurrentPage: setApplicationPage,
@@ -48,16 +47,11 @@ const {
 
 const {
   data: loansData,
-  count: loanCount,
   currentPage: loanPage,
   totalPages: totalLoanPages,
   setCurrentPage: setLoanPage,
   refresh: refreshLoans,
 } = usePaginatedData('/admin/loan/loans-admin/', filters); // use same `filters`
-
-
-
-
 
   const handleApproveApplication = async (applicationId) => {
     try {

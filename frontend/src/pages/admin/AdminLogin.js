@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import "../../styles/admin/AdminLogin.css";
+import Spinner from '../../components/Spinner';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -76,8 +77,15 @@ const AdminLogin = () => {
         {errorMsg && <p className="error-msg">{errorMsg}</p>}
 
         <button type="submit" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+          {loading ? (
+            <>
+              <Spinner size={18} color="#fff" /> Logging in...
+            </>
+          ) : (
+            'Login'
+          )}
         </button>
+
       </form>
     </div>
   );

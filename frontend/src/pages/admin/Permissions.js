@@ -11,7 +11,7 @@ const Permissions = () => {
   const [userGroups, setUserGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch all users (with pagination)
+
   useEffect(() => {
     const fetchAllUsers = async () => {
       try {

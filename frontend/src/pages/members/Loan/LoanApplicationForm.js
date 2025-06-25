@@ -72,7 +72,6 @@ const LoanApplicationForm = () => {
   }
 };
 
-
   return (
     <div className="loan-application-form-container">
       <h2>Apply for a Loan</h2>

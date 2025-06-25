@@ -5,6 +5,7 @@ import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import ExportPrintGroup from '../../components/ExportPrintGroup';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import Spinner from '../../components/Spinner';
 
 const PendingMemberList = () => {
   const {
@@ -43,7 +44,7 @@ const PendingMemberList = () => {
         status: 'approved',
         membership_status: 'active',
       });
-      window.location.reload(); // optional: refetch or reload instead of direct filter update
+      window.location.reload();
     } catch (error) {
       alert(error.response?.data?.detail || 'Approval failed');
     }
@@ -75,9 +76,6 @@ const PendingMemberList = () => {
   });
   doc.save('pending_members.pdf');
 };
-
-
-
 
   return (
     <div className="pending-member-list">
@@ -140,7 +138,7 @@ const PendingMemberList = () => {
         />
       </div>
 
-      {loading ? <p>Loading...</p> : null}
+      {loading ? <Spinner size={30} /> : null}
 
       <div ref={printRef}>
         <table className="members-table pending">

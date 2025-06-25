@@ -45,34 +45,40 @@ const DevelopmentLevyPayment = () => {
   };
 
   return (
-    <div>
-      <h2>Pay Development Levy</h2>
-      <form onSubmit={handlePayment}>
-        <label>
-          Amount (₦):
-          <input
-            type="number"
-            value={amount}
-            min={min || 0}
-            onChange={(e) => setAmount(e.target.value)}
-            required
-            step="0.01"
-          />
-        </label>
+<div className="loan-application-form-container">
+  <h2>Pay Development Levy</h2>
+  <form onSubmit={handlePayment}>
+    <label>
+      Amount (₦):
+      <input
+        type="number"
+        value={amount}
+        min={min || 0}
+        onChange={(e) => setAmount(e.target.value)}
+        required
+        step="0.01"
+      />
+    </label>
 
-        {min !== null && <p className="info">Minimum levy: ₦{min}</p>}
-        {max !== null && amount && parseFloat(amount) > max && (
-          <p className="warning">Maximum allowed: ₦{max}. Please adjust.</p>
-        )}
+    {min !== null && <p className="form-message">Minimum levy: ₦{min}</p>}
 
-        <button type="submit" disabled={loading || (max && parseFloat(amount) > max)}>
-          {loading ? 'Processing...' : 'Pay'}
-        </button>
-      </form>
+    {max !== null && amount && parseFloat(amount) > max && (
+      <p className="form-message">Maximum allowed: ₦{max}. Please adjust.</p>
+    )}
 
-      {status === 'success' && <p className="success">Payment successful!</p>}
-      {status === 'error' && <p className="error">Payment failed or invalid amount. Try again.</p>}
-    </div>
+    <button type="submit" disabled={loading || (max && parseFloat(amount) > max)}>
+      {loading ? 'Processing...' : 'Pay'}
+    </button>
+  </form>
+
+  {status === 'success' && (
+    <p className="form-message success">Payment successful!</p>
+  )}
+  {status === 'error' && (
+    <p className="form-message">Payment failed or invalid amount. Try again.</p>
+  )}
+</div>
+
   );
 };
 

@@ -9,11 +9,11 @@ import usePaginatedData from '../../../utils/usePaginatedData';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 import { toast } from 'react-toastify';
 import axiosMemberInstance from '../../../utils/axiosMemberInstance';
+import Spinner from '../../../components/Spinner';
 
 const MemberLevyList = () => {
   const {
     data,
-    fullData,
     loading,
     filters,
     setFilters,
@@ -149,7 +149,7 @@ const downloadReceipt = async (sourceReference) => {
         />
       </div>
 
-      {loading && <p>Loading...</p>}
+      {loading && <Spinner />}
 
       <div ref={printRef}>
         <table className="loan-table">

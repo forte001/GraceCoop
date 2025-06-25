@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 import { useContributionPayment } from '../../../utils/useContributionPayment';
+import '../../../styles/members/loan/LoanApplication.css'
 
 const ContributionPayment = () => {
   const [amount, setAmount] = useState('');
@@ -47,7 +48,7 @@ const handlePayment = async (e) => {
 
 
   return (
-    <div>
+   <div className="loan-application-form-container">
       <h2>Pay Contribution</h2>
       <form onSubmit={handlePayment}>
         <label>
@@ -62,10 +63,10 @@ const handlePayment = async (e) => {
           />
         </label>
 
-        {min !== null && <p className="info">Minimum contribution: ₦{min}</p>}
+        {min !== null && <p className="form-message">Minimum contribution: ₦{min}</p>}
 
         {max !== null && amount && parseFloat(amount) > max && (
-          <p className="warning">Maximum allowed: ₦{max}. Please adjust.</p>
+          <p className="form-message">Maximum allowed: ₦{max}. Please adjust.</p>
         )}
 
         <button type="submit" disabled={loading || (max && parseFloat(amount) > max)}>
@@ -73,9 +74,14 @@ const handlePayment = async (e) => {
         </button>
       </form>
 
-      {status === 'success' && <p className="success">Payment successful!</p>}
-      {status === 'error' && <p className="error">Payment failed or invalid amount. Try again.</p>}
+      {status === 'success' && (
+        <p className="form-message success">Payment successful!</p>
+      )}
+      {status === 'error' && (
+        <p className="form-message">Payment failed or invalid amount. Try again.</p>
+      )}
     </div>
+
   );
 };
 

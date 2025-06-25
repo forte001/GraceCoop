@@ -18,7 +18,7 @@
 =============================== */
 .add-category-btn {
   padding: 12px 16px;
-  background-color: #4CAF50; /* GREEN retained */
+  background-color: #4CAF50; 
   color: white;
   border: none;
   cursor: pointer;
@@ -75,7 +75,7 @@
 }
 
 .loan-categories-table th {
-  background-color: #4CAF50; /* GREEN retained */
+  background-color: #4CAF50;
   color: white;
   font-weight: bold;
   text-transform: uppercase;

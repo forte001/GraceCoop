@@ -5,6 +5,7 @@ import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import ExportPrintGroup from '../../components/ExportPrintGroup';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import Spinner from '../../components/Spinner';
 
 const MembersList = () => {
   const {
@@ -102,16 +103,6 @@ const MembersList = () => {
 };
 
 
-  const handlePrint = () => {
-    if (!printRef.current) return;
-    const content = printRef.current.innerHTML;
-    const original = document.body.innerHTML;
-    document.body.innerHTML = content;
-    window.print();
-    document.body.innerHTML = original;
-    window.location.reload();
-  };
-
   return (
     <div className="members-list">
       <h2>Approved Members</h2>
@@ -168,11 +159,10 @@ const MembersList = () => {
           exportToExcel={exportToExcel}
           exportToCSV={exportToCSV}
           exportToPDF={exportToPDF}
-          handlePrint={handlePrint}
         />
       </div>
 
-      {loading ? <p>Loading...</p> : null}
+      {loading ? <Spinner size={30} /> : null}
 
       <div ref={printRef}>
         <table className="members-table approved">

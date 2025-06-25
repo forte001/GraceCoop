@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import usePaginatedData from '../../utils/usePaginatedData';
 import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import '../../styles/admin/CooperativeConfig.css';
+import Spinner from '../../components/Spinner';
 
 const AdminCooperativeConfig = () => {
   const {
@@ -101,7 +102,7 @@ const AdminCooperativeConfig = () => {
       </div>
 
       {loading ? (
-        <p>Loading configs...</p>
+         <Spinner />
       ) : (
         <table className="config-table">
           <thead>

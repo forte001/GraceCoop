@@ -8,6 +8,7 @@ import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 import { toast } from 'react-toastify';
+import Spinner from '../../../components/Spinner';
 
 const AdminContributionList = () => {
   const printRef = useRef();
@@ -116,7 +117,7 @@ const AdminContributionList = () => {
         />
       </div>
 
-      {loading && <p>Loading...</p>}
+      {loading && <Spinner />}
       {error && <p style={{ color: 'red' }}>Error loading contributions.</p>}
 
       <div ref={printRef}>

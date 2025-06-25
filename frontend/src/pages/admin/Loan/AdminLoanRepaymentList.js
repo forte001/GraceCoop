@@ -8,6 +8,7 @@ import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../components/ExportPrintGroup';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 import { toast } from 'react-toastify';
+import Spinner from '../../../components/Spinner';
 
 const AdminLoanRepaymentList = () => {
   const printRef = useRef();
@@ -98,15 +99,7 @@ const AdminLoanRepaymentList = () => {
     }
   };
 
-  const handlePrint = () => {
-    if (!printRef.current) return;
-    const printContents = printRef.current.innerHTML;
-    const originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
-  };
+
 
   return (
     <div className="loan-management">
@@ -159,11 +152,10 @@ const AdminLoanRepaymentList = () => {
           exportToExcel={() => handleExport('excel')}
           exportToPDF={() => handleExport('pdf')}
           exportToCSV={() => handleExport('csv')}
-          handlePrint={handlePrint}
         />
       </div>
 
-      {loading && <p>Loading...</p>}
+      {loading && <Spinner />}
 
       <div ref={printRef}>
         <table className="loan-table">

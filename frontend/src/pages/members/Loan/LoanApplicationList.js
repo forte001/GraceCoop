@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import { formatNaira } from '../../../utils/formatCurrency';
 import '../../../styles/members/loan/LoanApplication.css';
+import Spinner from '../../../components/Spinner';
 
 const LoanApplicationList = () => {
   const {
@@ -88,8 +89,10 @@ const LoanApplicationList = () => {
       </div>
 
       {loading ? (
-        <p>Loading...</p>
-      ) : applications.length === 0 ? (
+      <>
+        <Spinner size={18} color="#fff" /> Loading...
+      </>
+    ) : applications.length === 0 ? (
         <p>No loan applications found.</p>
       ) : (
         <div>

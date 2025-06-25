@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosMemberInstance from "../../utils/axiosMemberInstance";
 import "../../styles/members/CompleteProfile.css";
+import Spinner from "../../components/Spinner";
 
 const CompleteProfile = () => {
   const navigate = useNavigate();
@@ -59,7 +60,15 @@ const CompleteProfile = () => {
     }
   };
 
-  if (loading) return <div>Loading profile...</div>;
+  if (loading) {
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Spinner size={20} />
+            <span>Loading profile...</span>
+          </div>
+        );
+      }
+
 
   return (
     <div className="complete-profile-container">

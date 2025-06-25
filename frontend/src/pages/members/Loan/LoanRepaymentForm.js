@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../../../styles/members/loan/ApprovedLoansList.css';
 import { useLoanPayment } from '../../../utils/useLoanPayment';
 import { formatNaira } from '../../../utils/formatCurrency';
+import Spinner from '../../../components/Spinner';
 
 const LoanRepaymentForm = ({ loanReference, type, installment, onSuccess }) => {
   const [amount, setAmount] = useState('');
@@ -64,8 +65,13 @@ const LoanRepaymentForm = ({ loanReference, type, installment, onSuccess }) => {
         {error && <p className="error-text">{error}</p>}
 
         <button type="submit" disabled={loading}>
-          {loading ? 'Processing...' : isPayoff ? 'Pay Off Now' : 'Submit Repayment'}
+          {loading ? (
+            <>
+              <Spinner size={16} /> Processing...
+            </>
+          ) : isPayoff ? 'Pay Off Now' : 'Submit Repayment'}
         </button>
+
       </form>
     </div>
   );

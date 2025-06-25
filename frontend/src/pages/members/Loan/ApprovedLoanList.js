@@ -75,13 +75,7 @@ const {
       </span>
     );
   };
-  // const handleChange = (e) => {
-  //   const { name, value } = e.target;
-  //   setFilters((prev) => ({
-  //     ...prev,
-  //     [name]: value,
-  //   }));
-  // };
+
   const handleReset = () => {
   setFilters({
     status: 'disbursed',
@@ -91,9 +85,6 @@ const {
   });
   setCurrentPage(1);
 };
-
-
-
 
   return (
           <div className="approved-loans-list">
@@ -136,13 +127,13 @@ const {
                 }}
               />
 
-    <button
-      type="button"
-      className="reset-button"
-      onClick={handleReset}
-    >
-      Reset
-    </button>
+            <button
+              type="button"
+              className="reset-button"
+              onClick={handleReset}
+            >
+              Reset
+            </button>
   </form>
 </div>
 

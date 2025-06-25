@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosMemberInstance from "../../utils/axiosMemberInstance";
 import "../../styles/members/EditProfilePage.css";
+import Spinner from "../../components/Spinner";
 
 const EditProfilePage = () => {
   const [profile, setProfile] = useState(null);
@@ -54,7 +55,15 @@ const EditProfilePage = () => {
     }
   };
 
-  if (!profile) return <div className="dashboard-container">Loading profile...</div>;
+  if (!profile) {
+  return (
+    <div className="dashboard-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <Spinner size={24} />
+      <span>Loading Profile...</span>
+    </div>
+  );
+}
+
 
   return (
     <div className="dashboard-container">

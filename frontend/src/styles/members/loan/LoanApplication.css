@@ -223,6 +223,10 @@ form button:hover {
   color: var(--text-color);
   border: 1px solid #ccc;
 }
+.loan-application-form-container form input{
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
 
 .filter-form button {
   background-color: var(--primary-button-bg);

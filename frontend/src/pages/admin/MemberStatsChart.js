@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
 import 'chart.js/auto';
-import axiosAdminInstance from '../../utils/axiosAdminInstance'; 
+import axiosAdminInstance from '../../utils/axiosAdminInstance';
+import Spinner from '../../components/Spinner';
 
 const MemberStatsChart = () => {
   const [chartData, setChartData] = useState([]);
@@ -30,7 +31,7 @@ const MemberStatsChart = () => {
     fetchMemberStats();
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <Spinner />;
   if (!chartData.length) return <p>No data available.</p>;
 
   const chartConfig = {

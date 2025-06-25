@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosMemberInstance from "../../utils/axiosMemberInstance";
 import "../../styles/members/ProfilePage.css";
+import Spinner from "../../components/Spinner";
 
 const ProfilePage = () => {
   const [memberProfile, setMemberProfile] = useState(null);
@@ -24,7 +25,15 @@ const ProfilePage = () => {
     fetchProfile();
   }, [navigate]);
 
-  if (loading) return <div className="dashboard-container">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="dashboard-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Spinner size={24} />
+        <span>Loading...</span>
+      </div>
+    );
+  }
+
 
   if (!memberProfile) {
     return (
