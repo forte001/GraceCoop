@@ -396,7 +396,7 @@ class PaystackWebhookView(views.APIView):
                     member.has_paid_shares = True
                     member.save()
                     print(f"🆕 Shares entry payment flagged for member {member.id}")
-                print(f"🔁 Contribution (shares) recorded for member {member.id} (ref: {ref})")
+                    print(f"🔁 Contribution (shares) recorded for member {member.id} (ref: {ref})")
 
             elif payment_type == 'levy':
                 Levy.objects.get_or_create(
@@ -409,7 +409,7 @@ class PaystackWebhookView(views.APIView):
                     member.has_paid_levy = True
                     member.save()
                     print(f"🆕 Levy entry payment flagged for member {member.id}")
-                print(f"🔁 Levy recorded for member {member.id} (ref: {ref})")
+                    print(f"🔁 Levy recorded for member {member.id} (ref: {ref})")
 
             elif payment_type == 'loan_repayment':
                 loan = payment.loan

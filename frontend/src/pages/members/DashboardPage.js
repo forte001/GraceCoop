@@ -3,6 +3,7 @@ import { MemberContext } from '../../components/MemberContext';
 import "../../styles/members/DashboardPage.css";
 import PayButtons from "../../components/PayButton";
 import Spinner from '../../components/Spinner';
+import DashboardSummary from './DashboardSummary';
 
 const DashboardPage = () => {
   const { memberProfile, loading } = useContext(MemberContext);
@@ -45,6 +46,7 @@ const DashboardPage = () => {
           <PayButtons hasPaidShares={has_paid_shares} hasPaidLevy={has_paid_levy} />
         </div>
       )}
+      <DashboardSummary />
     </div>
   );
 };

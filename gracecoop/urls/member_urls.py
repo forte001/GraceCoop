@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from gracecoop.views.member_views import (
+    MemberDashboardSummaryView,
     MemberViewSet,
     UserRegistrationView,
     UserLoginView,
@@ -39,6 +40,7 @@ urlpatterns = [
     path('2fa/status/', TwoFAStatusView.as_view(), name='2fa-status'),
     path('2fa/disable/', Disable2FAView.as_view(), name='2fa-disable'),
     path('user/me/', CurrentUserView.as_view(), name='current-user'),
+    path("dashboard/summary/", MemberDashboardSummaryView.as_view(), name="member-dashboard-summary"),
 
     # Logged-in member can view their own profile
     path('my-profile/', MyMemberProfileView.as_view(), name='my-profile'),

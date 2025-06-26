@@ -1,6 +1,30 @@
+:root {
+  --summary-bg: #f0f4f8; /* light mode */
+  --heading-color: #111111;
+  --table-header-bg: #f0f0f0;
+  --table-header-text: #222;
+  --error-text: #d9534f;
+  --summary-hover-bg: #cbcbe6;
+
+}
+
+[data-theme='dark'] {
+  --summary-bg: #2e2e3a;
+  --summary-hover-bg: #cbcbe6;
+  --summary-header-bg: #3a3a4a;
+  --row-alt-bg: rgba(255, 255, 255, 0.05);
+  --heading-color: #ffffff;
+  --table-header-bg: #2e2e3a;
+  --table-header-text: #ffffff;
+  --error-text: #ff6666;
+  --reminder-bg: #ffa50033; /* soft orange with transparency */
+  --reminder-text: #ffcc00;
+}
+
+
 .dashboard-container {
   padding: 2rem;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: var(--card-bg);
@@ -105,4 +129,94 @@
 
 .success-message {
   color: var(--success-text);
+}
+
+/* dashboard summary styles */
+.dashboard-summary {
+  margin-top: 2rem;
+  background-color: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  color: var(--text-color);
+}
+
+.summary-heading {
+  margin-top: 0;
+  color: var(--heading-color);
+}
+
+.summary-table-wrapper {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+}
+
+.summary-table th,
+.summary-table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--bg-color, #444);
+  text-align: left;
+  color: var(--text-color);
+}
+
+.summary-table th {
+  background-color: var(--summary-header-bg, #3a3a4a);
+  color: var(--heading-color);
+}
+.summary-table thead th {
+  background-color: var(--table-header-bg);
+  color: var(--table-header-text);
+}
+
+.summary-table tbody tr:nth-child(odd) {
+  background-color: var(--row-alt-bg, rgba(255, 255, 255, 0.05));
+}
+
+.summary-table tbody tr:hover {
+  background-color: var(--summary-hover-bg, #3a3a4a);
+  cursor: default;
+}
+
+.amount-cell {
+  font-weight: bold;
+}
+
+.status-complete {
+  color: var(--success-text);
+}
+
+.status-pending {
+  background-color: var(--bg-color);
+  color: var(--error-text);
+  font-weight: bold;
+}
+
+.upcoming-payment {
+  background: var(--summary-bg, #2e2e3a);
+  padding: 1rem;
+  margin-top: 1rem;
+  border-radius: 4px;
+}
+
+.flashing-reminder {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 6px;
+  font-weight: bold;
+  text-align: center;
+  background-color: var(--reminder-bg, #fff3cd);
+  color: var(--reminder-text, #856404);
+  animation: flash 1.5s infinite;
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }

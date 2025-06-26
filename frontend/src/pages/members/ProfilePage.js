@@ -61,7 +61,7 @@ const ProfilePage = () => {
           <p><strong>Full Name:</strong> {full_name}</p>
           <p><strong>Username:</strong> {user?.username}</p>
           <p><strong>Email:</strong> {email}</p>
-          <p><strong>Status:</strong> {membership_status}</p>
+          <p><strong>Status:</strong> {membership_status.toUpperCase()}</p>
           <p><strong>Member ID:</strong> {member_id || "Pending"}</p>
           <p><strong>Shares Paid:</strong> {has_paid_shares ? "✅ Yes" : "❌ No"}</p>
           <p><strong>Levy Paid:</strong> {has_paid_levy ? "✅ Yes" : "❌ No"}</p>

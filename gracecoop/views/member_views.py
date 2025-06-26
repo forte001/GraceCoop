@@ -6,7 +6,12 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from ..models import MemberProfile, CooperativeConfig
+from ..models import (MemberProfile, 
+                      CooperativeConfig,
+                      Levy,
+                      LoanRepayment,
+                      LoanRepaymentSchedule,
+                      Contribution)
 from ..serializers import (
     UserSerializer,
     MemberProfileSerializer,
@@ -16,7 +21,7 @@ from ..serializers import (
     TwoFASetupSerializer,
     CooperativeConfigSerializer
 )
-
+from datetime import datetime
 
 # =======================
 # USER REGISTRATION & LOGIN
@@ -176,3 +181,86 @@ class ActiveCooperativeConfigView(APIView):
             return Response(serializer.data)
         return Response({"detail": "No active cooperative config found."}, status=404)
         
+
+class MemberDashboardSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        member = request.user.memberprofile
+
+        # Get recent loan repayments
+        loan_repayments = LoanRepayment.objects.filter(
+            loan__member=member
+        ).order_by("-payment_date")[:3]
+
+        # Get recent contributions
+        contributions = Contribution.objects.filter(
+            member=member
+        ).order_by("-date")[:3]
+
+        # Get recent levies
+        levies = Levy.objects.filter(
+            member=member
+        ).order_by("-date")[:3]
+
+        # unify recent payments
+        recent_payments = []
+
+        for repay in loan_repayments:
+            recent_payments.append({
+                "amount": repay.amount,
+                "payment_type": "loan",
+                "paid_date": repay.payment_date,
+                "status": "complete" if repay.amount > 0 else "pending",
+                "next_due_date": None
+            })
+
+        for contrib in contributions:
+            recent_payments.append({
+                "amount": contrib.amount,
+                "payment_type": "contribution",
+                "paid_date": contrib.date,
+                "status": "complete",
+                "next_due_date": None
+            })
+
+        for levy in levies:
+            recent_payments.append({
+                "amount": levy.amount,
+                "payment_type": "levy",
+                "paid_date": levy.date,
+                "status": "complete",
+                "next_due_date": None
+            })
+
+        # next scheduled loan installment
+        next_installment = LoanRepaymentSchedule.objects.filter(
+            loan__member=member,
+            is_paid=False
+        ).order_by("due_date").first()
+
+        upcoming = None
+        if next_installment:
+            upcoming = {
+                "amount_due": next_installment.amount_due,
+                "due_date": next_installment.due_date,
+                "status": "unpaid"
+            }
+
+        # sort by paid_date descending
+        recent_payments = [
+            p for p in recent_payments if p["paid_date"] is not None
+        ]
+
+        recent_payments.sort(
+            key=lambda x: (
+                x["paid_date"].date() if isinstance(x["paid_date"], datetime) else x["paid_date"]
+            ),
+            reverse=True
+        )
+
+
+        return Response({
+            "recent_payments": recent_payments,
+            "upcoming_loan_payment": upcoming
+        })
