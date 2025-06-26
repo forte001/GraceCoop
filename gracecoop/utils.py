@@ -5,7 +5,7 @@ from gracecoop.models import MemberProfile
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 from decimal import Decimal,ROUND_HALF_UP
-from .models import LoanRepaymentSchedule, DisbursementLog, LoanRepayment, Loan, Payment
+from .models import LoanRepaymentSchedule, LoanRepayment, Loan
 from django.utils import timezone
 from django.db.models import Sum
 import datetime
@@ -18,6 +18,9 @@ from grace_coop.settings import production as settings
 import qrcode
 import base64
 from PIL import Image
+from rest_framework.views import exception_handler
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 
 def create_member_profile_if_not_exists(user):
     # Check if the profile already exists
@@ -27,9 +30,9 @@ def create_member_profile_if_not_exists(user):
         # Create MemberProfile if not exists
         profile = MemberProfile.objects.create(
             user=user,
-            full_name=user.username,  # Default full name (can be updated later)
+            full_name=user.username,  # Default full name
             email=user.email,
-            phone_number="",  # Default empty values (can be updated later)
+            phone_number="",  # Default empty values 
             address="",
             status='pending',
         )
@@ -239,7 +242,7 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
             LoanRepayment.objects.create(
                 loan=loan,
                 amount=Decimal(amount),  # Full amount paid recorded here
-                principal_component=Decimal("0.00"),  # Optionally calculate components if needed
+                principal_component=Decimal("0.00"), 
                 interest_component=Decimal("0.00"),
                 paid_by=paid_by_user,
                 payment_date=timezone.now().date(),
@@ -300,3 +303,11 @@ def generate_payment_receipt(payment):
     HTML(string=html_string, base_url=base_url).write_pdf(pdf_buffer)
 
     return pdf_buffer
+
+def custom_exception_handler(exc, context):
+    response = exception_handler(exc, context)
+
+    if isinstance(exc, PermissionDenied):
+        return Response({'detail': 'Forbidden: You do not have access to this resource.'}, status=403)
+
+    return response

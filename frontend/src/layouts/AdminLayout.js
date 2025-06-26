@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { ThemeContext } from '../components/ThemeContext';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import '../styles/admin/AdminLayout.css';
@@ -61,6 +61,7 @@ const AdminLayout = () => {
                 <ul className="submenu">
                   <li><Link to="/admin/loan/categories">Loan Categories</Link></li>
                   <li><Link to="/admin/loan/management">Loan Management</Link></li>
+                  <li><Link to="/admin/disbursement-logs">Disbursement Log</Link></li>
                 </ul>
               )}
             </li>

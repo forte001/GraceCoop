@@ -5,7 +5,8 @@ from .models import (LoanRepayment,
                      LoanApplication,
                      MemberProfile, 
                      CooperativeConfig,
-                     Payment)
+                     Payment,
+                     DisbursementLog)
 from django.db.models import Q
 
 class LoanApplicationFilter(django_filters.FilterSet):
@@ -164,3 +165,13 @@ class PaymentFilter(django_filters.FilterSet):
     class Meta:
         model = Payment
         fields = ['payment_type', 'verified', 'member__full_name', 'created_at']
+
+
+class DisbursementLogFilter(django_filters.FilterSet):
+    disbursed_by__username = django_filters.CharFilter(lookup_expr='icontains')
+    loan__reference = django_filters.CharFilter(lookup_expr='icontains')
+    disbursed_at = django_filters.DateFromToRangeFilter()
+
+    class Meta:
+        model = DisbursementLog
+        fields = ['disbursed_by__username', 'loan__reference', 'disbursed_at']

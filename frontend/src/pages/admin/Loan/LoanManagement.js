@@ -1,6 +1,7 @@
 // src/components/admin/loan/LoanManagement.js
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import axiosAdminInstance from '../../../utils/axiosAdminInstance';
 import { getCSRFToken } from '../../../utils/csrf';
@@ -28,6 +29,7 @@ const LoanManagement = () => {
   const [loanSummaries, setLoanSummaries] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [isFullPayment, setIsFullPayment] = useState(false);
+  const navigate = useNavigate();
   
 
 const {
@@ -64,7 +66,12 @@ const {
       refreshApplications();
       refreshLoans();
     } catch (error) {
-      alert('Failed to approve application.');
+      if (error?.response?.status ===403){
+        navigate('/forbidden');
+      } else {
+        alert(error?.response?.data?.error || 'Failed to approve application.');
+      }
+      
     }
   };
 
@@ -93,8 +100,13 @@ const {
       setShowModal(false);
       refreshLoans();
     } catch (err) {
-      alert(err.response?.data?.error || 'An error occurred during disbursement.');
+      if (err.response?.status === 403){
+        navigate('/forbidden');
+      } else{
+        alert(err.response?.data?.error || 'An error occurred during disbursement.');
+      }
     }
+
   };
 
   const toggleSchedule = async (loanId) => {
@@ -134,8 +146,12 @@ const {
       alert(response.data.message);
       refreshLoans();
     } catch (err) {
+      if (err?.response?.status ===403){
+        navigate('/forbidden');
+      } else {
       alert(err.response?.data?.error || 'Error applying grace period.');
     }
+  }
   };
 
   const getStatusBadge = (status) => {

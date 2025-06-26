@@ -167,7 +167,10 @@ class AdminLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid credentials.")
 
         if not user.is_staff:
-            raise serializers.ValidationError("User does not have admin access.")
+            user_group_names = user.groups.values_list('name', flat=True)
+            if not any(name.lower() in ['admin', 'staff'] for name in user_group_names):
+                raise serializers.ValidationError("User does not have admin access.")
+
 
         attrs["user"] = user
         return attrs
@@ -400,10 +403,20 @@ class LoanCategorySerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class DisbursementLogSerializer(serializers.ModelSerializer):
+    loan_reference = serializers.CharField(source='loan.reference', read_only=True)
+    disbursed_by_name = serializers.SerializerMethodField()
+
     class Meta:
         model = DisbursementLog
-        fields = ['id', 'amount', 'repayment_months', 'disbursed_by', 'disbursed_at']
-        read_only_fields = ['repayment_months']
+        fields = ['id', 'amount', 'repayment_months', 'disbursed_by_name', 'loan_reference', 'disbursed_at']
+
+    def get_disbursed_by_name(self, obj):
+        user = obj.disbursed_by
+        if not user:
+            return "N/A"
+        full_name = f"{user.first_name} {user.last_name}".strip()
+        return full_name if full_name else user.username
+
 
 class LoanSerializer(serializers.ModelSerializer):
     disbursements = DisbursementLogSerializer(many=True, read_only=True)

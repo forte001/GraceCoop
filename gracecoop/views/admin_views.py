@@ -268,7 +268,7 @@ class AdminUserListView(generics.ListAPIView):
 
 # List all permissions available in the system
 class AllPermissionsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
         permissions_qs = Permission.objects.all()
@@ -359,8 +359,34 @@ class UserGroupUpdateView(APIView):
 
         group_ids = serializer.validated_data['group_ids']
         groups = Group.objects.filter(id__in=group_ids)
+
+        # Step 1: Check group names
+        group_names = list(groups.values_list('name', flat=True))
+
+        # Step 2: Enforce admin group if assigning other groups
+        assigning_other_roles = any(name.lower() not in ['admin', 'staff'] for name in group_names)
+        has_admin_or_staff = any(name.lower() in ['admin', 'staff'] for name in group_names)
+
+        if assigning_other_roles and not has_admin_or_staff:
+            return Response({
+                'detail': 'Admin or Staff group must be assigned before assigning other roles.'
+            }, status=400)
+
+        # Step 3: Save groups
         user.groups.set(groups)
+
+        # Step 4: Set is_staff based on admin/staff group
+        if has_admin_or_staff:
+            if not user.is_staff:
+                user.is_staff = True
+                user.save()
+        else:
+            if user.is_staff and not user.is_superuser:
+                user.is_staff = False
+                user.save()
+
         return Response({'detail': 'Groups updated successfully'})
+
     
 
 #######################################

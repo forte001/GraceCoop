@@ -13,7 +13,7 @@ from ..utils import (generate_repayment_schedule,
                     apply_loan_repayment
                     )
 from django_filters.rest_framework import DjangoFilterBackend
-from ..filters import RepaymentFilter, LoanFilter, LoanApplicationFilter
+from ..filters import RepaymentFilter, LoanFilter, LoanApplicationFilter, DisbursementLogFilter
 from rest_framework.filters import SearchFilter, OrderingFilter
 from gracecoop.pagination import StandardResultsSetPagination
 
@@ -30,7 +30,8 @@ from ..serializers import (
     LoanCategorySerializer,
     LoanApplicationSerializer,
     RepaymentSerializer,
-    LoanRepaymentScheduleSerializer
+    LoanRepaymentScheduleSerializer,
+    DisbursementLogSerializer
     )
 from ..permissions import (
     CanCreateLoanCategory, 
@@ -385,9 +386,7 @@ class BaseRepaymentListView(generics.ListAPIView):
             'loan', 'paid_by', 'loan__member__user', 'scheduled_installment'
         )
 
-
-
-    
+  
 class AdminRepaymentListView(BaseRepaymentListView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     filterset_class = RepaymentFilter
@@ -403,3 +402,15 @@ class MemberRepaymentListView(BaseRepaymentListView):
         return super().get_queryset().filter(loan__member__user=self.request.user)
 
 
+### Disbursement Log view
+class DisbursementLogAdminListView(generics.ListAPIView):
+    serializer_class = DisbursementLogSerializer
+    permission_classes = [IsAdminUser]
+    pagination_class = StandardResultsSetPagination
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = DisbursementLogFilter
+    ordering_fields = ['disbursed_at', 'amount', 'repayment_months']
+    ordering = ['-disbursed_at']
+
+    def get_queryset(self):
+        return DisbursementLog.objects.select_related('loan', 'disbursed_by')

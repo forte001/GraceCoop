@@ -51,9 +51,17 @@ axiosAdminInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    const status = error.response?.status;
+
+    // 🛑 Handle 403 Forbidden
+    if (status === 403) {
+      window.location.href = '/forbidden';
+      return Promise.reject(error);
+    }
+
+    // 🔁 Token Refresh Logic
     const shouldRetry =
-      (error.response?.status === 401 || error.response?.status === 400) &&
-      !originalRequest._retry;
+      (status === 401 || status === 400) && !originalRequest._retry;
 
     if (shouldRetry) {
       originalRequest._retry = true;
@@ -76,7 +84,6 @@ axiosAdminInstance.interceptors.response.use(
         const newAccess = refreshResponse.data.access;
         localStorage.setItem('admin_token', newAccess);
 
-        // 🔁 Re-issue original request with updated token
         originalRequest.headers['Authorization'] = `Bearer ${newAccess}`;
         return axiosAdminInstance(originalRequest);
       } catch (refreshErr) {
@@ -90,5 +97,6 @@ axiosAdminInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 export default axiosAdminInstance;

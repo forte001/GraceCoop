@@ -3,6 +3,7 @@ import axiosAdminInstance from '../../../utils/axiosAdminInstance';
 import { getCSRFToken } from '../../../utils/csrf';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import '../../../styles/admin/loan/LoanCategories.css';
+import { useNavigate } from 'react-router-dom';
 
 const LoanCategories = () => {
   const [showModal, setShowModal] = useState(false);
@@ -17,6 +18,7 @@ const LoanCategories = () => {
   const [categoryGracePeriod, setCategoryGracePeriod] = useState('');
   const [categoryStatus, setCategoryStatus] = useState('active');
   const [categoryAbbreviation, setCategoryAbbreviation] = useState('');
+  const navigate = useNavigate();
 
   const {
     data: categories,
@@ -91,7 +93,7 @@ const LoanCategories = () => {
 
     try {
       if (isEditing && selectedCategory) {
-        const response = await axiosAdminInstance.put(
+        await axiosAdminInstance.put(
           `/admin/loan/loan-categories/${selectedCategory.id}/`,
           payload,
           { headers: { 'X-CSRFToken': getCSRFToken() } }
@@ -105,9 +107,12 @@ const LoanCategories = () => {
       }
       toggleModal();
     } catch (error) {
-      console.error('Error saving category:', error.response?.data || error);
+      if (error.response?.status === 403){
+        navigate('/forbidden');
+      } else {
       alert('Failed to save category: ' + JSON.stringify(error.response?.data));
     }
+  }
   };
 
   const handleDelete = async (id) => {
@@ -117,9 +122,12 @@ const LoanCategories = () => {
         headers: { 'X-CSRFToken': getCSRFToken() },
       });
     } catch (error) {
-      console.error('Error deleting category:', error.response?.data || error);
-      alert('Failed to delete category.');
+      if (error.response?.status === 403){
+        navigate('/forbidden');
+      } else{
+      alert(error.response?.data || 'Failed to delete category.');
     }
+  }
   };
 
   return (

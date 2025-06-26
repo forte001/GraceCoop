@@ -40,6 +40,8 @@ import MemberLevyList from './pages/members/OtherPayments/MemberLevyList';
 import AdminLevyList from './pages/admin/OtherPayments/AdminLevyList';
 import AdminAllPayments from './pages/admin/OtherPayments/AdminAllPayments';
 import MemberAllPaymentsList from './pages/members/OtherPayments/MemberAllPaymentsList';
+import AdminDisbursementLogs from './pages/admin/Loan/AdminDisbursementsLogs';
+import Forbidden from './pages/admin/Forbidden';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -113,6 +115,7 @@ const App = () => {
     <Route path="/admin/login" element={<AdminLogin />} />
     <Route path="/admin/2fa/verify" element={<Verify2FA />} />
     <Route path="/member/2fa/verify" element={<Verify2FA />} />
+    <Route path="/forbidden" element={<Forbidden />} />
 
     {/* Member Protected Routes */}
     <Route path="/member" element={
@@ -150,6 +153,7 @@ const App = () => {
         <Route path="payments/contributions" element={<AdminContributionList />} />
         <Route path="payments/levies" element={<AdminLevyList />} />
         <Route path="all-payments" element={<AdminAllPayments/>} />
+        <Route path="disbursement-logs" element={<AdminDisbursementLogs/>} />
         <Route path="settings/theme" element={<ThemeSwitcher />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="2fa/setup" element={<TwoFASetup />} />
