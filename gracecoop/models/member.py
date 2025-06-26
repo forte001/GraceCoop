@@ -4,6 +4,7 @@ from django.db import models
 from django.conf import settings
 from datetime import datetime
 from django.db.models import Sum
+from django.utils.text import capfirst
 
 
 class MemberProfile(models.Model):
@@ -54,6 +55,16 @@ class MemberProfile(models.Model):
                 except (IndexError, ValueError):
                     next_serial = 1
             self.member_id = f"GC-{year}-{next_serial:05d}"
+
+        if self.full_name and self.user:
+            parts = self.full_name.strip().split()
+            if len(parts) == 1:
+                self.user.first_name = capfirst(parts[0])
+                self.user.last_name = ''
+            elif len(parts) >= 2:
+                self.user.first_name = capfirst(parts[0])
+                self.user.last_name = capfirst(" ".join(parts[1:]))
+            self.user.save()
         super().save(*args, **kwargs)
 
     @property

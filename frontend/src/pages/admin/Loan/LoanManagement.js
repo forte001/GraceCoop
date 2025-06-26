@@ -1,6 +1,6 @@
 // src/components/admin/loan/LoanManagement.js
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import axiosAdminInstance from '../../../utils/axiosAdminInstance';
 import { getCSRFToken } from '../../../utils/csrf';
@@ -51,7 +51,7 @@ const {
   totalPages: totalLoanPages,
   setCurrentPage: setLoanPage,
   refresh: refreshLoans,
-} = usePaginatedData('/admin/loan/loans-admin/', filters); // use same `filters`
+} = usePaginatedData('/admin/loan/loans-admin/', filters);
 
   const handleApproveApplication = async (applicationId) => {
     try {
@@ -161,8 +161,6 @@ const {
     );
   };
 
-const printRef = useRef();
-
 const transformExportLoan = (loan) => ({
   LoanRef: loan.reference || 'N/A',
   Member: loan.applicant_name || 'N/A',
@@ -250,7 +248,7 @@ const exportToPDF = async () => {
     useEffect(() => {
       setApplicationPage(1);
       setLoanPage(1);
-    }, [filters]);
+    }, [filters, setApplicationPage, setLoanPage]);
   return (
     <div className="loan-management">
       <h2>Loan Management</h2>
@@ -453,58 +451,59 @@ const exportToPDF = async () => {
         </>
       )}
 
-      {showModal && selectedLoan && (
-        <div className="modal">
-          <div className="modal-content">
-            <h3>Disburse Loan - {selectedLoan.reference}</h3>
-            <form onSubmit={handleDisburse}>
-              <div>
-                <label>
-                  <input
-                    type="radio"
-                    name="disbursementType"
-                    value="full"
-                    checked={disbursementType === 'full'}
-                    onChange={() => {
-                      setDisbursementType('full');
-                      setIsFullPayment(true);
-                    }}
-                  />
-                  Full Disbursement
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="disbursementType"
-                    value="partial"
-                    checked={disbursementType === 'partial'}
-                    onChange={() => {
-                      setDisbursementType('partial');
-                      setIsFullPayment(false);
-                    }}
-                  />
-                  Partial Disbursement
-                </label>
+          {showModal && selectedLoan && (
+            <div className="modal-overlay">
+              <div className="modal">
+                <h3>Disburse Loan - {selectedLoan.reference}</h3>
+                <form onSubmit={handleDisburse}>
+                  <div>
+                    <label>
+                      <input
+                        type="radio"
+                        name="disbursementType"
+                        value="full"
+                        checked={disbursementType === 'full'}
+                        onChange={() => {
+                          setDisbursementType('full');
+                          setIsFullPayment(true);
+                        }}
+                      />
+                      Full Disbursement
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="disbursementType"
+                        value="partial"
+                        checked={disbursementType === 'partial'}
+                        onChange={() => {
+                          setDisbursementType('partial');
+                          setIsFullPayment(false);
+                        }}
+                      />
+                      Partial Disbursement
+                    </label>
+                  </div>
+                  {disbursementType === 'partial' && (
+                    <div>
+                      <label>Amount to Disburse</label>
+                      <input
+                        type="number"
+                        value={disburseAmount}
+                        onChange={(e) => setDisburseAmount(e.target.value)}
+                        min="1"
+                        max={selectedLoan.disbursements_remaining}
+                        required
+                      />
+                    </div>
+                  )}
+                  <button type="submit">Confirm Disbursement</button>
+                  <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
+                </form>
               </div>
-              {disbursementType === 'partial' && (
-                <div>
-                  <label>Amount to Disburse</label>
-                  <input
-                    type="number"
-                    value={disburseAmount}
-                    onChange={(e) => setDisburseAmount(e.target.value)}
-                    min="1"
-                    max={selectedLoan.disbursements_remaining}
-                    required
-                  />
-                </div>
-              )}
-              <button type="submit">Confirm Disbursement</button>
-              <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+          )}
+
     </div>
   );
 };
