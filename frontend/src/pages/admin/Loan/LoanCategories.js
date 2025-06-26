@@ -203,22 +203,26 @@ const LoanCategories = () => {
             <h3>{isEditing ? 'Edit Loan Category' : 'Add New Loan Category'}</h3>
             <form onSubmit={handleSubmit}>
               <label htmlFor="categoryName">Category Name:</label>
-              <input
-                type="text"
-                id="categoryName"
-                value={categoryName}
-                onChange={(e) => setCategoryName(e.target.value)}
-                required
-              />
+                <input
+                  type="text"
+                  id="categoryName"
+                  value={categoryName}
+                  onChange={(e) => setCategoryName(e.target.value)}
+                  required
+                  disabled={selectedCategory?.is_used}
+                />
+
               <label htmlFor="categoryAbbreviation">Abbreviation:</label>
               <input
-                type="text"
-                id="categoryAbbreviation"
-                value={categoryAbbreviation}
-                onChange={(e) => setCategoryAbbreviation(e.target.value.toUpperCase())}
-                maxLength={10}
-                required
-              />
+                  type="text"
+                  id="categoryAbbreviation"
+                  value={categoryAbbreviation}
+                  onChange={(e) => setCategoryAbbreviation(e.target.value.toUpperCase())}
+                  maxLength={10}
+                  required
+                  disabled={selectedCategory?.is_used}
+                />
+
               <small className="form-hint">
                 Short code for category (e.g., BIZ, EDU, AGR). Must be unique.
               </small>
@@ -230,28 +234,34 @@ const LoanCategories = () => {
               />
               <label htmlFor="categoryInterestRate">Interest Rate (%):</label>
               <input
-                type="number"
-                id="categoryInterestRate"
-                value={categoryInterestRate}
-                onChange={(e) => setCategoryInterestRate(e.target.value)}
-                required
-              />
+                  type="number"
+                  id="categoryInterestRate"
+                  value={categoryInterestRate}
+                  onChange={(e) => setCategoryInterestRate(e.target.value)}
+                  required
+                  disabled={selectedCategory?.is_used}
+                />
+
               <label htmlFor="categoryLoanPeriod">Loan Period (Months):</label>
               <input
-                type="number"
-                id="categoryLoanPeriod"
-                value={categoryLoanPeriod}
-                onChange={(e) => setCategoryLoanPeriod(e.target.value)}
-                required
-              />
+                  type="number"
+                  id="categoryLoanPeriod"
+                  value={categoryLoanPeriod}
+                  onChange={(e) => setCategoryLoanPeriod(e.target.value)}
+                  required
+                  disabled={selectedCategory?.is_used}
+                />
+
               <label htmlFor="categoryGracePeriod">Grace Period (Months):</label>
               <input
-                type="number"
-                id="categoryGracePeriod"
-                value={categoryGracePeriod}
-                onChange={(e) => setCategoryGracePeriod(e.target.value)}
-                required
-              />
+                  type="number"
+                  id="categoryGracePeriod"
+                  value={categoryGracePeriod}
+                  onChange={(e) => setCategoryGracePeriod(e.target.value)}
+                  required
+                  disabled={selectedCategory?.is_used}
+                />
+
               <label htmlFor="categoryStatus">Status:</label>
               <select
                 id="categoryStatus"

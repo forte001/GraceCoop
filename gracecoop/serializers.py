@@ -397,6 +397,15 @@ class LoanCategorySerializer(serializers.ModelSerializer):
         has_loans = obj.loan_set.exists()
         has_applications = obj.loanapplication_set.exists()
         return has_loans or has_applications
+    
+    def update(self, instance, validated_data):
+        if self.get_is_used(instance):
+            # allow only description and status to be changed
+            allowed_fields = ['description', 'status']
+            for field in list(validated_data.keys()):
+                if field not in allowed_fields:
+                    validated_data.pop(field)
+        return super().update(instance, validated_data)    
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user

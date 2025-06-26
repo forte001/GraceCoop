@@ -218,6 +218,15 @@
   width: 45%;
   margin: 10px 2%;
 }
+/* disabled inputs */
+.modal input:disabled,
+.modal textarea:disabled,
+.modal select:disabled {
+  background-color: var(--bg-color, #2e2e3a);  
+  color: var(--text-color, #fff);             
+  cursor: not-allowed;
+}
+
 
 /* ===============================
    Action Buttons
