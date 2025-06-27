@@ -17,6 +17,7 @@ from weasyprint import HTML, CSS
 from grace_coop.settings import production as settings
 import qrcode
 import base64
+import os
 from PIL import Image
 from rest_framework.views import exception_handler
 from rest_framework.exceptions import PermissionDenied
@@ -280,6 +281,13 @@ def generate_payment_receipt(payment):
     small_qr.save(qr_buffer, format="PNG")
     qr_b64 = base64.b64encode(qr_buffer.getvalue()).decode()
 
+    # Base64-encoding logo so it is *embedded* in the HTML
+    logo_path = os.path.join(settings.BASE_DIR, 'gracecoop', 'static', 'images', 'logo.png')
+    with open(logo_path, 'rb') as f:
+        logo_data = f.read()
+    logo_b64 = base64.b64encode(logo_data).decode()
+    logo_url = f"data:image/png;base64,{logo_b64}"
+
     # Determine loan reference if applicable
     loan_reference = getattr(payment, "loan", None)
     loan_reference = loan_reference.reference if loan_reference else None
@@ -291,7 +299,7 @@ def generate_payment_receipt(payment):
         "amount_words": payment.amount_to_words(),
         "qr_code": qr_b64,
         "verify_url": verify_url,
-        "logo_url": f"{base_url}/static/images/logo.png",
+        "logo_url": logo_url,
         "loan_reference": loan_reference,
         "payment_source_reference": payment.source_reference or payment.reference,  # fallback
     }
