@@ -275,12 +275,24 @@ class Verify2FASerializer(serializers.Serializer):
         return attrs
 
 #############################################################
+class RecentPaymentSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+    paid_date = serializers.DateTimeField(source="created_at")
+
+    class Meta:
+        model = Payment
+        fields = ['id', 'amount', 'payment_type', 'status', 'paid_date', 'reference']
+
+    def get_status(self, obj):
+        return "complete" if obj.verified else "pending"
+    
 ### Admin Dashboard stats serializer
 class AdminDashboardStatsSerializer(serializers.Serializer):
     total_members = serializers.IntegerField()
     pending_members = serializers.IntegerField()
-    paid_members = serializers.IntegerField()
-    unpaid_members = serializers.IntegerField()
+    total_payments = serializers.DecimalField(max_digits=12, decimal_places=2)
+    recent_payments = RecentPaymentSerializer(many=True)
+
 
 ## Serializer for listing pending approvals
 class PendingApprovalSerializer(serializers.ModelSerializer):

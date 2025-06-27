@@ -36,6 +36,8 @@ code {
 
   --error-text: red;
   --success-text: green;
+  --grid-color: rgba(0, 0, 0, 0.1);
+
   
 }
 
@@ -58,6 +60,9 @@ code {
 
   --error-text: #f87171;
   --success-text: #4ade80;
+  --grid-color: rgba(255, 255, 255, 0.2);
+
+  
 }
 
 html, body, #root {

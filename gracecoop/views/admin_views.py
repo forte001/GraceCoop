@@ -1,3 +1,5 @@
+from datetime import timedelta
+from django.utils import timezone
 import traceback
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
@@ -47,7 +49,8 @@ from gracecoop.permissions import (
     CanViewApprovedMembers,
     CanUpdateMemberProfile,
 )
-from gracecoop.models import CooperativeConfig
+from gracecoop.models import CooperativeConfig, Payment
+from django.db.models import Sum
 
 ###########################################################
 ### Admin Login View with 2FA implementaion
@@ -204,22 +207,33 @@ class AdminDashboardStatsView(APIView):
     def get(self, request, *args, **kwargs):
         total_members = MemberProfile.objects.count()
         pending_members = MemberProfile.objects.filter(status='pending').count()
-        paid_members = MemberProfile.objects.filter(has_paid_shares=True, has_paid_levy=True).count()
-        unpaid_members = total_members - paid_members
 
-        # Use the serializer to structure the data
+        # filter for periods
+        period = request.query_params.get('period', '30')
+        try:
+            period = int(period)
+        except ValueError:
+            period = 30
+
+        today = timezone.now()
+        start_date = today - timedelta(days=period)
+
+        total_payments = Payment.objects.filter(
+            created_at__gte=start_date
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        recent_payments = Payment.objects.order_by('-created_at')[:10]
+
         stats_data = {
             "total_members": total_members,
             "pending_members": pending_members,
-            "paid_members": paid_members,
-            "unpaid_members": unpaid_members,
+            "total_payments": total_payments,
+            "recent_payments": recent_payments,
         }
 
-        # Serialize the data
         serializer = AdminDashboardStatsSerializer(stats_data)
-
-        # Return the serialized data in the response
         return Response(serializer.data)
+
     
 # List all pending applications
 class PendingApplicationsView(generics.ListAPIView):
