@@ -31,6 +31,7 @@ class MemberProfile(models.Model):
     is_email_verified = models.BooleanField(default=False)
     email_verification_token = models.UUIDField(default=uuid.uuid4, unique=True)
 
+
      # Approval and membership statuses
     status = models.CharField(max_length=10, choices=APPROVAL_STATUS_CHOICES, default='pending')
     membership_status = models.CharField(max_length=10, choices=MEMBERSHIP_STATUS_CHOICES, default='inactive')
