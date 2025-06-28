@@ -42,6 +42,8 @@ import AdminAllPayments from './pages/admin/OtherPayments/AdminAllPayments';
 import MemberAllPaymentsList from './pages/members/OtherPayments/MemberAllPaymentsList';
 import AdminDisbursementLogs from './pages/admin/Loan/AdminDisbursementsLogs';
 import Forbidden from './pages/admin/Forbidden';
+import VerifyEmail from './pages/members/VerifyEmail';
+import Spinner from './components/Spinner';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -116,6 +118,7 @@ const App = () => {
     <Route path="/admin/2fa/verify" element={<Verify2FA />} />
     <Route path="/member/2fa/verify" element={<Verify2FA />} />
     <Route path="/forbidden" element={<Forbidden />} />
+    <Route path="/verify-email" element={<VerifyEmail/>} />
 
     {/* Member Protected Routes */}
     <Route path="/member" element={

@@ -22,6 +22,8 @@ from ..serializers import (
     CooperativeConfigSerializer
 )
 from datetime import datetime
+from gracecoop.utils import send_verification_email
+import uuid
 
 # =======================
 # USER REGISTRATION & LOGIN
@@ -32,10 +34,44 @@ class UserRegistrationView(APIView):
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            # Create the user
             user = serializer.save()
-            return Response({"message": "Registration successful!"}, status=status.HTTP_201_CREATED)
+            profile = user.memberprofile
+
+            # send verification email using the token from the MemberProfile
+            send_verification_email(profile.email, profile.email_verification_token)
+
+            return Response(
+                {"message": "Registration successful! Please verify your email."},
+                status=status.HTTP_201_CREATED
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        token = request.query_params.get("token")
+        if not token:
+            return Response({"error": "Token missing"}, status=400)
+
+        try:
+            profile = MemberProfile.objects.get(email_verification_token=token)
+        except MemberProfile.DoesNotExist:
+            print(f"Profile not found for token {token}")
+            return Response({"error": "Invalid token"}, status=400)
+
+        if not profile.is_email_verified:
+            profile.is_email_verified = True
+            profile.email_verification_token = uuid.uuid4()  # rotate
+            profile.save()
+            print(f"Profile verified: {profile}")
+            return Response({"message": "Email verified successfully!"})
+        else:
+            print(f"Profile already verified: {profile}")
+            return Response({"message": "Email already verified!"})
+
+
+
 
 
 ########################################################

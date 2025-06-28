@@ -5,6 +5,7 @@ from django.conf import settings
 from datetime import datetime
 from django.db.models import Sum
 from django.utils.text import capfirst
+import uuid
 
 
 class MemberProfile(models.Model):
@@ -27,6 +28,8 @@ class MemberProfile(models.Model):
     phone_number = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     joined_on = models.DateField(auto_now_add=True)
+    is_email_verified = models.BooleanField(default=False)
+    email_verification_token = models.UUIDField(default=uuid.uuid4, unique=True)
 
      # Approval and membership statuses
     status = models.CharField(max_length=10, choices=APPROVAL_STATUS_CHOICES, default='pending')

@@ -50,4 +50,22 @@
     text-align: center;
     margin-top: 1rem;
   }
-  
+  .verify-email-container {
+  min-height: 80vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  color: var(--text-color, #333);
+}
+
+.verify-success {
+  color: green;
+  font-size: 1.2rem;
+}
+
+.verify-failed {
+  color: red;
+  font-size: 1.2rem;
+}

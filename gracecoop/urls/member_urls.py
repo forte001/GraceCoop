@@ -9,7 +9,8 @@ from gracecoop.views.member_views import (
     MyMemberProfileView,
     Member2FAVerifyView,
     Member2FASetupView,
-    ActiveCooperativeConfigView
+    ActiveCooperativeConfigView,
+    VerifyEmailView
 
 )
 from gracecoop.views.admin_views import TwoFAStatusView, Disable2FAView, Verify2FALoginView
@@ -41,6 +42,7 @@ urlpatterns = [
     path('2fa/disable/', Disable2FAView.as_view(), name='2fa-disable'),
     path('user/me/', CurrentUserView.as_view(), name='current-user'),
     path("dashboard/summary/", MemberDashboardSummaryView.as_view(), name="member-dashboard-summary"),
+    path('verify-email/', VerifyEmailView.as_view(), name="verify-email"),
 
     # Logged-in member can view their own profile
     path('my-profile/', MyMemberProfileView.as_view(), name='my-profile'),

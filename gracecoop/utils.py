@@ -22,6 +22,7 @@ from PIL import Image
 from rest_framework.views import exception_handler
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from django.core.mail import send_mail
 
 def create_member_profile_if_not_exists(user):
     # Check if the profile already exists
@@ -319,3 +320,26 @@ def custom_exception_handler(exc, context):
         return Response({'detail': 'Forbidden: You do not have access to this resource.'}, status=403)
 
     return response
+
+def send_verification_email(to_email, token):
+    subject = "Verify your GraceCoop Account"
+    
+    verification_link = f"{settings.FRONTEND_URL}/verify-email?token={token}"
+    
+    message = (
+        f"Hello,\n\n"
+        f"Thank you for registering with GraceCoop.\n\n"
+        f"Please verify your email address by clicking the link below:\n\n"
+        f"{verification_link}\n\n"
+        f"If you did not create this account, please ignore this email.\n\n"
+        f"Regards,\n"
+        f"The GraceCoop Team"
+    )
+    
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [to_email],
+        fail_silently=False
+    )

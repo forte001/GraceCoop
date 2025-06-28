@@ -375,3 +375,7 @@
 .filter-form button:hover {
   background-color: var(--primary-button-hover-bg);
 }
+.repayment-form-container form input{
+background-color: var(--bg-color);
+color: var(--text-color);
+}

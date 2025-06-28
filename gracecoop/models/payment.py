@@ -23,8 +23,6 @@ class Payment(models.Model):
     def __str__(self):
         return f"{self.member.full_name} - {self.payment_type} - {self.amount}"
     
-    # def amount_to_words(self):
-    #     return num2words(self.amount, to='currency', lang='en', currency='NGN').capitalize()
 
     def amount_to_words(self):
         naira = int(self.amount)

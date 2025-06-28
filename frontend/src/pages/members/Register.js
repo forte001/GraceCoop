@@ -38,16 +38,22 @@ const Register = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
   setError(null);
   setSuccess("");
 
-  try {
-    const response = await axiosMemberInstance.post("/members/register/", formData); // baseURL is already set
-    setSuccess(response.data.message || "Registration successful!");
+  // remove any blank optional fields
+  const cleanedProfileData = Object.fromEntries(
+    Object.entries(profileData).filter(([_, v]) => v.trim() !== "")
+  );
 
-    setTimeout(() => navigate("/login"), 1500); // redirect after success
+  const combinedData = { ...formData, ...cleanedProfileData };
+
+  try {
+    const response = await axiosMemberInstance.post("/members/register/", combinedData);
+    setSuccess(response.data.message || "Registration successful! Please check your email.");
+    setTimeout(() => navigate("/login"), 2000);
   } catch (err) {
     if (err.response && err.response.data) {
       const serverErrors = err.response.data;
@@ -58,6 +64,7 @@ const Register = () => {
     }
   }
 };
+
 
   return (
     <div className="register-container">
@@ -86,28 +93,6 @@ const Register = () => {
           placeholder="Password"
           required
           value={formData.password}
-          onChange={handleChange}
-        />
-
-        {/* Profile fields (optional for now) */}
-        <input
-          type="text"
-          name="full_name"
-          placeholder="Full Name (optional)"
-          value={profileData.full_name}
-          onChange={handleChange}
-        />
-        <input
-          type="text"
-          name="phone_number"
-          placeholder="Phone Number (optional)"
-          value={profileData.phone_number}
-          onChange={handleChange}
-        />
-        <textarea
-          name="address"
-          placeholder="Address (optional)"
-          value={profileData.address}
           onChange={handleChange}
         />
 
