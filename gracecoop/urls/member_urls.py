@@ -3,6 +3,8 @@ from rest_framework.routers import DefaultRouter
 from gracecoop.views.member_views import (
     MemberDashboardSummaryView,
     MemberViewSet,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
     UserRegistrationView,
     UserLoginView,
     CurrentUserView,
@@ -43,6 +45,9 @@ urlpatterns = [
     path('user/me/', CurrentUserView.as_view(), name='current-user'),
     path("dashboard/summary/", MemberDashboardSummaryView.as_view(), name="member-dashboard-summary"),
     path('verify-email/', VerifyEmailView.as_view(), name="verify-email"),
+    path("password-reset-request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
+    path("password-reset-confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+
 
     # Logged-in member can view their own profile
     path('my-profile/', MyMemberProfileView.as_view(), name='my-profile'),

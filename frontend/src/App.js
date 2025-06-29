@@ -44,6 +44,8 @@ import AdminDisbursementLogs from './pages/admin/Loan/AdminDisbursementsLogs';
 import Forbidden from './pages/admin/Forbidden';
 import VerifyEmail from './pages/members/VerifyEmail';
 import Spinner from './components/Spinner';
+import PasswordResetRequest from './pages/members/PasswordResetRequest';
+import PasswordResetConfirm from './pages/members/PasswordResetConfirm';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -119,6 +121,8 @@ const App = () => {
     <Route path="/member/2fa/verify" element={<Verify2FA />} />
     <Route path="/forbidden" element={<Forbidden />} />
     <Route path="/verify-email" element={<VerifyEmail/>} />
+    <Route path="/password-reset" element={<PasswordResetRequest/>} />
+    <Route path="/reset-password" element={<PasswordResetConfirm/>} />
 
     {/* Member Protected Routes */}
     <Route path="/member" element={

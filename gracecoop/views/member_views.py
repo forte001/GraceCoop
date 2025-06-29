@@ -11,7 +11,8 @@ from ..models import (MemberProfile,
                       Levy,
                       LoanRepayment,
                       LoanRepaymentSchedule,
-                      Contribution)
+                      Contribution, User
+                      )
 from ..serializers import (
     UserSerializer,
     MemberProfileSerializer,
@@ -22,8 +23,10 @@ from ..serializers import (
     CooperativeConfigSerializer
 )
 from datetime import datetime
-from gracecoop.utils import send_verification_email
+from gracecoop.utils import send_verification_email, send_password_reset_email
 import uuid
+from django.utils import timezone
+from django.core.mail import send_mail
 
 # =======================
 # USER REGISTRATION & LOGIN
@@ -45,6 +48,7 @@ class UserRegistrationView(APIView):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
     
 class VerifyEmailView(APIView):
     permission_classes = [AllowAny]
@@ -69,8 +73,6 @@ class VerifyEmailView(APIView):
         else:
             print(f"Profile already verified: {profile}")
             return Response({"message": "Email already verified!"})
-
-
 
 
 
@@ -119,6 +121,62 @@ class UserLoginView(APIView):
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            profile = MemberProfile.objects.get(email=email)
+            profile.password_reset_token = uuid.uuid4()
+            profile.password_reset_expiry = timezone.now() + timezone.timedelta(hours=1)
+            profile.save()
+
+            send_password_reset_email(profile.email, profile.password_reset_token)
+
+            return Response(
+                {"message": "If an account with that email exists, a reset link has been sent."}
+            )
+        except MemberProfile.DoesNotExist:
+            # Always respond with success-like message to avoid email enumeration
+            return Response(
+                {"message": "If an account with that email exists, a reset link has been sent."}
+            )
+    
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get("token")
+        new_password = request.data.get("new_password")
+
+        if not token or not new_password:
+            return Response({"error": "Token and new password are required."}, status=400)
+
+        try:
+            profile = MemberProfile.objects.get(password_reset_token=token)
+        except MemberProfile.DoesNotExist:
+            return Response({"error": "Invalid token."}, status=400)
+
+        if profile.password_reset_expiry < timezone.now():
+            return Response({"error": "Token expired."}, status=400)
+
+        user = profile.user
+        user.set_password(new_password)
+        user.save()
+
+        # clear the token
+        profile.password_reset_token = None
+        profile.password_reset_expiry = None
+        profile.save()
+
+        return Response({"message": "Password has been reset successfully."})
+    
+
     
 class Member2FASetupView(APIView):
     permission_classes = [IsAuthenticated]

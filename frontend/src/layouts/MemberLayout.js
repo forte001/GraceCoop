@@ -4,6 +4,7 @@ import { MemberContext } from '../components/MemberContext';
 import { ThemeContext } from '../components/ThemeContext';
 import { FaMoon, FaSun, FaDesktop } from 'react-icons/fa';
 import '../styles/members/MemberLayout.css';
+import Spinner from '../components/Spinner';
 
 const MemberLayout = () => {
   const { memberProfile, loading } = useContext(MemberContext);
@@ -54,7 +55,10 @@ const MemberLayout = () => {
     setTheme(nextTheme);
   };
 
-  if (loading) return <div className="member-layout">Loading member data...</div>;
+  if (loading) return <div className="member-layout" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <Spinner size={24} />
+      <span>Loading member data...</span>
+    </div>;
 
   return (
     <div className="member-layout">

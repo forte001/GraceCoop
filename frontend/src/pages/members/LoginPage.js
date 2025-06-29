@@ -102,9 +102,25 @@ const LoginPage = () => {
           </button>
         </div>
         <div>
-          <p>Don't have an account?</p>
-          <button type="button" onClick={() => navigate('/register')}>Sign up</button>
+          <p>Forgot Password? <a href="/password-reset">Reset password</a></p>
         </div>
+        <div>
+          <p>
+            Don't have an account?{" "}
+            <a
+              href="/register"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/register');
+              }}
+              className="button-link"
+            >
+              Sign up
+            </a>
+          </p>
+        </div>
+
+        
       </form>
     </div>
   );

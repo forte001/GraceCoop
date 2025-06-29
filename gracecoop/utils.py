@@ -343,3 +343,25 @@ def send_verification_email(to_email, token):
         [to_email],
         fail_silently=False
     )
+
+def send_password_reset_email(to_email, token):
+    subject = "GraceCoop Password Reset"
+    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
+    message = (
+        f"Hello,\n\n"
+        f"We received a request to reset your GraceCoop password.\n\n"
+        f"You can reset it using the link below:\n\n"
+        f"{reset_link}\n\n"
+        f"If you did not request a password reset, please ignore this email.\n\n"
+        f"Regards,\n"
+        f"The GraceCoop Team"
+    )
+
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [to_email],
+        fail_silently=False
+    )

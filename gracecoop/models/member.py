@@ -30,7 +30,8 @@ class MemberProfile(models.Model):
     joined_on = models.DateField(auto_now_add=True)
     is_email_verified = models.BooleanField(default=False)
     email_verification_token = models.UUIDField(default=uuid.uuid4, unique=True)
-
+    password_reset_token = models.UUIDField(null=True, blank=True)
+    password_reset_expiry = models.DateTimeField(null=True, blank=True)
 
      # Approval and membership statuses
     status = models.CharField(max_length=10, choices=APPROVAL_STATUS_CHOICES, default='pending')

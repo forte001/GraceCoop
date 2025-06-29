@@ -44,10 +44,36 @@
   .login-container form button:hover {
     background-color: #45a049;
   }
+
+  .button-link {
+  display: inline-block;
+  background-color: #007bff;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  text-align: center;
+  transition: background-color 0.3s ease;
+}
+
+.button-link:hover {
+  background-color: #0056b3;
+}
+
   
   .error-message {
     color: red;
     font-size: 14px;
     text-align: center;
   }
+
+  .success-message {
+    color: green;
+    font-size: 0.9rem;
+  }
   
+  .status-message {
+    color: #0f3826;
+    font-size: 14px;
+    text-align: center;
+  }
