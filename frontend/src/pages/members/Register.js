@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axiosMemberInstance from "../../utils/axiosMemberInstance";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "../../styles/members/Register.css";
 
@@ -12,11 +12,10 @@ const Register = () => {
     password: "",
   });
 
-  // Local state to temporarily hold profile info (not submitted yet)
   const [profileData, setProfileData] = useState({
     full_name: "",
     phone_number: "",
-    address: ""
+    address: "",
   });
 
   const [error, setError] = useState(null);
@@ -38,39 +37,41 @@ const Register = () => {
     }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError(null);
-  setSuccess("");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess("");
 
-  // remove any blank optional fields
-  const cleanedProfileData = Object.fromEntries(
-    Object.entries(profileData).filter(([_, v]) => v.trim() !== "")
-  );
+    // remove any blank optional fields
+    const cleanedProfileData = Object.fromEntries(
+      Object.entries(profileData).filter(([_, v]) => v.trim() !== "")
+    );
 
-  const combinedData = { ...formData, ...cleanedProfileData };
+    const combinedData = { ...formData, ...cleanedProfileData };
 
-  try {
-    const response = await axiosMemberInstance.post("/members/register/", combinedData);
-    setSuccess(response.data.message || "Registration successful! Please check your email.");
-    setTimeout(() => navigate("/login"), 2000);
-  } catch (err) {
-    if (err.response && err.response.data) {
-      const serverErrors = err.response.data;
-      const firstKey = Object.keys(serverErrors)[0];
-      setError(serverErrors[firstKey][0]);
-    } else {
-      setError("Registration failed. Please try again.");
+    const registerBaseURL =
+      process.env.NODE_ENV === "development"
+        ? "http://localhost:8000/api/members"
+        : process.env.REACT_APP_API_BASE_URL + "members";
+
+    try {
+      const response = await axios.post(`${registerBaseURL}/register/`, combinedData);
+      setSuccess(response.data.message || "Registration successful! Please check your email.");
+      setError(null);
+      setTimeout(() => navigate("/login"), 2000);
+    } catch (err) {
+      if (err.response && err.response.data) {
+        setError(err.response.data);
+      } else {
+        setError({ general: "Registration failed. Please try again." });
+      }
     }
-  }
-};
-
+  };
 
   return (
     <div className="register-container">
       <h2>Member Registration</h2>
       <form onSubmit={handleSubmit}>
-        {/* Required registration fields */}
         <input
           type="text"
           name="username"
@@ -96,14 +97,31 @@ const handleSubmit = async (e) => {
           onChange={handleChange}
         />
 
-        {error && <p className="error-message">{error}</p>}
+        {/* Errors and success */}
+        {error &&
+          Object.entries(error).map(([field, messages]) => (
+            <p key={field} className="error-message">
+              {Array.isArray(messages) ? messages[0] : messages}
+            </p>
+          ))}
+
         {success && <p className="success-message">{success}</p>}
 
         <button type="submit">Register</button>
 
         <div className="centered-text">
-          <p>Already signed up?</p>
-          <button type="button" onClick={() => navigate('/login')}>Login</button>
+          <p>
+            Already signed up?{" "}
+            <a
+              href="/login"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/login");
+              }}
+            >
+              Login
+            </a>
+          </p>
         </div>
       </form>
     </div>

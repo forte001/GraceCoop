@@ -78,16 +78,17 @@ const DashboardSummary = () => {
           {new Date(summary.upcoming_loan_payment.due_date).toLocaleDateString()}
           <br />
           <span className="status-pending">Status: {summary.upcoming_loan_payment.status}</span>
-          <hr/>
-          <div className="flashing-reminder">
-                🚨 Don't forget: Regular <strong>Contributions</strong> and <strong>Development Levy</strong> payments
-                are essential for your cooperative benefits!
-          </div>
+          
         </div>
         
       ) : (
         <p>No upcoming loan payment.</p>
       )}
+      <hr/>
+          <div className="flashing-reminder">
+                🚨 Don't forget: Regular <strong>Contributions</strong> and <strong>Development Levy</strong> payments
+                are essential for your cooperative benefits!
+          </div>
     </div>
     
   );

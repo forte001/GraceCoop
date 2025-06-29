@@ -37,6 +37,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': True, 'min_length': 8},
         }
+    
+    def validate_email(self, value):
+        """
+        Ensure email is unique across User table
+        """
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
 
     def create(self, validated_data):
         # Extract optional profile fields (won’t raise KeyError if not present)
@@ -301,7 +309,8 @@ class PendingApprovalSerializer(serializers.ModelSerializer):
     class Meta:
         model = MemberProfile
         fields = [
-            'id', 'user', 'has_paid_shares', 'has_paid_levy',
+            'id', 'user', 'full_name', 'email', 'phone_number',
+            'has_paid_shares', 'has_paid_levy',
             'membership_status', 'member_id'
         ]
         
