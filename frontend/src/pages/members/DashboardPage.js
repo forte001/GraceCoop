@@ -4,6 +4,7 @@ import "../../styles/members/DashboardPage.css";
 import PayButtons from "../../components/PayButton";
 import Spinner from '../../components/Spinner';
 import DashboardSummary from './DashboardSummary';
+import MemberAnnouncements from './MemberAnnouncements';
 
 const DashboardPage = () => {
   const { memberProfile, loading } = useContext(MemberContext);
@@ -46,7 +47,14 @@ const DashboardPage = () => {
           <PayButtons hasPaidShares={has_paid_shares} hasPaidLevy={has_paid_levy} />
         </div>
       )}
-      <DashboardSummary />
+      <div className="dashboard-split-container">
+      <div className="dashboard-left">
+        <DashboardSummary />
+      </div>
+      <div className="dashboard-right">
+        <MemberAnnouncements />
+      </div>
+    </div>
     </div>
   );
 };

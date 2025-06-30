@@ -41,7 +41,8 @@ TwoFAVerifyLoginSerializer,
 TwoFASetupVerifySerializer,
 Toggle2FASerializer,
 TwoFASetupSerializer,
-CooperativeConfigSerializer
+CooperativeConfigSerializer,
+AnnouncementSerializer
 )
 from gracecoop.permissions import (
     CanViewPendingApplications,
@@ -49,7 +50,7 @@ from gracecoop.permissions import (
     CanViewApprovedMembers,
     CanUpdateMemberProfile,
 )
-from gracecoop.models import CooperativeConfig, Payment
+from gracecoop.models import CooperativeConfig, Payment, Announcement
 from django.db.models import Sum
 
 ###########################################################
@@ -219,7 +220,7 @@ class AdminDashboardStatsView(APIView):
         start_date = today - timedelta(days=period)
 
         total_payments = Payment.objects.filter(
-            created_at__gte=start_date
+            created_at__gte=start_date, verified=True
         ).aggregate(total=Sum('amount'))['total'] or 0
 
         recent_payments = Payment.objects.order_by('-created_at')[:10]
@@ -422,3 +423,48 @@ class CooperativeConfigAdminViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = CooperativeConfigFilter
+
+#######################################
+## ANNOUNCEMENTS
+#######################################
+
+class AnnouncementViewSet(viewsets.ModelViewSet):
+    queryset = Announcement.objects.all().order_by("-created_at")
+    serializer_class = AnnouncementSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['is_active']
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [permissions.AllowAny]
+        else:
+            permission_classes = [permissions.IsAdminUser]
+        return [permission() for permission in permission_classes]
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Allow admin to create a new announcement.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Allow admin to fully update an existing announcement.
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Allow admin to delete an announcement.
+        """
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)

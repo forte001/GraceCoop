@@ -85,6 +85,10 @@ urlpatterns = [
     path('entry-payment/initiate/', EntryPaymentInitiateView.as_view(), name='entry-initiate'),
     path('entry-payment/verify/<str:reference>/', EntryPaymentVerifyView.as_view(), name='entry-verify'),
 
+    ### Announcement 
+    path('notice/', include('gracecoop.urls.announcement_urls')),
+
+
 
 
    

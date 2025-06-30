@@ -11,7 +11,8 @@ from gracecoop.models import (
     Payment, 
     Contribution,
     Levy,
-    CooperativeConfig)
+    CooperativeConfig,
+    Announcement)
 from datetime import datetime
 from django.utils import timezone
 from .utils import create_member_profile_if_not_exists, generate_payment_reference
@@ -900,3 +901,8 @@ class UserGroupUpdateSerializer(serializers.Serializer):
         if invalid_ids:
             raise serializers.ValidationError(f"Invalid group IDs: {invalid_ids}")
         return value
+    
+class AnnouncementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Announcement
+        fields = ['id', 'title', 'message', 'created_at']

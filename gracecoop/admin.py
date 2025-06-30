@@ -13,6 +13,7 @@ User,
 CooperativeConfig,
 Payment,
 Levy,
+Announcement
 )
 class UserAdmin(admin.ModelAdmin):
     list_display = (
@@ -178,7 +179,13 @@ class ContributionAdmin(admin.ModelAdmin):
     search_fields =['member']
     ordering = ['date']
 
+class AnnouncementAdmin(admin.ModelAdmin):
+    list_display = ['title', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['title', 'message']
+
 # Register your models
+admin.site.register(Announcement, AnnouncementAdmin),
 admin.site.register(Levy, LevyAdmin),
 admin.site.register(Payment,PaymentAdmin),
 admin.site.register(CooperativeConfig, CooperativeConfigAdmin),

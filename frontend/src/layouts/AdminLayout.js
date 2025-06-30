@@ -81,6 +81,7 @@ const AdminLayout = () => {
             </li>
 
             <li><Link to="/admin/report">Reports</Link></li>
+            <li><Link to="/admin/announcements">Announcements</Link></li>
            
 
             <li>

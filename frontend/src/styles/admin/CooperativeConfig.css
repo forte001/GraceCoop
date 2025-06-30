@@ -103,3 +103,15 @@
 .modal-buttons button:hover {
   background-color: var(--primary-button-hover-bg);
 }
+.danger-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  margin-left: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.danger-button:hover {
+  background-color: #d32f2f;
+}

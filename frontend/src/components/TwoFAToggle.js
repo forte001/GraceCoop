@@ -50,13 +50,26 @@ const TwoFAToggle = () => {
 
   return (
     <div>
-      <h2>Two-Factor Authentication</h2>
-      <p>{enabled ? "2FA is currently enabled." : "2FA is currently disabled."}</p>
-      <button onClick={handleToggle} disabled={loading}>
-        {enabled ? 'Disable 2FA' : 'Enable 2FA'}
-      </button>
-      {message && <p>{message}</p>}
-    </div>
+  <h2>Two-Factor Authentication</h2>
+  <p>{enabled ? "2FA is currently enabled." : "2FA is currently disabled."}</p>
+
+  <label className="switch">
+    <input
+      type="checkbox"
+      checked={enabled}
+      onChange={handleToggle}
+      disabled={loading}
+    />
+    <span className="slider">
+      <span className="slider-label">{enabled ? "ON" : "OFF"}</span>
+    </span>
+  </label>
+
+  {message && <p>{message}</p>}
+</div>
+
+
+
   );
 };
 

@@ -46,6 +46,7 @@ import VerifyEmail from './pages/members/VerifyEmail';
 import Spinner from './components/Spinner';
 import PasswordResetRequest from './pages/members/PasswordResetRequest';
 import PasswordResetConfirm from './pages/members/PasswordResetConfirm';
+import AdminAnnouncements from './pages/admin/AnnouncementManager';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -147,6 +148,7 @@ const App = () => {
       <Route path="edit-profile" element={<EditProfilePage />} />
       <Route path="settings/2fa" element={<TwoFAToggle />} />
       <Route path="2fa/setup" element={<TwoFASetup />} />
+      
     </Route>
 
     {/* Admin Protected Routes */}
@@ -167,6 +169,7 @@ const App = () => {
         <Route path="2fa/setup" element={<TwoFASetup />} />
         <Route path="settings/2fa" element={<TwoFAToggle />} />
         <Route path="coop-config" element={<AdminCooperativeConfig />} />
+        <Route path="announcements/" element={<AdminAnnouncements />} />
       </Route>
     </Route>
 

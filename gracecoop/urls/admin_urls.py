@@ -70,6 +70,10 @@ urlpatterns = [
 
    ### Cooperative admin config urls
    path('', include(router.urls)),
+
+
+   ### Announcement-relarted endpoints
+   path('notice/', include('gracecoop.urls.announcement_urls')),
   
 
     
