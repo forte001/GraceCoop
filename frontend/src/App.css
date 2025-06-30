@@ -65,3 +65,9 @@
   animation: slideUp 1.2s ease-in-out forwards;
   animation-delay: 0.5s;
 }
+.landing-logo {
+  width: 150px;
+  height: auto;
+  margin-bottom: 1rem;
+  animation: fadeIn 1s ease;
+}

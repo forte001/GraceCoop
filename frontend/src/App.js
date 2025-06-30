@@ -57,6 +57,7 @@ const MainPage = () => {
 
   return (
     <div className="landing-container">
+    <img src="/logo.png" alt="GraceCoop Logo" className="landing-logo" />
     <h1 className="landing-title animate-fade-in">Welcome to GraceCoop</h1>
     <div className="landing-buttons animate-slide-up">
       <button onClick={() => navigate('/login')}>Member Login</button>

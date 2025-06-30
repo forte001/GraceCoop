@@ -83,7 +83,7 @@ const Register = () => {
         <input
           type="email"
           name="email"
-          placeholder="Email"
+          placeholder="Enter a valid Email"
           required
           value={formData.email}
           onChange={handleChange}
