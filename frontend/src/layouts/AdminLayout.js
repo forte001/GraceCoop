@@ -1,12 +1,15 @@
 import React, { useState, useContext } from 'react';
 import { ThemeContext } from '../components/ThemeContext';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { FaBars, FaTachometerAlt, FaUsers, FaMoneyBill, FaCog, FaHandshake, FaBullhorn, FaFileAlt } from 'react-icons/fa';
 import '../styles/admin/AdminLayout.css';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, setTheme } = useContext(ThemeContext);
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMembershipOpen, setIsMembershipOpen] = useState(
     location.pathname.startsWith('/admin/members')
   );
@@ -20,84 +23,108 @@ const AdminLayout = () => {
     location.pathname.startsWith('/admin/settings')
   );
 
-  const { theme, setTheme } = useContext(ThemeContext);
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     navigate('/admin/login');
   };
 
+  const toggleSidebar = () => setIsSidebarCollapsed(prev => !prev);
   const toggleMembershipMenu = () => setIsMembershipOpen(prev => !prev);
   const toggleLoanMenu = () => setIsLoanOpen(prev => !prev);
   const togglePaymentsMenu = () => setIsPaymentsOpen(prev => !prev);
   const toggleSettingsMenu = () => setIsSettingsOpen(prev => !prev);
 
   return (
-    <div className="admin-layout">
+    <div className={`admin-layout ${isSidebarCollapsed ? 'collapsed' : ''}`}>
       <aside className="sidebar">
-        <div>
-          <h3>Admin Panel</h3>
-          <ul className="sidebar-nav">
-            <li><Link to="/admin/dashboard">Dashboard</Link></li>
-
-            <li>
-              <button onClick={toggleMembershipMenu} className="sidebar-link collapsible">
-                Membership {isMembershipOpen ? '▾' : '▸'}
-              </button>
-              {isMembershipOpen && (
-                <ul className="submenu">
-                  <li><Link to="/admin/members/pending">Pending Members</Link></li>
-                  <li><Link to="/admin/members/approved">Members</Link></li>
-                </ul>
-              )}
-            </li>
-
-            <li>
-              <button onClick={toggleLoanMenu} className="sidebar-link collapsible">
-                Loan {isLoanOpen ? '▾' : '▸'}
-              </button>
-              {isLoanOpen && (
-                <ul className="submenu">
-                  <li><Link to="/admin/loan/categories">Loan Categories</Link></li>
-                  <li><Link to="/admin/loan/management">Loan Management</Link></li>
-                  <li><Link to="/admin/disbursement-logs">Disbursement Log</Link></li>
-                </ul>
-              )}
-            </li>
-
-            <li>
-              <button onClick={togglePaymentsMenu} className="sidebar-link collapsible">
-                Payments {isPaymentsOpen ? '▾' : '▸'}
-              </button>
-              {isPaymentsOpen && (
-                <ul className="submenu">
-                  <li><Link to="/admin/all-payments">All Payments</Link></li>
-                  <li><Link to="/admin/loan/repayment-list">Loan Repayments</Link></li>
-                  <li><Link to="/admin/payments/levies">Development Levy</Link></li>
-                  <li><Link to="/admin/payments/contributions">Contribution</Link></li>
-                </ul>
-              )}
-            </li>
-
-            <li><Link to="/admin/report">Reports</Link></li>
-            <li><Link to="/admin/announcements">Announcements</Link></li>
-           
-
-            <li>
-              <button onClick={toggleSettingsMenu} className="sidebar-link collapsible">
-                Settings {isSettingsOpen ? '▾' : '▸'}
-              </button>
-              {isSettingsOpen && (
-                <ul className="submenu">
-                  <li><Link to="/admin/settings/2fa">Two-Factor Auth</Link></li>
-                  <li><Link to="/admin/coop-config">Cooperative Config</Link></li>
-                   <li><Link to="/admin/permissions">Permissions</Link></li>
-                </ul>
-              )}
-            </li>
-          </ul>
+        <div className="sidebar-header">
+          <img src="/logo.png" alt="GraceCoop" className="sidebar-logo" />
+          {!isSidebarCollapsed && <span className="sidebar-subtitle">GraceCoop</span>}
+          {!isSidebarCollapsed && <h3>Admin Panel</h3>}
+          <button onClick={toggleSidebar} className="sidebar-toggle-btn">
+            <FaBars />
+          </button>
         </div>
+
+        <ul className="sidebar-nav">
+          <li>
+            <Link to="/admin/dashboard">
+              <FaTachometerAlt />
+              {!isSidebarCollapsed && ' Dashboard'}
+            </Link>
+          </li>
+
+          <li>
+            <button onClick={toggleMembershipMenu} className="sidebar-link collapsible">
+              <FaUsers />
+              {!isSidebarCollapsed && ` Membership ${isMembershipOpen ? '▾' : '▸'}`}
+            </button>
+            {isMembershipOpen && (
+              <ul className="submenu">
+                <li><Link to="/admin/members/pending">Pending Members</Link></li>
+                <li><Link to="/admin/members/approved">Members</Link></li>
+              </ul>
+            )}
+          </li>
+
+          <li>
+            <button onClick={toggleLoanMenu} className="sidebar-link collapsible">
+              <FaHandshake />
+              {!isSidebarCollapsed && ` Loan ${isLoanOpen ? '▾' : '▸'}`}
+            </button>
+            {isLoanOpen && (
+              <ul className="submenu">
+                <li><Link to="/admin/loan/categories">Loan Categories</Link></li>
+                <li><Link to="/admin/loan/management">Loan Management</Link></li>
+                <li><Link to="/admin/disbursement-logs">Disbursement Log</Link></li>
+              </ul>
+            )}
+          </li>
+
+          <li>
+            <button onClick={togglePaymentsMenu} className="sidebar-link collapsible">
+              <FaMoneyBill />
+              {!isSidebarCollapsed && ` Payments ${isPaymentsOpen ? '▾' : '▸'}`}
+            </button>
+            {isPaymentsOpen && (
+              <ul className="submenu">
+                <li><Link to="/admin/all-payments">All Payments</Link></li>
+                <li><Link to="/admin/loan/repayment-list">Loan Repayments</Link></li>
+                <li><Link to="/admin/payments/levies">Development Levy</Link></li>
+                <li><Link to="/admin/payments/contributions">Contribution</Link></li>
+              </ul>
+            )}
+          </li>
+
+          <li>
+            <Link to="/admin/report">
+              <FaFileAlt />
+              {!isSidebarCollapsed && ' Reports'}
+            </Link>
+          </li>
+
+          <li>
+            <Link to="/admin/announcements">
+              <FaBullhorn />
+              {!isSidebarCollapsed && ' Announcements'}
+            </Link>
+          </li>
+
+          <li>
+            <button onClick={toggleSettingsMenu} className="sidebar-link collapsible">
+              <FaCog />
+              {!isSidebarCollapsed && ` Settings ${isSettingsOpen ? '▾' : '▸'}`}
+            </button>
+            {isSettingsOpen && (
+              <ul className="submenu">
+                <li><Link to="/admin/settings/2fa">Two-Factor Auth</Link></li>
+                <li><Link to="/admin/coop-config">Cooperative Config</Link></li>
+                <li><Link to="/admin/permissions">Permissions</Link></li>
+              </ul>
+            )}
+          </li>
+        </ul>
 
         <button onClick={handleLogout} className="logout-button">
           Logout

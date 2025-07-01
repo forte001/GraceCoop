@@ -905,4 +905,4 @@ class UserGroupUpdateSerializer(serializers.Serializer):
 class AnnouncementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
-        fields = ['id', 'title', 'message', 'created_at']
+        fields = ['id', 'title', 'message', 'is_active', 'created_at']

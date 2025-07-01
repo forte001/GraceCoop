@@ -68,7 +68,7 @@ const DashboardSummary = () => {
             </table>
             </div>
       )}
-
+      <hr/>
       <h2 className="summary-heading">Upcoming Loan Payment</h2>
       {summary.upcoming_loan_payment ? (
         <div className="upcoming-payment">

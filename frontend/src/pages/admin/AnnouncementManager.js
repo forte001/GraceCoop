@@ -148,24 +148,36 @@ const AdminAnnouncements = () => {
             </tr>
           </thead>
           <tbody>
-            {announcements.map((ann) => (
-              <tr key={ann.id}>
-                <td>{ann.title}</td>
-                <td>{ann.message}</td>
-                <td>{ann.is_active ? "Yes" : "No"}</td>
-                <td>{new Date(ann.created_at).toLocaleDateString()}</td>
-                <td>
-                  <button onClick={() => handleToggleStatus(ann.id, ann.is_active)}>
-                    {ann.is_active ? "Deactivate" : "Activate"}
-                  </button>
-                  <button className="danger-button" onClick={() => handleDeleteAnnouncement(ann.id)}>
-                    Delete
-                  </button>
-                  <button onClick={() => handleEditAnnouncement(ann)}>Edit</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+                {announcements.length === 0 ? (
+                    <tr>
+                    <td colSpan="5" style={{ textAlign: "center", padding: "1rem" }}>
+                        No announcements yet. They will be displayed here when you add any.
+                    </td>
+                    </tr>
+                ) : (
+                    announcements.map((ann) => (
+                    <tr key={ann.id}>
+                        <td>{ann.title}</td>
+                        <td>{ann.message}</td>
+                        <td>{ann.is_active === true || ann.is_active === "True" ? "Yes" : "No"}</td>
+                        <td>{new Date(ann.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <button onClick={() => handleToggleStatus(ann.id, ann.is_active === true || ann.is_active === "true")}>
+                            {ann.is_active === true || ann.is_active === "True" ? "Deactivate" : "Activate"}
+                            </button>
+                        <button
+                            className="danger-button"
+                            onClick={() => handleDeleteAnnouncement(ann.id)}
+                        >
+                            Delete
+                        </button>
+                        <button onClick={() => handleEditAnnouncement(ann)}>Edit</button>
+                        </td>
+                    </tr>
+                    ))
+                )}
+                </tbody>
+
         </table>
       )}
 

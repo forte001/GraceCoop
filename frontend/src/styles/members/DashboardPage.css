@@ -349,3 +349,16 @@ input:disabled + .slider {
   max-height: 400px;  /* preferred height */
   overflow-y: auto;   /* enable scrolling if content overflows */
 }
+.announcement-date {
+  font-weight: normal;
+  opacity: 0.7;
+}
+
+.new-badge {
+  background-color: var(--success-text, green);
+  color: #fff;
+  margin-left: 0.5rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.7rem;
+  border-radius: 4px;
+}

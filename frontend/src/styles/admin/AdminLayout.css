@@ -182,5 +182,45 @@
   border-color: transparent;
 }
 
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.sidebar-logo {
+  width: 35px;
+  height: 35px;
+  margin-bottom: 4px;
+}
+
+.sidebar-subtitle {
+  font-size: 0.6rem;
+  color: var(--text-color, #111827);
+  margin-bottom: 0.5rem;
+}
+
+.admin-layout.collapsed .sidebar-subtitle,
+.admin-layout.collapsed .sidebar h3 {
+  display: none;
+}
+
+.sidebar-nav li a,
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-toggle-btn {
+  margin-top: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
 
 
