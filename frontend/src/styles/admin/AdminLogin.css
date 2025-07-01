@@ -101,4 +101,18 @@ body {
     margin-bottom: 15px;
     text-align: center;
   }
-  
+ .landing-logo {
+  width: 80px !important;
+  height: 80px !important;
+  margin: 0 auto 1rem auto;
+  display: block;
+  animation: fadeIn 1s ease;
+}
+.logo-text {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color:#062045
+}
+

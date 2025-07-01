@@ -50,6 +50,8 @@ const AdminLogin = () => {
 
   return (
     <div className="login-container">
+      <img src="/logo.png" alt="GraceCoop Logo" className="landing-logo" />
+      <p className="logo-text">GraceCoop</p>
       <h2>Admin Login</h2>
       <form onSubmit={handleLogin}>
         <div>
