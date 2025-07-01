@@ -13,7 +13,6 @@ const AdminStatsDashboard = () => {
   const [chartOptions, setChartOptions] = useState({});
   const { theme } = useContext(ThemeContext);
 
-
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -29,39 +28,39 @@ const AdminStatsDashboard = () => {
   }, [period]);
 
   useEffect(() => {
-  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim();
-  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-color').trim();
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim();
+    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid-color').trim();
 
-  setChartOptions({
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'right',
-        labels: {
-          color: textColor,
+    setChartOptions({
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            color: textColor,
+          },
         },
       },
-    },
-    scales: {
-      x: {
-        ticks: {
-          color: textColor,
+      scales: {
+        x: {
+          ticks: {
+            color: textColor,
+          },
+          grid: {
+            color: gridColor,
+          },
         },
-        grid: {
-          color: gridColor,
+        y: {
+          ticks: {
+            color: textColor,
+          },
+          grid: {
+            color: gridColor,
+          },
         },
       },
-      y: {
-        ticks: {
-          color: textColor,
-        },
-        grid: {
-          color: gridColor,
-        },
-      },
-    },
-  });
-}, [theme]);
+    });
+  }, [theme]);
 
   if (loading) return <Spinner />;
   if (!stats) return <p>No data available.</p>;
@@ -73,16 +72,14 @@ const AdminStatsDashboard = () => {
     return acc;
   }, {});
 
-  const chartLabels = Object.keys(amountsByDay).sort(
-    (a, b) => new Date(a) - new Date(b)
-  );
+  const chartLabels = Object.keys(amountsByDay).sort((a, b) => new Date(a) - new Date(b));
   const chartData = chartLabels.map(label => amountsByDay[label]);
 
   const lineData = {
     labels: chartLabels,
     datasets: [
       {
-        label: 'Total Payments (₦)',
+        label: `Total Payments (₦) in last ${period} days`,
         data: chartData,
         fill: false,
         backgroundColor: '#10b981',
@@ -91,8 +88,6 @@ const AdminStatsDashboard = () => {
       },
     ],
   };
-
-
 
   return (
     <div className="dashboard-container" style={{ padding: '20px' }}>
@@ -107,18 +102,18 @@ const AdminStatsDashboard = () => {
           <p>{stats.pending_members}</p>
         </div>
         <div className="stat-card payments">
-          <h4>Total Payments (₦)</h4>
+          <h4>Total Payments (₦) in last {period} days</h4>
           <p>{parseFloat(stats.total_payments).toFixed(2)}</p>
         </div>
       </div>
 
       {/* Period selector */}
-      <div className="period-selector">
+      <div className="period-selector" style={{ marginTop: '20px' }}>
         <label htmlFor="period">Select Period (days): </label>
         <select
           id="period"
           value={period}
-          onChange={e => setPeriod(e.target.value)}
+          onChange={e => setPeriod(Number(e.target.value))}
           style={{ marginLeft: '10px' }}
         >
           <option value={30}>30</option>
@@ -152,7 +147,10 @@ const AdminStatsDashboard = () => {
                 <td>{new Date(payment.paid_date).toLocaleDateString()}</td>
                 <td
                   style={{
-                    color: payment.status === 'complete' ? 'var(--success-color)' : 'var(--warning-color)',
+                    color:
+                      payment.status === 'complete'
+                        ? 'var(--success-color)'
+                        : 'var(--warning-color)',
                     fontWeight: 'bold',
                   }}
                 >

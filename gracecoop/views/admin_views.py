@@ -223,13 +223,14 @@ class AdminDashboardStatsView(APIView):
             created_at__gte=start_date, verified=True
         ).aggregate(total=Sum('amount'))['total'] or 0
 
-        recent_payments = Payment.objects.order_by('-created_at')[:10]
+        recent_payments = Payment.objects.filter(verified=True).order_by('-created_at')[:10]
 
         stats_data = {
             "total_members": total_members,
             "pending_members": pending_members,
             "total_payments": total_payments,
             "recent_payments": recent_payments,
+            "period": period,
         }
 
         serializer = AdminDashboardStatsSerializer(stats_data)

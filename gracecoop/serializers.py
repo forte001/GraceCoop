@@ -301,6 +301,7 @@ class AdminDashboardStatsSerializer(serializers.Serializer):
     pending_members = serializers.IntegerField()
     total_payments = serializers.DecimalField(max_digits=12, decimal_places=2)
     recent_payments = RecentPaymentSerializer(many=True)
+    period = serializers.IntegerField()
 
 
 ## Serializer for listing pending approvals
