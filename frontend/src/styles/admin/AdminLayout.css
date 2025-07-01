@@ -22,21 +22,22 @@
 
 .sidebar-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding-bottom: 0.5rem;
+  padding: 0.5rem;
   border-bottom: 1px solid #ddd;
 }
 
 .sidebar-logo {
-  width: 30px;
-  height: 30px;
+  width: 35px;
+  height: 35px;
+  margin-bottom: 4px;
 }
 
 .sidebar-subtitle {
   font-size: 0.6rem;
   color: var(--text-color, #111827);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .admin-layout.collapsed .sidebar-subtitle,
