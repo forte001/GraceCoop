@@ -238,3 +238,29 @@ form button:hover {
 .filter-form button:hover {
   background-color: var(--primary-button-hover-bg);
 }
+
+.alert-banner {
+  position: relative;
+  background-color: #2563eb; /* success default blue */
+  color: #fff;
+  padding: 10px 15px;
+  border-radius: 6px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  transition: opacity 0.3s ease;
+}
+
+.alert-banner.error {
+  background-color: #dc2626; /* red for error */
+}
+
+.alert-banner .close-btn {
+  position: absolute;
+  right: 10px;
+  top: 6px;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+}

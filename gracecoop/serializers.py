@@ -548,11 +548,37 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             'repayment_months', 'status', 'application_date', 'approved_by', 'approval_date'
         ]
 
-        def validate_category(self, category):
-            if category.status in ['inactive', 'archived']:
-                raise serializers.ValidationError("This loan category is not available for applications.")
-            return category
-            
+    def validate_category(self, category):
+        if category.status in ['inactive', 'archived']:
+            raise serializers.ValidationError("This loan category is not available for applications.")
+        return category    
+    def validate(self, data):
+        user = self.context['request'].user
+
+        # check for active loans
+        active_loans = Loan.objects.filter(
+                member=user.memberprofile,
+                status__in=['approved', 'disbursed', 'partially_disbursed']
+            )
+        if active_loans.exists():
+                raise serializers.ValidationError("You cannot apply for a new loan while an active loan exists.")
+
+            # cap loan amount to 3x contribution
+        total_contributions = (
+                user.memberprofile.contributions.aggregate(total=Sum('amount'))['total'] or 0
+            )
+
+        max_loan_amount = total_contributions * 3
+        requested_amount = data.get('amount')
+
+        if requested_amount > max_loan_amount:
+                raise serializers.ValidationError(
+                    f"Requested amount exceeds allowed limit. "
+                    f"Maximum allowed is 3× contributions (₦{max_loan_amount:,.2f})."
+                )
+
+        return data        
+                
     
 class RepaymentSerializer(serializers.ModelSerializer):
     loan_reference = serializers.SerializerMethodField()
