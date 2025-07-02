@@ -160,6 +160,43 @@
 .loan-summary strong {
   font-weight: bold;
 }
+.loan-summary-container {
+  display: flex;
+  gap: 1rem;
+  border-top: 1px solid #ddd;
+  padding-top: 1rem;
+}
+
+.summary-column {
+  flex: 1;
+  padding: 0 0.5rem;
+  border-left: 1px solid #ddd;
+}
+
+.summary-column:first-child {
+  border-left: none; /* no border on the first column */
+}
+
+.receipt-button {
+  display: inline-block;
+  background-color: #007bff;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.receipt-button:hover {
+  background-color: #0056b3;
+}
+
+.no-receipt {
+  color: #888;
+  font-style: italic;
+}
+
+
 
 /* ============================================
    Disbursement Details

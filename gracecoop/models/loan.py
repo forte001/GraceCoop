@@ -102,9 +102,12 @@ class DisbursementLog(models.Model):
     repayment_months = models.PositiveIntegerField(default=1, help_text="Number of months to repay this disbursement")
     disbursed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     disbursed_at = models.DateTimeField(auto_now_add=True)
+    receipt = models.FileField(upload_to='disbursement_receipts/', null=True, blank=True)  # allow blank for existing records
+    receipt_url = models.URLField(blank=True, null=True)
+    requested_by = models.ForeignKey(MemberProfile, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.amount} over {self.repayment_months} months on {self.disbursed_at.date()}"
+        return f"{self.amount} over {self.repayment_months} months on {self.disbursed_at.date()} disbursed to {self.requested_by}"
 
 
 class LoanApplication(models.Model):

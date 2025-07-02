@@ -379,3 +379,46 @@
 background-color: var(--bg-color);
 color: var(--text-color);
 }
+
+.three-column-layout {
+  display: flex;
+  gap: 20px;
+  border-top: 1px solid #ddd;
+  padding-top: 1rem;
+}
+
+.loan-column {
+  flex: 1;
+  padding: 0 10px;
+  border-right: 1px solid #ddd;
+}
+
+.loan-column:last-child {
+  border-right: none;
+}
+
+/* for scrollable receipts */
+.loan-receipts-column .receipt-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.receipt-button {
+  display: inline-block;
+  background-color: #007bff;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.receipt-button:hover {
+  background-color: #0056b3;
+}
+
+.no-receipt {
+  color: #888;
+  font-style: italic;
+}
+

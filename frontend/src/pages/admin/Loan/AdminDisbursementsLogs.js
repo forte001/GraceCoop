@@ -10,6 +10,7 @@ import { toast } from 'react-toastify';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
+import { formatDateTime } from '../../../utils/formatDate';
 
 const AdminDisbursementLogs = () => {
   const {
@@ -149,29 +150,47 @@ const AdminDisbursementLogs = () => {
               <th>Reference</th>
               <th>Amount</th>
               <th>Months</th>
+              <th>Recipient</th>
               <th>Disbursed By</th>
               <th>Disbursed At</th>
+              <th>View/Download</th>
             </tr>
           </thead>
           <tbody>
-            {data.length ? (
-              data.map((log) => (
-                <tr key={log.id}>
-                  <td>{log.loan_reference}</td>
-                  <td>{formatNaira(log.amount)}</td>
-                  <td>{log.repayment_months}</td>
-                  <td>{log.disbursed_by_name}</td>
-                  <td>{log.disbursed_at?.split('T')[0]}</td>
+              {data.length ? (
+                data.map((log) => (
+                  <tr key={log.id}>
+                    <td>{log.loan_reference}</td>
+                    <td>{formatNaira(log.amount)}</td>
+                    <td>{log.repayment_months}</td>
+                    <td>{log.requested_by_name}</td>
+                    <td>{log.disbursed_by_name}</td>
+                    <td>{formatDateTime(log.disbursed_at)}</td>
+                    <td>
+                      {log.receipt_url ? (
+                        <a
+                            href={log.receipt_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="receipt-button"
+                          >
+                            View / Download Receipt
+                          </a>
+                        ) : (
+                          <span className="no-receipt">No receipt</span>
+                        )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center' }}>
+                    No disbursement logs found.
+                  </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" style={{ textAlign: 'center' }}>
-                  No disbursement logs found.
-                </td>
-              </tr>
-            )}
-          </tbody>
+              )}
+            </tbody>
+
         </table>
       </div>
 

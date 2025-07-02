@@ -3,6 +3,7 @@ import usePaginatedData from "../../utils/usePaginatedData";
 import axiosAdminInstance from "../../utils/axiosAdminInstance";
 import Spinner from "../../components/Spinner";
 import { toast } from "react-toastify";
+import { formatDateTime } from "../../utils/formatDate";
 
 const AdminAnnouncements = () => {
   const {
@@ -160,7 +161,7 @@ const AdminAnnouncements = () => {
                         <td>{ann.title}</td>
                         <td>{ann.message}</td>
                         <td>{ann.is_active === true || ann.is_active === "True" ? "Yes" : "No"}</td>
-                        <td>{new Date(ann.created_at).toLocaleDateString()}</td>
+                        <td>{formatDateTime(ann.created_at)}</td>
                         <td>
                             <button onClick={() => handleToggleStatus(ann.id, ann.is_active === true || ann.is_active === "true")}>
                             {ann.is_active === true || ann.is_active === "True" ? "Deactivate" : "Activate"}

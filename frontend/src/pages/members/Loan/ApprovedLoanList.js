@@ -4,6 +4,7 @@ import { formatNaira } from '../../../utils/formatCurrency';
 import LoanRepaymentForm from './LoanRepaymentForm';
 import '../../../styles/members/loan/ApprovedLoansList.css';
 import usePaginatedData from '../../../utils/usePaginatedData';
+import { formatDateTime } from '../../../utils/formatDate';
 
 const ApprovedLoansList = () => {
 
@@ -173,18 +174,62 @@ const {
               {selectedLoanId === loan.id && (
                 <div className="loan-expanded-section">
                   {loanSummary && (
-                    <div className="section-block">
-                      <h3>Loan Summary</h3>
-                      <p>Reference: {loanSummary.reference || 'N/A'}</p>
-                      <p>Member: {loanSummary.applicant_name}</p>
-                      <p>Interest Rate: {loanSummary.interest_rate}%</p>
-                      <p>Total Disbursed: {formatNaira(loanSummary.amount)}</p>
-                      <p>Remaining Disbursement Balance: {formatNaira(loanSummary.disbursements_remaining)}</p>
-                      <p>Total Repaid: {formatNaira(loanSummary.total_paid)}</p>
-                      <p>Repayment Months: {loanSummary.total_repayment_months}</p>
-                      <p>Start Date: {loanSummary.start_date}</p>
-                      <p>End Date: {loanSummary.end_date}</p>
-                    </div>
+                    <div className="loan-expanded-section three-column-layout">
+    {/* Loan summary */}
+    <div className="loan-column loan-summary-column">
+      {loanSummary && (
+        <>
+          <h3>Loan Summary</h3>
+          <p>Reference: {loanSummary.reference || 'N/A'}</p>
+          <p>Member: {loanSummary.applicant_name}</p>
+          <p>Interest Rate: {loanSummary.interest_rate}%</p>
+          <p>Total Disbursed: {formatNaira(loanSummary.amount)}</p>
+          <p>Remaining Disbursement Balance: {formatNaira(loanSummary.disbursements_remaining)}</p>
+          <p>Total Repaid: {formatNaira(loanSummary.total_paid)}</p>
+          <p>Repayment Months: {loanSummary.total_repayment_months}</p>
+          <p>Start Date: {loanSummary.start_date}</p>
+          <p>End Date: {loanSummary.end_date}</p>
+        </>
+      )}
+    </div>
+
+    {/* Disbursement receipts */}
+    <div className="loan-column loan-receipts-column">
+      <h3>Disbursement Receipts</h3>
+      <div className="receipt-list">
+        {loanSummary?.disbursements?.length > 0 ? (
+          loanSummary.disbursements.map((d) => (
+            <div key={d.id} className="receipt-entry">
+              <p>
+                <strong>Amount:</strong> {formatNaira(d.amount)} <br />
+                <strong>Disbursed On:</strong> {formatDateTime(d.disbursed_at)} <br />
+                {d.receipt_url ? (
+                  <a
+                      href={d.receipt_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="receipt-button"
+                    >
+                      View / Download Receipt
+                    </a>
+                  ) : (
+                    <span className="no-receipt">No receipt</span>
+                  )}
+              </p>
+            </div>
+          ))
+        ) : (
+          <p>No receipts found.</p>
+        )}
+      </div>
+    </div>
+
+    {/* Reserved for future */}
+    <div className="loan-column loan-future-column">
+      <h3>Coming Soon</h3>
+      <p>This area is reserved for future functionality.</p>
+    </div>
+  </div>
                   )}
 
                   {repaymentSchedule.length > 0 && (

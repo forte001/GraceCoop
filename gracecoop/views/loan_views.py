@@ -10,12 +10,14 @@ from decimal import Decimal, InvalidOperation
 from ..utils import (generate_repayment_schedule,
                     update_loan_disbursement_status,
                     generate_loan_reference,
-                    apply_loan_repayment
+                    apply_loan_repayment,
+                    upload_receipt_to_supabase
                     )
 from django_filters.rest_framework import DjangoFilterBackend
 from ..filters import RepaymentFilter, LoanFilter, LoanApplicationFilter, DisbursementLogFilter
 from rest_framework.filters import SearchFilter, OrderingFilter
 from gracecoop.pagination import StandardResultsSetPagination
+import grace_coop.settings as settings
 
 
 from gracecoop.models import (
@@ -106,13 +108,18 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
         loan.approved_at = timezone.now()
         loan.save()
         return Response({'status': 'approved'})
-
+    
     @action(detail=True, methods=['post'], url_path='disburse')
     def disburse(self, request, pk=None):
         loan = self.get_object()
         amount = request.data.get('amount')
         num_disbursements = request.data.get('num_disbursements')
         remaining_flag = request.data.get('remaining_disbursement', False)
+
+        # uploaded file (required)
+        receipt_file = request.FILES.get('receipt')
+        if not receipt_file:
+            return Response({'error': 'Receipt file is required.'}, status=400)
 
         if not amount:
             return Response({'error': 'Amount is required.'}, status=400)
@@ -137,12 +144,34 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
 
         loan.remaining_disbursement = bool(remaining_flag)
 
-        DisbursementLog.objects.create(
-            loan=loan,
-            amount=amount,
-            repayment_months=loan.duration_months,
-            disbursed_by=request.user
-        )
+        # handle local vs production
+        if settings.local.DEBUG:
+            # store using FileField
+            DisbursementLog.objects.create(
+                loan=loan,
+                amount=amount,
+                repayment_months=loan.duration_months,
+                disbursed_by=request.user,
+                requested_by=loan.member,
+                receipt=receipt_file
+            )
+        else:
+            # store in Supabase
+            file_ext = receipt_file.name.split(".")[-1]
+            unique_name = f"receipt_{loan.reference}_{uuid.uuid4()}.{file_ext}"
+            try:
+                public_url = upload_receipt_to_supabase(receipt_file, unique_name)
+            except Exception as e:
+                return Response({'error': str(e)}, status=500)
+
+            DisbursementLog.objects.create(
+                loan=loan,
+                amount=amount,
+                repayment_months=loan.duration_months,
+                disbursed_by=request.user,
+                requested_by=loan.member,
+                receipt_url=public_url
+            )
 
         if not loan.start_date:
             loan.start_date = timezone.now().date()
@@ -150,6 +179,7 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
         update_loan_disbursement_status(loan)
 
         return Response({'message': f'{amount} disbursed successfully.'})
+
 
     @action(detail=True, methods=['post'], url_path='apply-grace-period')
     def apply_grace_period(self, request, pk=None):

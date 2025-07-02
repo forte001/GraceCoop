@@ -15,6 +15,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
+import { formatDateTime } from '../../../utils/formatDate';
 
 const LoanManagement = () => {
 
@@ -83,31 +84,46 @@ const {
     setIsFullPayment(false);
   };
 
-  const handleDisburse = async (e) => {
-    e.preventDefault();
-    try {
-      const amount = disbursementType === 'full' || isFullPayment
-        ? selectedLoan.disbursements_remaining
-        : disburseAmount;
+const [receiptFile, setReceiptFile] = useState(null);
 
-      await axiosAdminInstance.post(
-        `/admin/loan/loans-admin/${selectedLoan.id}/disburse/`,
-        { amount },
-        { headers: { 'X-CSRFToken': getCSRFToken() } }
-      );
+    const handleDisburse = async (e) => {
+      e.preventDefault();
+      try {
+        const amount = disbursementType === 'full' || isFullPayment
+          ? selectedLoan.disbursements_remaining
+          : disburseAmount;
 
-      alert('Loan disbursed successfully!');
-      setShowModal(false);
-      refreshLoans();
-    } catch (err) {
-      if (err.response?.status === 403){
-        navigate('/forbidden');
-      } else{
-        alert(err.response?.data?.error || 'An error occurred during disbursement.');
+        const formData = new FormData();
+        formData.append('amount', amount);
+        if (receiptFile) {
+          formData.append('receipt', receiptFile);
+        }
+        // to define number of intended tranches
+        // formData.append('num_disbursements', numDisbursements);
+
+        await axiosAdminInstance.post(
+          `/admin/loan/loans-admin/${selectedLoan.id}/disburse/`,
+          formData,
+          {
+            headers: {
+              'X-CSRFToken': getCSRFToken(),
+              'Content-Type': 'multipart/form-data',
+            }
+          }
+        );
+
+        alert('Loan disbursed successfully!');
+        setShowModal(false);
+        refreshLoans();
+      } catch (err) {
+        if (err.response?.status === 403){
+          navigate('/forbidden');
+        } else{
+          alert(err.response?.data?.error || 'An error occurred during disbursement.');
+        }
       }
-    }
+    };
 
-  };
 
   const toggleSchedule = async (loanId) => {
     setExpandedSchedules(prev => ({ ...prev, [loanId]: !prev[loanId] }));
@@ -404,17 +420,50 @@ const exportToPDF = async () => {
                   {expandedSummaries[loan.id] && loanSummaries[loan.id] && (
                     <tr className="summary-row">
                     <td colSpan="9">
-                      <div className="loan-summary">
-                        <h4>Loan Summary</h4>
-                        <p><strong>Reference:</strong> {loanSummaries[loan.id].reference}</p>
-                        <p><strong>Member:</strong> {loanSummaries[loan.id].member_name}</p>
-                        <p><strong>Total Disbursed:</strong> {formatNaira(loanSummaries[loan.id].total_disbursed || 0)}</p>
-                        <p><strong>Outstanding Disbursement Balance:</strong> {formatNaira(loanSummaries[loan.id].remaining_balance || 0)}</p>
-                        <p><strong>Total Repaid:</strong> {formatNaira(loanSummaries[loan.id].total_paid || 0)}</p>
-                        <p><strong>Interest Rate:</strong> {loanSummaries[loan.id].interest_rate}%</p>
-                        <p><strong>Status:</strong> {getStatusBadge(loanSummaries[loan.id].status)}</p>
-                      </div>
-                    </td>
+                      <div className="loan-summary-container">
+                          <div className="summary-column loan-details">
+                            <h4>Loan Summary</h4>
+                            <p><strong>Reference:</strong> {loanSummaries[loan.id].reference}</p>
+                            <p><strong>Member:</strong> {loanSummaries[loan.id].member_name}</p>
+                            <p><strong>Total Disbursed:</strong> {formatNaira(loanSummaries[loan.id].total_disbursed || 0)}</p>
+                            <p><strong>Outstanding Disbursement Balance:</strong> {formatNaira(loanSummaries[loan.id].remaining_balance || 0)}</p>
+                            <p><strong>Total Repaid:</strong> {formatNaira(loanSummaries[loan.id].total_paid || 0)}</p>
+                            <p><strong>Interest Rate:</strong> {loanSummaries[loan.id].interest_rate}%</p>
+                            <p><strong>Status:</strong> {getStatusBadge(loanSummaries[loan.id].status)}</p>
+                          </div>
+                          <div className="summary-column disbursement-receipts">
+                            <h4>Disbursement Receipts</h4>
+                            {loan.disbursements && loan.disbursements.length > 0 ? (
+                              loan.disbursements.map((d) => (
+                                <div key={d.id} className="receipt-entry">
+                                  <p>{formatNaira(d.amount)} on {formatDateTime(d.disbursed_at)}</p>
+                                  {d.receipt_url ? (
+                                    <a
+                                      href={d.receipt_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="receipt-button"
+                                    >
+                                      View / Download Receipt
+                                    </a>
+                                  ) : (
+                                    <span className="no-receipt">No receipt</span>
+                                  )}
+
+                                </div>
+                              ))
+                            ) : (
+                              <p>No disbursement records</p>
+                            )}
+                          </div>
+                          <div className="summary-column reserved">
+                            <h4>Reserved</h4>
+                            <p>Coming soon...</p>
+                          </div>
+                        </div>
+
+                      </td>
+
                   </tr>
                   )}
                   {/* Loan Repayment Schedule Row (below the loan row) */}
@@ -467,58 +516,70 @@ const exportToPDF = async () => {
         </>
       )}
 
-          {showModal && selectedLoan && (
-            <div className="modal-overlay">
-              <div className="modal">
-                <h3>Disburse Loan - {selectedLoan.reference}</h3>
-                <form onSubmit={handleDisburse}>
+      {showModal && selectedLoan && (
+          <div className="modal-overlay">
+            <div className="modal">
+              <h3>Disburse Loan - {selectedLoan.reference}</h3>
+              <form onSubmit={handleDisburse}>
+                <div>
+                  <label>
+                    <input
+                      type="radio"
+                      name="disbursementType"
+                      value="full"
+                      checked={disbursementType === 'full'}
+                      onChange={() => {
+                        setDisbursementType('full');
+                        setIsFullPayment(true);
+                      }}
+                    />
+                    Full Disbursement
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="disbursementType"
+                      value="partial"
+                      checked={disbursementType === 'partial'}
+                      onChange={() => {
+                        setDisbursementType('partial');
+                        setIsFullPayment(false);
+                      }}
+                    />
+                    Partial Disbursement
+                  </label>
+                </div>
+                {disbursementType === 'partial' && (
                   <div>
-                    <label>
-                      <input
-                        type="radio"
-                        name="disbursementType"
-                        value="full"
-                        checked={disbursementType === 'full'}
-                        onChange={() => {
-                          setDisbursementType('full');
-                          setIsFullPayment(true);
-                        }}
-                      />
-                      Full Disbursement
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="disbursementType"
-                        value="partial"
-                        checked={disbursementType === 'partial'}
-                        onChange={() => {
-                          setDisbursementType('partial');
-                          setIsFullPayment(false);
-                        }}
-                      />
-                      Partial Disbursement
-                    </label>
+                    <label>Amount to Disburse</label>
+                    <input
+                      type="number"
+                      value={disburseAmount}
+                      onChange={(e) => setDisburseAmount(e.target.value)}
+                      min="1"
+                      max={selectedLoan.disbursements_remaining}
+                      required
+                    />
                   </div>
-                  {disbursementType === 'partial' && (
-                    <div>
-                      <label>Amount to Disburse</label>
-                      <input
-                        type="number"
-                        value={disburseAmount}
-                        onChange={(e) => setDisburseAmount(e.target.value)}
-                        min="1"
-                        max={selectedLoan.disbursements_remaining}
-                        required
-                      />
-                    </div>
-                  )}
-                  <button type="submit">Confirm Disbursement</button>
-                  <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-                </form>
-              </div>
+                )}
+
+                <div>
+                  <label>Upload Disbursement Receipt</label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setReceiptFile(e.target.files[0])}
+                    required
+                  />
+                </div>
+
+                <button type="submit">Confirm Disbursement</button>
+                <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
+              </form>
             </div>
-          )}
+          </div>
+        )}
+
 
     </div>
   );

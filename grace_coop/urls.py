@@ -44,7 +44,8 @@ urlpatterns = [
     
 
     # Updated catch-all route with explicit exclusions
-    re_path(r'^(?!admin(?:/|$)|api(?:/|$)|accounts(?:/|$)).*$', TemplateView.as_view(template_name='index.html')),
+    re_path(r'^(?!admin(?:/|$)|api(?:/|$)|accounts(?:/|$)|media(?:/|$)).*$', TemplateView.as_view(template_name='index.html')),
+
     
 ]
 

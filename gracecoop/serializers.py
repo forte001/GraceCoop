@@ -437,10 +437,24 @@ class LoanCategorySerializer(serializers.ModelSerializer):
 class DisbursementLogSerializer(serializers.ModelSerializer):
     loan_reference = serializers.CharField(source='loan.reference', read_only=True)
     disbursed_by_name = serializers.SerializerMethodField()
+    requested_by_name = serializers.SerializerMethodField()
+    receipt_url = serializers.SerializerMethodField()
+    receipt = serializers.FileField(write_only=True, required=False)
+
 
     class Meta:
         model = DisbursementLog
-        fields = ['id', 'amount', 'repayment_months', 'disbursed_by_name', 'loan_reference', 'disbursed_at']
+        fields = [
+            'id',
+            'amount',
+            'repayment_months',
+            'disbursed_by_name',
+            'loan_reference',
+            'disbursed_at',
+            'requested_by_name',
+            'receipt_url',
+            'receipt'
+        ]
 
     def get_disbursed_by_name(self, obj):
         user = obj.disbursed_by
@@ -448,6 +462,23 @@ class DisbursementLogSerializer(serializers.ModelSerializer):
             return "N/A"
         full_name = f"{user.first_name} {user.last_name}".strip()
         return full_name if full_name else user.username
+    
+    def get_requested_by_name(self, obj):
+        member_user = getattr(obj.loan.member, "user", None)
+        if member_user:
+            full_name = f"{member_user.first_name} {member_user.last_name}".strip()
+            return full_name if full_name else member_user.username
+        return "N/A"
+  
+    def get_receipt_url(self, obj):
+        request = self.context.get('request')
+        if obj.receipt_url:
+            return obj.receipt_url
+        elif obj.receipt and request:
+            return request.build_absolute_uri(obj.receipt.url)
+        return None
+
+
 
 
 class LoanSerializer(serializers.ModelSerializer):

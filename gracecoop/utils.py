@@ -14,7 +14,7 @@ from django.db import transaction
 from io import BytesIO
 from django.template.loader import render_to_string
 from weasyprint import HTML, CSS
-from grace_coop.settings import production as settings
+from django.conf import settings
 import qrcode
 import base64
 import os
@@ -23,6 +23,7 @@ from rest_framework.views import exception_handler
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.core.mail import send_mail
+import supabase
 
 def create_member_profile_if_not_exists(user):
     # Check if the profile already exists
@@ -365,3 +366,27 @@ def send_password_reset_email(to_email, token):
         [to_email],
         fail_silently=False
     )
+
+
+def get_supabase_client():
+    return supabase.create_client(
+        settings.SUPABASE_URL,
+        settings.SUPABASE_SERVICE_KEY
+    )
+
+def upload_receipt_to_supabase(file, filename):
+    path = f"receipts/{filename}"
+    data = file.read()
+    content_type = file.content_type
+
+    # Supabase expects binary data
+    res = supabase.storage.from_(settings.SUPABASE_BUCKET).upload(
+        path,
+        data,
+        {"content-type": content_type}
+    )
+    if res.get("error"):
+        raise Exception(res["error"]["message"])
+
+    public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/{settings.SUPABASE_BUCKET}/{path}"
+    return public_url

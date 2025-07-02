@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axiosMemberInstance from "../../utils/axiosMemberInstance";
 import Spinner from "../../components/Spinner";
+import { formatDateTime } from "../../utils/formatDate";
 
 
 const MemberAnnouncements = () => {
@@ -73,7 +74,7 @@ const MemberAnnouncements = () => {
                                 <h4>
                                 {ann.title}{" | "}
                                 <span className="announcement-date">
-                                    {new Date(ann.created_at).toLocaleDateString()}
+                                    {formatDateTime(ann.created_at)}
                                 </span>
                                 {showNewBadge && <span className="new-badge">NEW</span>}
                                 </h4>
