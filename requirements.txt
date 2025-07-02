@@ -53,7 +53,7 @@ pygame==2.6.1
 Pygments==2.19.2
 pyHanko==0.29.1
 pyhanko-certvalidator==0.27.0
-PyJWT==2.10.1
+PyJWT==2.9.0
 pyotp==2.9.0
 pypaystack2==2.0.3
 pypdf==5.6.1
