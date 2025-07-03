@@ -213,30 +213,32 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
         if loan.grace_applied:
             return Response({'error': 'Grace period has already been applied to this loan.'}, status=400)
 
-        if not loan.category.grace_period_months or loan.category.grace_period_months <= 0:
+        grace_months = loan.category.grace_period_months
+        if not grace_months or grace_months <= 0:
             return Response({"error": "This loan category does not have a grace period defined."}, status=400)
 
-        grace_months = loan.category.grace_period_months
-
-        loan.total_repayment_months += grace_months
+        # Extend repayment months
+        original_total_months = loan.total_repayment_months or loan.duration_months
+        loan.total_repayment_months = original_total_months + grace_months
         loan.grace_applied = True
 
-        # extend end_date
-        if loan.end_date:
-            loan.end_date += relativedelta(months=grace_months)
+        # Adjust end_date
+        if loan.start_date:
+            loan.end_date = loan.start_date + relativedelta(months=loan.total_repayment_months)
         else:
             loan.end_date = timezone.now().date() + relativedelta(months=loan.total_repayment_months)
-
-        # Set loan status to grace period
+        
         loan.status = 'grace_applied'
 
         loan.save()
 
-        # check if overdue
-        if loan.end_date < timezone.now().date() and loan.status != 'paid_off':
+        # Check if grace applies to expired loans
+        today = timezone.now().date()
+        if loan.end_date < today and loan.status != 'paid_off':
             regenerate_repayment_schedule(loan)
 
-        return Response({"message": f"Grace period of {grace_months} months applied."})
+        return Response({'message': f'{grace_months} months grace period applied successfully.'})
+
 
 
     @action(detail=True, methods=['get'], url_path='summary')
