@@ -379,7 +379,8 @@ def upload_receipt_to_supabase(file, filename):
         "Content-Type": file.content_type,
     }
 
-    response = requests.post(
+    file.seek(0)  # reset pointer to start, just in case
+    response = requests.put(
         upload_url,
         headers=headers,
         data=file.read(),
@@ -392,4 +393,5 @@ def upload_receipt_to_supabase(file, filename):
         f"{settings.SUPABASE_URL}/storage/v1/object/public/{settings.SUPABASE_BUCKET}/{path}"
     )
     return public_url
+
 
