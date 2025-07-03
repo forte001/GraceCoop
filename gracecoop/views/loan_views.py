@@ -19,6 +19,9 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from gracecoop.pagination import StandardResultsSetPagination
 import grace_coop.settings as settings
 import traceback
+import logging
+
+
 
 from gracecoop.models import (
     Loan, 
@@ -145,7 +148,7 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
 
             loan.remaining_disbursement = bool(remaining_flag)
 
-            if settings.local.DEBUG:
+            if settings.DEBUG:
                 # store using FileField locally
                 DisbursementLog.objects.create(
                     loan=loan,
@@ -157,13 +160,14 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
                 )
             else:
                 # handle Supabase storage
+                logger = logging.getLogger(__name__)
                 try:
                     file_ext = receipt_file.name.split(".")[-1]
                     unique_name = f"receipt_{loan.reference}_{uuid.uuid4()}.{file_ext}"
                     public_url = upload_receipt_to_supabase(receipt_file, unique_name)
                 except Exception as e:
                     traceback_str = traceback.format_exc()
-                    print(traceback_str)  # will show in Render logs
+                    print(traceback_str)
                     return Response({
                         'error': str(e),
                         'hint': 'Check server logs for full stacktrace'

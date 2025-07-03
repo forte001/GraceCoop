@@ -119,7 +119,7 @@ const [receiptFile, setReceiptFile] = useState(null);
         if (err.response?.status === 403){
           navigate('/forbidden');
         } else{
-          alert(err.response?.data?.error || 'An error occurred during disbursement.');
+          alert('An error occurred during disbursement.');
         }
       }
     };
