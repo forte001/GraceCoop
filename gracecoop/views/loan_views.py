@@ -189,9 +189,6 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
                         'hint': 'See server logs for details'
                     }, status=500)
 
-            if not loan.start_date:
-                loan.start_date = timezone.now().date()
-
             update_loan_disbursement_status(loan)
 
             return Response({'message': f'{amount} disbursed successfully.'})

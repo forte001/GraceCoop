@@ -388,7 +388,7 @@ const exportToPDF = async () => {
                     <td>{formatNaira(loan.amount)}</td>
                     <td>{formatNaira(loan.disbursements_remaining)}</td>
                     <td>{getStatusBadge(loan.status)}</td>
-                    <td>{loan.approval_date ? new Date(loan.approval_date).toLocaleDateString() : 'N/A'}</td>
+                    <td>{formatDateTime(loan.start_date)|| 'N/A'}</td>
                     <td>{loan.total_repayment_months}</td>
                     <td>
                     <button data-tooltip-id="tooltip" data-tooltip-content="View Schedule" onClick={() => toggleSchedule(loan.id)}>

@@ -1,7 +1,8 @@
 import React, { useState, useContext } from 'react';
 import { ThemeContext } from '../components/ThemeContext';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { FaBars, FaTachometerAlt, FaUsers, FaMoneyBill, FaCog, FaHandshake, FaBullhorn, FaFileAlt } from 'react-icons/fa';
+import { FaBars, FaTachometerAlt, FaUsers, FaMoneyBill, FaCog, 
+  FaHandshake, FaBullhorn, FaFileAlt, FaSignOutAlt } from 'react-icons/fa';
 import '../styles/admin/AdminLayout.css';
 
 const AdminLayout = () => {
@@ -127,7 +128,8 @@ const AdminLayout = () => {
         </ul>
 
         <button onClick={handleLogout} className="logout-button">
-          Logout
+          <FaSignOutAlt />
+          {!isSidebarCollapsed && ' Logout'}
         </button>
       </aside>
 

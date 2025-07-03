@@ -2,7 +2,8 @@ import React, { useContext, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MemberContext } from '../components/MemberContext';
 import { ThemeContext } from '../components/ThemeContext';
-import { FaMoon, FaSun, FaDesktop, FaBars, FaTachometerAlt, FaUser, FaMoneyBill, FaCog, FaFileAlt, FaHandshake } from 'react-icons/fa';
+import { FaMoon, FaSun, FaDesktop, FaBars, FaTachometerAlt, 
+  FaUser, FaMoneyBill, FaCog, FaFileAlt, FaHandshake, FaSignOutAlt } from 'react-icons/fa';
 import '../styles/members/MemberLayout.css';
 import Spinner from '../components/Spinner';
 
@@ -160,7 +161,8 @@ const MemberLayout = () => {
           </p>
         )}
         <button onClick={handleLogout} className="logout-button">
-          Logout
+          <FaSignOutAlt />
+          {!isSidebarCollapsed && ' Logout'}
         </button>
       </aside>
 

@@ -109,11 +109,22 @@ def update_loan_disbursement_status(loan):
         loan.status = 'partially_disbursed'
         loan.remaining_disbursement = True
 
-    if not loan.start_date:
+    # Set start, repayment, and end dates
+    first_disbursement = loan.disbursements.order_by('disbursed_at').first()
+    if first_disbursement:
+        loan.start_date = first_disbursement.disbursed_at.date()
+        loan.repayment_start_date = first_disbursement.disbursed_at.date()
+        months = loan.total_repayment_months or loan.duration_months
+        if months:
+            loan.end_date = loan.start_date + relativedelta(months=months)
+    else:
+        # fallback
         loan.start_date = timezone.now().date()
 
-    loan.has_interest_schedule = True  # ✅  Allow interest on partial disbursement
+    loan.has_interest_schedule = True
     loan.save()
+
+    regenerate_repayment_schedule(loan)
 
     # ✅ Regenerate the repayment schedule based on updated disbursements
     regenerate_repayment_schedule(loan)
