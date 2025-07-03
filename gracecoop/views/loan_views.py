@@ -18,7 +18,7 @@ from ..filters import RepaymentFilter, LoanFilter, LoanApplicationFilter, Disbur
 from rest_framework.filters import SearchFilter, OrderingFilter
 from gracecoop.pagination import StandardResultsSetPagination
 import grace_coop.settings as settings
-
+import traceback
 
 from gracecoop.models import (
     Loan, 
@@ -111,74 +111,95 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'], url_path='disburse')
     def disburse(self, request, pk=None):
-        loan = self.get_object()
-        amount = request.data.get('amount')
-        num_disbursements = request.data.get('num_disbursements')
-        remaining_flag = request.data.get('remaining_disbursement', False)
-
-        # uploaded file (required)
-        receipt_file = request.FILES.get('receipt')
-        if not receipt_file:
-            return Response({'error': 'Receipt file is required.'}, status=400)
-
-        if not amount:
-            return Response({'error': 'Amount is required.'}, status=400)
-
         try:
-            amount = Decimal(amount)
-        except (ValueError, TypeError, InvalidOperation):
-            return Response({'error': 'Invalid amount.'}, status=400)
+            loan = self.get_object()
+            amount = request.data.get('amount')
+            num_disbursements = request.data.get('num_disbursements')
+            remaining_flag = request.data.get('remaining_disbursement', False)
 
-        if amount <= 0:
-            return Response({'error': 'Amount must be positive.'}, status=400)
+            # uploaded file (required)
+            receipt_file = request.FILES.get('receipt')
+            if not receipt_file:
+                return Response({'error': 'Receipt file is required.'}, status=400)
 
-        total_disbursed = loan.disbursements.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        if total_disbursed + amount > loan.amount:
-            return Response({'error': 'Disbursement exceeds approved loan amount.'}, status=400)
+            if not amount:
+                return Response({'error': 'Amount is required.'}, status=400)
 
-        if not loan.num_disbursements and num_disbursements:
             try:
-                loan.num_disbursements = int(num_disbursements)
-            except ValueError:
-                return Response({'error': 'Invalid number of disbursements.'}, status=400)
+                amount = Decimal(amount)
+            except (ValueError, TypeError, InvalidOperation):
+                return Response({'error': 'Invalid amount.'}, status=400)
 
-        loan.remaining_disbursement = bool(remaining_flag)
+            if amount <= 0:
+                return Response({'error': 'Amount must be positive.'}, status=400)
 
-        # handle local vs production
-        if settings.local.DEBUG:
-            # store using FileField
-            DisbursementLog.objects.create(
-                loan=loan,
-                amount=amount,
-                repayment_months=loan.duration_months,
-                disbursed_by=request.user,
-                requested_by=loan.member,
-                receipt=receipt_file
-            )
-        else:
-            # store in Supabase
-            file_ext = receipt_file.name.split(".")[-1]
-            unique_name = f"receipt_{loan.reference}_{uuid.uuid4()}.{file_ext}"
-            try:
-                public_url = upload_receipt_to_supabase(receipt_file, unique_name)
-            except Exception as e:
-                return Response({'error': str(e)}, status=500)
+            total_disbursed = loan.disbursements.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            if total_disbursed + amount > loan.amount:
+                return Response({'error': 'Disbursement exceeds approved loan amount.'}, status=400)
 
-            DisbursementLog.objects.create(
-                loan=loan,
-                amount=amount,
-                repayment_months=loan.duration_months,
-                disbursed_by=request.user,
-                requested_by=loan.member,
-                receipt_url=public_url
-            )
+            if not loan.num_disbursements and num_disbursements:
+                try:
+                    loan.num_disbursements = int(num_disbursements)
+                except ValueError:
+                    return Response({'error': 'Invalid number of disbursements.'}, status=400)
 
-        if not loan.start_date:
-            loan.start_date = timezone.now().date()
+            loan.remaining_disbursement = bool(remaining_flag)
 
-        update_loan_disbursement_status(loan)
+            if settings.local.DEBUG:
+                # store using FileField locally
+                DisbursementLog.objects.create(
+                    loan=loan,
+                    amount=amount,
+                    repayment_months=loan.duration_months,
+                    disbursed_by=request.user,
+                    requested_by=loan.member,
+                    receipt=receipt_file
+                )
+            else:
+                # handle Supabase storage
+                try:
+                    file_ext = receipt_file.name.split(".")[-1]
+                    unique_name = f"receipt_{loan.reference}_{uuid.uuid4()}.{file_ext}"
+                    public_url = upload_receipt_to_supabase(receipt_file, unique_name)
+                except Exception as e:
+                    traceback_str = traceback.format_exc()
+                    print(traceback_str)  # will show in Render logs
+                    return Response({
+                        'error': str(e),
+                        'hint': 'Check server logs for full stacktrace'
+                    }, status=500)
 
-        return Response({'message': f'{amount} disbursed successfully.'})
+                try:
+                    DisbursementLog.objects.create(
+                        loan=loan,
+                        amount=amount,
+                        repayment_months=loan.duration_months,
+                        disbursed_by=request.user,
+                        requested_by=loan.member,
+                        receipt_url=public_url
+                    )
+                except Exception as e:
+                    traceback_str = traceback.format_exc()
+                    print(traceback_str)
+                    return Response({
+                        'error': f'Error saving DisbursementLog: {str(e)}',
+                        'hint': 'See server logs for details'
+                    }, status=500)
+
+            if not loan.start_date:
+                loan.start_date = timezone.now().date()
+
+            update_loan_disbursement_status(loan)
+
+            return Response({'message': f'{amount} disbursed successfully.'})
+        
+        except Exception as e:
+            traceback_str = traceback.format_exc()
+            print(traceback_str)
+            return Response({
+                'error': f'Unexpected error: {str(e)}',
+                'hint': 'See server logs for full traceback'
+            }, status=500)
 
 
     @action(detail=True, methods=['post'], url_path='apply-grace-period')
