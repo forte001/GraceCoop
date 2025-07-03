@@ -19,7 +19,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from gracecoop.pagination import StandardResultsSetPagination
 from django.conf import settings
 import traceback
-import logging
+import uuid
 
 
 
@@ -160,7 +160,6 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
                 )
             else:
                 # handle Supabase storage
-                logger = logging.getLogger(__name__)
                 try:
                     file_ext = receipt_file.name.split(".")[-1]
                     unique_name = f"receipt_{loan.reference}_{uuid.uuid4()}.{file_ext}"
