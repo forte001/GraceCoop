@@ -17,7 +17,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from ..filters import RepaymentFilter, LoanFilter, LoanApplicationFilter, DisbursementLogFilter
 from rest_framework.filters import SearchFilter, OrderingFilter
 from gracecoop.pagination import StandardResultsSetPagination
-import grace_coop.settings as settings
+from django.conf import settings
 import traceback
 import logging
 
