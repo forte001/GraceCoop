@@ -409,10 +409,17 @@ const exportToPDF = async () => {
                       data-tooltip-id="tooltip"
                       data-tooltip-content="Apply Grace Period"
                       onClick={() => handleApplyGracePeriod(loan.id, loan.status)}
-                      disabled={loan.status === 'approved' || loan.status === 'paid_off' || loan.grace_applied}
+                      disabled={
+                        loan.status === 'approved' ||
+                        loan.status === 'paid_off' ||
+                        loan.grace_applied ||
+                        !loan.end_date ||                         // no end date, don’t allow
+                        new Date(loan.end_date) > new Date()      // period not yet expired
+                      }
                     >
                       <FaClock />
                     </button>
+
                 <Tooltip id="tooltip" />
               </td>
                   </tr>
