@@ -155,7 +155,7 @@ def regenerate_repayment_schedule(loan):
         return
 
     # Step 5: Define remaining months
-    months_remaining = loan.duration_months - paid_installments.count()
+    months_remaining = months_remaining = loan.total_repayment_months - paid_installments.count()
     months_remaining = max(1, months_remaining)
 
     # Step 6: Calculate EMI over remaining principal

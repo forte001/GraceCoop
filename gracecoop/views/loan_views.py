@@ -18,6 +18,7 @@ from ..filters import RepaymentFilter, LoanFilter, LoanApplicationFilter, Disbur
 from rest_framework.filters import SearchFilter, OrderingFilter
 from gracecoop.pagination import StandardResultsSetPagination
 from django.conf import settings
+from dateutil.relativedelta import relativedelta
 import traceback
 import uuid
 
@@ -215,11 +216,28 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
         if not loan.category.grace_period_months or loan.category.grace_period_months <= 0:
             return Response({"error": "This loan category does not have a grace period defined."}, status=400)
 
-        loan.total_repayment_months += loan.category.grace_period_months
+        grace_months = loan.category.grace_period_months
+
+        loan.total_repayment_months += grace_months
         loan.grace_applied = True
+
+        # extend end_date
+        if loan.end_date:
+            loan.end_date += relativedelta(months=grace_months)
+        else:
+            loan.end_date = timezone.now().date() + relativedelta(months=loan.total_repayment_months)
+
+        # Set loan status to grace period
+        loan.status = 'grace_applied'
+
         loan.save()
 
-        return Response({'message': f'{loan.category.grace_period_months} months grace period applied.'})
+        # check if overdue
+        if loan.end_date < timezone.now().date() and loan.status != 'paid_off':
+            regenerate_repayment_schedule(loan)
+
+        return Response({"message": f"Grace period of {grace_months} months applied."})
+
 
     @action(detail=True, methods=['get'], url_path='summary')
     def summary(self, request, pk=None):

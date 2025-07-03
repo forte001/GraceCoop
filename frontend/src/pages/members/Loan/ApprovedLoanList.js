@@ -183,7 +183,7 @@ const {
                             <p>Reference: {loanSummary.reference || 'N/A'}</p>
                             <p>Member: {loanSummary.applicant_name}</p>
                             <p>Interest Rate: {loanSummary.interest_rate}%</p>
-                            <p>Total Disbursed: {formatNaira(loanSummary.amount)}</p>
+                            <p>Amount Requested: {formatNaira(loanSummary.amount)}</p>
                             <p>Remaining Disbursement Balance: {formatNaira(loanSummary.disbursements_remaining)}</p>
                             <p>Total Repaid: {formatNaira(loanSummary.total_paid)}</p>
                             <p>Repayment Months: {loanSummary.total_repayment_months}</p>
