@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from decimal import Decimal, InvalidOperation
 from ..utils import (generate_repayment_schedule,
+                     regenerate_repayment_schedule,
                     update_loan_disbursement_status,
                     generate_loan_reference,
                     apply_loan_repayment,
@@ -213,31 +214,37 @@ class AdminLoanViewSet(viewsets.ModelViewSet):
         if loan.grace_applied:
             return Response({'error': 'Grace period has already been applied to this loan.'}, status=400)
 
-        grace_months = loan.category.grace_period_months
-        if not grace_months or grace_months <= 0:
+        if not loan.category.grace_period_months or loan.category.grace_period_months <= 0:
             return Response({"error": "This loan category does not have a grace period defined."}, status=400)
 
-        # Extend repayment months
-        original_total_months = loan.total_repayment_months or loan.duration_months
-        loan.total_repayment_months = original_total_months + grace_months
-        loan.grace_applied = True
+        grace_months = loan.category.grace_period_months
 
-        # Adjust end_date
-        if loan.start_date:
-            loan.end_date = loan.start_date + relativedelta(months=loan.total_repayment_months)
-        else:
-            loan.end_date = timezone.now().date() + relativedelta(months=loan.total_repayment_months)
-        
+        # extend loan period
+        loan.total_repayment_months += grace_months
+
+        # switch to grace interest if defined
+        if loan.category.grace_interest_rate:
+            loan.interest_rate = loan.category.grace_interest_rate
+
+        loan.grace_applied = True
         loan.status = 'grace_applied'
 
+        # extend the end_date
+        if loan.end_date:
+            loan.end_date += relativedelta(months=grace_months)
+        else:
+            loan.end_date = timezone.now().date() + relativedelta(months=loan.total_repayment_months)
         loan.save()
 
-        # Check if grace applies to expired loans
-        today = timezone.now().date()
-        if loan.end_date < today and loan.status != 'paid_off':
+        # regenerate repayment schedule immediately upon applying grace
+        # regenerate_repayment_schedule(loan)
+
+        # if loan is overdue, regenerate repayment
+        if loan.end_date < timezone.now().date() and loan.status != 'paid_off':
             regenerate_repayment_schedule(loan)
 
-        return Response({'message': f'{grace_months} months grace period applied successfully.'})
+        return Response({"message": f"Grace period of {grace_months} months applied with interest rate {loan.interest_rate}%."})
+
 
 
 

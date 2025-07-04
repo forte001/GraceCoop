@@ -21,6 +21,7 @@ class LoanCategory(models.Model):
     interest_rate = models.DecimalField(max_digits=5, decimal_places=2, help_text="Interest rate as a percentage (e.g., 5.5%)")
     loan_period_months = models.PositiveIntegerField(help_text="Number of months loan is repayable from disbursement date")
     grace_period_months = models.PositiveIntegerField(help_text="Number of months after loan period expiry for grace")
+    grace_interest_rate = models.DecimalField(max_digits=5,decimal_places=2,help_text="Interest rate as a percentage during grace period (e.g. 8.5%)",null=True,blank=True,)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='loan_categories_created')
     created_at = models.DateTimeField(auto_now_add=True,)
@@ -88,6 +89,7 @@ class Loan(models.Model):
     remaining_disbursement = models.BooleanField(default=False, help_text="Is there more disbursement to be made?")
 
     grace_applied = models.BooleanField(default=False)
+    
 
     def get_next_scheduled_payment(self):
         return self.repayment_schedule.filter(is_paid=False).order_by('due_date').first()

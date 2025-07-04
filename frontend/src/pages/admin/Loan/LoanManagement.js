@@ -405,6 +405,14 @@ const exportToPDF = async () => {
                       </button>
                     )}
 
+                    {/* <button
+                      data-tooltip-id="tooltip"
+                      data-tooltip-content="Apply Grace Period"
+                      onClick={() => handleApplyGracePeriod(loan.id, loan.status)}
+                      disabled={loan.status === 'approved' || loan.status === 'paid_off' || loan.grace_applied}
+                    >
+                      <FaClock />
+                    </button> */}
                     <button
                       data-tooltip-id="tooltip"
                       data-tooltip-content="Apply Grace Period"
@@ -419,7 +427,6 @@ const exportToPDF = async () => {
                     >
                       <FaClock />
                     </button>
-
                 <Tooltip id="tooltip" />
               </td>
                   </tr>

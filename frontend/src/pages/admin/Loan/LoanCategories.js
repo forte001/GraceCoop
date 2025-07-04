@@ -18,6 +18,8 @@ const LoanCategories = () => {
   const [categoryGracePeriod, setCategoryGracePeriod] = useState('');
   const [categoryStatus, setCategoryStatus] = useState('active');
   const [categoryAbbreviation, setCategoryAbbreviation] = useState('');
+  const [categoryGraceInterestRate, setCategoryGraceInterestRate] = useState('');
+
   const navigate = useNavigate();
 
   const {
@@ -57,6 +59,7 @@ const LoanCategories = () => {
     setCategoryInterestRate('');
     setCategoryLoanPeriod('');
     setCategoryGracePeriod('');
+    setCategoryGraceInterestRate('');
     setSelectedCategory(null);
     setIsEditing(false);
   };
@@ -74,6 +77,7 @@ const LoanCategories = () => {
     setCategoryLoanPeriod(category.loan_period_months);
     setCategoryGracePeriod(category.grace_period_months);
     setCategoryAbbreviation(category.abbreviation || '');
+    setCategoryGraceInterestRate(category.grace_interest_rate || '');
     setIsEditing(true);
     setShowModal(true);
   };
@@ -88,6 +92,7 @@ const LoanCategories = () => {
       interest_rate: categoryInterestRate.toString(),
       loan_period_months: categoryLoanPeriod,
       grace_period_months: categoryGracePeriod,
+      grace_interest_rate: categoryGraceInterestRate.toString(),
       status: categoryStatus,
     };
 
@@ -149,6 +154,7 @@ const LoanCategories = () => {
             <th>Interest Rate (%)</th>
             <th>Loan Period (Months)</th>
             <th>Grace Period (Months)</th>
+            <th>Grace Interest Rate (%)</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -162,6 +168,7 @@ const LoanCategories = () => {
               <td>{category.interest_rate}</td>
               <td>{category.loan_period_months}</td>
               <td>{category.grace_period_months}</td>
+              <td>{category.grace_interest_rate}</td>
               <td>
                 <span className={`status-badge ${category.status}`}>
                   {category.status.toUpperCase()}
@@ -261,6 +268,14 @@ const LoanCategories = () => {
                   required
                   disabled={selectedCategory?.is_used}
                 />
+              <label htmlFor="categoryGraceInterestRate">Grace Period Interest Rate (%):</label>
+              <input
+                  type="number"
+                  id="categoryGraceInterestRate"
+                  value={categoryGraceInterestRate}
+                  onChange={(e) => setCategoryGraceInterestRate(e.target.value)}
+                  required
+              />
 
               <label htmlFor="categoryStatus">Status:</label>
               <select
