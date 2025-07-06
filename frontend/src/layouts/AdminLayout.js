@@ -23,6 +23,9 @@ const AdminLayout = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(
     location.pathname.startsWith('/admin/settings')
   );
+  const [isReportsOpen, setIsReportsOpen] = useState(
+    location.pathname.startsWith('/admin/reports')
+  );
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -35,6 +38,7 @@ const AdminLayout = () => {
   const toggleLoanMenu = () => setIsLoanOpen(prev => !prev);
   const togglePaymentsMenu = () => setIsPaymentsOpen(prev => !prev);
   const toggleSettingsMenu = () => setIsSettingsOpen(prev => !prev);
+  const toggleReportsMenu = () => setIsReportsOpen(prev => !prev);
 
   return (
     <div className={`admin-layout ${isSidebarCollapsed ? 'collapsed' : ''}`}>
@@ -97,12 +101,19 @@ const AdminLayout = () => {
               </ul>
             )}
           </li>
-
+            
           <li>
-            <Link to="/admin/report">
+            <button onClick={toggleReportsMenu} className="sidebar-link collapsible">
               <FaFileAlt />
-              {!isSidebarCollapsed && ' Reports'}
-            </Link>
+              {!isSidebarCollapsed && ` Reports ${isReportsOpen ? '▾' : '▸'}`}
+            </button>
+            {isReportsOpen && (
+              <ul className="submenu">
+                <li><Link to="/admin/report/members-balances">Members Balances</Link></li>
+                {/* <li><Link to="#">Report 2</Link></li>
+                <li><Link to="#">Report 3</Link></li> */}
+              </ul>
+            )}
           </li>
 
           <li>

@@ -6,7 +6,7 @@ const getAllPaginatedDataForExport = async ({
   filters = {},
   pageSize = 1000,
   pathname = window.location.pathname,
-  transformFn = null, // Optional mapping function
+  transformFn = null, // mapping function
   maxLimit = 5000, // Prevent huge exports
 }) => {
   const axios = getAxiosByRole(pathname);
@@ -35,7 +35,7 @@ const getAllPaginatedDataForExport = async ({
       }
     }
 
-    // Optional transformation (e.g. format currency, dates, etc.)
+    
     return transformFn ? allResults.map(transformFn) : allResults;
   } catch (error) {
     console.error('❌ Error during full export fetch:', error);

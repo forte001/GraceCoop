@@ -964,3 +964,55 @@ class AnnouncementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
         fields = ['id', 'title', 'message', 'is_active', 'created_at']
+
+
+#################################################
+## REPORTS SERIALIZER
+#################################################
+class MemberBalanceReportSerializer(serializers.Serializer):
+    """Serializer for individual member balance data in reports"""
+    member_id = serializers.CharField()
+    full_name = serializers.CharField()
+    email = serializers.EmailField()
+    phone_number = serializers.CharField()
+    membership_status = serializers.CharField()
+    approval_status = serializers.CharField()
+    joined_on = serializers.DateField()
+    contributions_balance = serializers.DecimalField(max_digits=10, decimal_places=2)
+    levies_balance = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_assets = serializers.DecimalField(max_digits=12, decimal_places=2)
+    loans_disbursed = serializers.DecimalField(max_digits=12, decimal_places=2)
+    loan_repayments = serializers.DecimalField(max_digits=12, decimal_places=2)
+    outstanding_loans = serializers.DecimalField(max_digits=12, decimal_places=2)
+    active_loans_count = serializers.IntegerField()
+    net_position = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+class ReportSummarySerializer(serializers.Serializer):
+    """Serializer for report summary data"""
+    report_date = serializers.DateField()
+    total_members = serializers.IntegerField()
+    total_contributions = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_levies = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_assets = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_loans_disbursed = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_loan_repayments = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_outstanding_loans = serializers.DecimalField(max_digits=12, decimal_places=2)
+    net_cooperative_position = serializers.DecimalField(max_digits=12, decimal_places=2)
+    members_with_outstanding_loans = serializers.IntegerField()
+    average_contributions = serializers.DecimalField(max_digits=12, decimal_places=2)
+    average_outstanding_loans = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+class ReportParametersSerializer(serializers.Serializer):
+    """Serializer for report parameters"""
+    as_of_date = serializers.DateField(required=False)
+    member_status = serializers.ChoiceField(
+        choices=['active', 'inactive', 'archived'],
+        required=False
+    )
+    approval_status = serializers.ChoiceField(
+        choices=['approved', 'pending', 'rejected'],
+        required=False
+    )
+    include_inactive = serializers.BooleanField(default=False)

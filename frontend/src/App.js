@@ -43,10 +43,10 @@ import MemberAllPaymentsList from './pages/members/OtherPayments/MemberAllPaymen
 import AdminDisbursementLogs from './pages/admin/Loan/AdminDisbursementsLogs';
 import Forbidden from './pages/admin/Forbidden';
 import VerifyEmail from './pages/members/VerifyEmail';
-import Spinner from './components/Spinner';
 import PasswordResetRequest from './pages/members/PasswordResetRequest';
 import PasswordResetConfirm from './pages/members/PasswordResetConfirm';
 import AdminAnnouncements from './pages/admin/AnnouncementManager';
+import MembersBalancesReport from './pages/admin/Reports/MembersBalance';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -164,6 +164,7 @@ const App = () => {
         <Route path="payments/levies" element={<AdminLevyList />} />
         <Route path="all-payments" element={<AdminAllPayments/>} />
         <Route path="disbursement-logs" element={<AdminDisbursementLogs/>} />
+        <Route path="report/members-balances" element={<MembersBalancesReport/>} />
         <Route path="settings/theme" element={<ThemeSwitcher />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="2fa/setup" element={<TwoFASetup />} />

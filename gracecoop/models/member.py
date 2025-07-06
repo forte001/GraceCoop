@@ -20,6 +20,10 @@ class MemberProfile(models.Model):
         ('inactive', 'Inactive'),
         ('archived', 'Archived'),
     ]
+    class Meta:
+        permissions = [
+            ("can_view_reports", "Can view and generate reports")
+        ]
     
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='memberprofile')
     member_id = models.CharField(max_length=20, unique=True, blank=True, null=True)

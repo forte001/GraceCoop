@@ -41,6 +41,14 @@ class IsAdminWith2FA(BasePermission):
         if not request.user.is_authenticated or not request.user.is_staff:
             return False
         return request.user.totpdevice_set.filter(confirmed=True).exists()
+    
+class CanViewReports(BasePermission):
+    """
+    Allows only staff with the `can_view_reports` permission to view/generate reports.
+    """
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.has_perm('member.can_view_reports')
+
 
 
 ########################################################

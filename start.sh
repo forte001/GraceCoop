@@ -2,6 +2,8 @@
 
 echo "Applying migrations..."
 python manage.py migrate --noinput
+echo "Updating permissions..."
+python manage.py update_permissions
 
 echo "Creating admin user..."
 python manage.py create_admin

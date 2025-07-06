@@ -386,6 +386,21 @@
 /* ============================================
    Filters and Export
 ============================================ */
+.filter-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.filter-section label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-color);
+}
+
 .filter-input,
 .filter-select {
   padding: 8px 12px;
@@ -409,6 +424,11 @@
   outline: none;
   border-color: #4caf50;
   box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.export-button-group {
+  display: flex;
+  gap: 5px;
 }
 
 .export-button {
@@ -560,4 +580,24 @@ input:disabled {
     font-size: 13px;
     padding: 6px;
   }
+}
+
+/* ============================================
+   Reports
+============================================ */
+.summary-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: var(--bg-color);
+  border-radius: 5px;
+}
+.summary-section h2{
+  text-align: center;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  text-align: center;
 }

@@ -72,8 +72,11 @@ urlpatterns = [
    path('', include(router.urls)),
 
 
-   ### Announcement-relarted endpoints
+   ### Announcement-related endpoints
    path('notice/', include('gracecoop.urls.announcement_urls')),
+
+   ### Report-related endpoints
+   path('report/', include('gracecoop.urls.report_urls')),
   
 
     

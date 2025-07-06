@@ -134,12 +134,12 @@ const MemberLayout = () => {
                   </ul>
                 )}
               </li>
-              <li>
+              {/* <li>
                 <Link to="/member/reports">
                   <FaFileAlt />
                   {!isSidebarCollapsed && ' Reports'}
                 </Link>
-              </li>
+              </li> */}
               <li>
                 <button onClick={toggleSettingsMenu} className="sidebar-link collapsible">
                   <FaCog />
