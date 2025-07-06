@@ -162,25 +162,38 @@ const MembersBalancesReport = () => {
 
       {loading && <Spinner />}
 
-      {summary && Object.keys(summary).length > 0 && (
-        <div className="summary-section">
-            <h2>Report Summary</h2>
-            <div className="summary-grid">
-            <div><strong>Total Members:</strong> </div>
-            <div><strong>Total Contributions:</strong> </div>
-            <div><strong>Total Levies:</strong> </div>
-            <div><strong>Total Assets:</strong> </div>
-            <div><strong>Total Outstanding Loans:</strong> </div>
-            <div><strong>Net Position:</strong> </div>
-                <div><strong> {summary.total_members}</strong> </div>
-                <div><strong> {formatNaira(summary.total_contributions)}</strong> </div>
-                <div><strong> {formatNaira(summary.total_levies)}</strong> </div>
-                <div><strong> {formatNaira(summary.total_assets)}</strong> </div>
-                <div><strong> {formatNaira(summary.total_outstanding_loans)}</strong> </div>
-                <div><strong> {formatNaira(summary.net_cooperative_position)}</strong> </div>
-            </div>
-        </div>
-        )}
+            {summary && Object.keys(summary).length > 0 && (
+  <div className="summary-section">
+    <h2>Report Summary</h2>
+    <div className="summary-grid">
+      <div>
+        <strong>Total Members</strong>
+        <div>{summary.total_members}</div>
+      </div>
+      <div>
+        <strong>Total Contributions</strong>
+        <div>{formatNaira(summary.total_contributions)}</div>
+      </div>
+      <div>
+        <strong>Total Levies</strong>
+        <div>{formatNaira(summary.total_levies)}</div>
+      </div>
+      <div>
+        <strong>Total Assets</strong>
+        <div>{formatNaira(summary.total_assets)}</div>
+      </div>
+      <div>
+        <strong>Total Outstanding Loans</strong>
+        <div>{formatNaira(summary.total_outstanding_loans)}</div>
+      </div>
+      <div>
+        <strong>Net Position</strong>
+        <div>{formatNaira(summary.net_cooperative_position)}</div>
+      </div>
+    </div>
+  </div>
+)}
+
 
       <div ref={printRef}>
         <table className="loan-table">
