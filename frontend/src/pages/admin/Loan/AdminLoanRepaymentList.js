@@ -1,14 +1,11 @@
-import React, { useRef } from 'react';
-import usePaginatedData from '../../../utils/usePaginatedData';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import '../../../styles/admin/loan/LoanManagement.css';
-import { formatNaira } from '../../../utils/formatCurrency';
-import ExportPrintGroup from '../../../components/ExportPrintGroup';
-import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
-import { toast } from 'react-toastify';
-import Spinner from '../../../components/Spinner';
+// src/pages/admin/Loan/AdminLoanRepaymentList.js
+import React, { useRef } from "react";
+import usePaginatedData from "../../../utils/usePaginatedData";
+import "../../../styles/admin/loan/LoanManagement.css";
+import { formatNaira } from "../../../utils/formatCurrency";
+import ExportPrintGroup from "../../../utils/ExportPrintGroup";
+import Spinner from "../../../components/Spinner";
+import exportHelper from "../../../utils/exportHelper";
 
 const AdminLoanRepaymentList = () => {
   const printRef = useRef();
@@ -23,83 +20,38 @@ const AdminLoanRepaymentList = () => {
     setPageSize,
     filters,
     setFilters,
-  } = usePaginatedData('/admin/loan/repayments-admin/', {
-    loan__reference: '',
-    payment_date_after: '',
-    payment_date_before: '',
-    was_late: '',
-    ordering: '-payment_date',
+  } = usePaginatedData("/admin/loan/repayments-admin/", {
+    loan__reference: "",
+    payment_date_after: "",
+    payment_date_before: "",
+    was_late: "",
+    ordering: "-payment_date",
   });
 
   const transformFn = (repayment) => ({
-    LoanRef: repayment.loan_reference || 'N/A',
-    PaidBy: repayment.paid_by_name || 'N/A',
+    "Loan Ref": repayment.loan_reference || "N/A",
+    "Paid By": repayment.paid_by_name || "N/A",
     Amount: `NGN ${Number(repayment.amount).toLocaleString()}`,
-    PaymentDate: repayment.recorded_at?.split('T')[0] || 'N/A',
-    DueDate: repayment.due_date || 'N/A',
-    WasLate: repayment.was_late ? 'Yes' : 'No',
+    "Payment Date": repayment.recorded_at?.split("T")[0] || "N/A",
+    "Due Date": repayment.due_date || "N/A",
+    "Late?": repayment.was_late ? "Yes" : "No",
   });
 
-  const handleExport = async (format) => {
-    toast.loading(`Exporting as ${format.toUpperCase()}...`, { toastId: 'loan-export' });
-
-    const exportData = await getAllPaginatedDataForExport({
-      url: '/admin/loan/repayments-admin/',
-      filters,
-      transformFn,
-    });
-
-    if (!exportData.length) {
-      toast.update('loan-export', {
-        render: 'No data to export.',
-        type: 'warning',
-        isLoading: false,
-        autoClose: 3000,
-      });
-      return;
-    }
-
-    try {
-      if (format === 'excel') {
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Repayments');
-        XLSX.writeFile(workbook, 'repayments.xlsx');
-      } else if (format === 'csv') {
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Repayments');
-        XLSX.writeFile(workbook, 'repayments.csv', { bookType: 'csv' });
-      } else if (format === 'pdf') {
-        const doc = new jsPDF();
-        doc.text('Loan Repayments', 14, 15);
-        autoTable(doc, {
-          startY: 20,
-          head: [['Loan Ref', 'Paid By', 'Amount', 'Payment Date', 'Due Date', 'Late?']],
-          body: exportData.map((item) => Object.values(item)),
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [76, 175, 80] },
-        });
-        doc.save('repayments.pdf');
-      }
-
-      toast.update('loan-export', {
-        render: `Exported as ${format.toUpperCase()}`,
-        type: 'success',
-        isLoading: false,
-        autoClose: 3000,
-      });
-    } catch (err) {
-      toast.update('loan-export', {
-        render: `Failed to export ${format.toUpperCase()}`,
-        type: 'error',
-        isLoading: false,
-        autoClose: 3000,
-      });
-    }
-  };
-
-
+  const { exportToExcel, exportToCSV, exportToPDF } = exportHelper({
+    url: "/admin/loan/repayments-admin/",
+    filters,
+    transformFn,
+    columns: [
+      "Loan Ref",
+      "Paid By",
+      "Amount",
+      "Payment Date",
+      "Due Date",
+      "Late?",
+    ],
+    fileName: "repayments",
+    reportTitle: "Loan Repayments Report",
+  });
 
   return (
     <div className="loan-management">
@@ -109,7 +61,7 @@ const AdminLoanRepaymentList = () => {
         <input
           className="filter-input"
           placeholder="Loan Ref"
-          value={filters.loan__reference || ''}
+          value={filters.loan__reference || ""}
           onChange={(e) =>
             setFilters((f) => ({ ...f, loan__reference: e.target.value }))
           }
@@ -119,7 +71,7 @@ const AdminLoanRepaymentList = () => {
         <input
           type="date"
           className="filter-input"
-          value={filters.payment_date_after || ''}
+          value={filters.payment_date_after || ""}
           onChange={(e) =>
             setFilters((f) => ({ ...f, payment_date_after: e.target.value }))
           }
@@ -129,7 +81,7 @@ const AdminLoanRepaymentList = () => {
         <input
           type="date"
           className="filter-input"
-          value={filters.payment_date_before || ''}
+          value={filters.payment_date_before || ""}
           onChange={(e) =>
             setFilters((f) => ({ ...f, payment_date_before: e.target.value }))
           }
@@ -137,7 +89,7 @@ const AdminLoanRepaymentList = () => {
 
         <select
           className="filter-select"
-          value={filters.was_late || ''}
+          value={filters.was_late || ""}
           onChange={(e) =>
             setFilters((f) => ({ ...f, was_late: e.target.value }))
           }
@@ -149,9 +101,9 @@ const AdminLoanRepaymentList = () => {
 
         <ExportPrintGroup
           data={data}
-          exportToExcel={() => handleExport('excel')}
-          exportToPDF={() => handleExport('pdf')}
-          exportToCSV={() => handleExport('csv')}
+          exportToExcel={exportToExcel}
+          exportToCSV={exportToCSV}
+          exportToPDF={exportToPDF}
         />
       </div>
 
@@ -173,21 +125,21 @@ const AdminLoanRepaymentList = () => {
             {data.length > 0 ? (
               data.map((repayment) => (
                 <tr key={repayment.id}>
-                  <td>{repayment.loan_reference || 'N/A'}</td>
-                  <td>{repayment.paid_by_name || 'N/A'}</td>
+                  <td>{repayment.loan_reference || "N/A"}</td>
+                  <td>{repayment.paid_by_name || "N/A"}</td>
                   <td>{formatNaira(repayment.amount)}</td>
-                  <td>{repayment.recorded_at?.split('T')[0]}</td>
+                  <td>{repayment.recorded_at?.split("T")[0]}</td>
                   <td>
                     {repayment.due_date
                       ? new Date(repayment.due_date).toLocaleDateString()
-                      : 'N/A'}
+                      : "N/A"}
                   </td>
-                  <td>{repayment.was_late ? 'Yes' : 'No'}</td>
+                  <td>{repayment.was_late ? "Yes" : "No"}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center' }}>
+                <td colSpan="6" style={{ textAlign: "center" }}>
                   No repayment records found.
                 </td>
               </tr>

@@ -47,6 +47,7 @@ import PasswordResetRequest from './pages/members/PasswordResetRequest';
 import PasswordResetConfirm from './pages/members/PasswordResetConfirm';
 import AdminAnnouncements from './pages/admin/AnnouncementManager';
 import MembersBalancesReport from './pages/admin/Reports/MembersBalance';
+import MonthlyReceiptsReport from './pages/admin/Reports/AnalysisOfReceipts';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -165,6 +166,7 @@ const App = () => {
         <Route path="all-payments" element={<AdminAllPayments/>} />
         <Route path="disbursement-logs" element={<AdminDisbursementLogs/>} />
         <Route path="report/members-balances" element={<MembersBalancesReport/>} />
+        <Route path="report/analysis-of-receipts" element={<MonthlyReceiptsReport/>} />
         <Route path="settings/theme" element={<ThemeSwitcher />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="2fa/setup" element={<TwoFASetup />} />

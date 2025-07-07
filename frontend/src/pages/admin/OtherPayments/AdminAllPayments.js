@@ -1,14 +1,11 @@
-import React, { useRef } from 'react';
-import usePaginatedData from '../../../utils/usePaginatedData';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { formatNaira } from '../../../utils/formatCurrency';
-import ExportPrintGroup from '../../../components/ExportPrintGroup';
-import '../../../styles/admin/loan/LoanManagement.css';
-import { toast } from 'react-toastify';
-import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
-import Spinner from '../../../components/Spinner';
+import React, { useRef } from "react";
+import usePaginatedData from "../../../utils/usePaginatedData";
+import { formatNaira } from "../../../utils/formatCurrency";
+import ExportPrintGroup from "../../../utils/ExportPrintGroup";
+import "../../../styles/admin/loan/LoanManagement.css";
+import { toast } from "react-toastify";
+import Spinner from "../../../components/Spinner";
+import exportHelper from "../../../utils/exportHelper";
 
 const AdminAllPayments = () => {
   const {
@@ -21,99 +18,40 @@ const AdminAllPayments = () => {
     setPageSize,
     filters,
     setFilters,
-  } = usePaginatedData('/admin/payment/payments-admin/', {
-    payment_type: '',
-    verified: '',
-    member__full_name: '',
-    created_at_after: '',
-    created_at_before: '',
-    ordering: '-created_at',
+  } = usePaginatedData("/admin/payment/payments-admin/", {
+    payment_type: "",
+    verified: "",
+    member__full_name: "",
+    created_at_after: "",
+    created_at_before: "",
+    ordering: "-created_at",
   });
 
-const printRef = useRef();
-const transformExportPayment = (payment) => ({
-    Member: payment.member_name || 'N/A',
-    Type: payment.payment_type.toUpperCase() || 'N/A',
-    Reference: payment.reference || 'N/A',
+  const printRef = useRef();
+
+  const transformExportPayment = (payment) => ({
+    Member: payment.member_name || "N/A",
+    Type: payment.payment_type?.toUpperCase() || "N/A",
+    Reference: payment.reference || "N/A",
     Amount: `NGN ${Number(payment.amount).toLocaleString()}`,
-    CreatedAt: payment.created_at?.split('T')[0] || 'N/A',
-    Verified: payment.verified ? 'Yes' : 'No',
-    
+    CreatedAt: payment.created_at?.split("T")[0] || "N/A",
+    Verified: payment.verified ? "Yes" : "No",
   });
-const previewExportData = (data || []).map(transformExportPayment);
 
-const exportToExcel = async () => {
-  toast.info('Preparing Excel export...');
-  try {
-    const exportData = await getAllPaginatedDataForExport({
-      url: '/admin/payment/payments-admin/',
-      filters,
-      transformFn: transformExportPayment,
-    });
-    if (!exportData.length) return toast.warn('No data to export.');
+  const {
+    exportToExcel,
+    exportToCSV,
+    exportToPDF
+  } = exportHelper({
+    url: "/admin/payment/payments-admin/",
+    filters,
+    transformFn: transformExportPayment,
+    columns: ["Member", "Type", "Reference", "Amount", "CreatedAt", "Verified"],
+    fileName: "payments",
+    reportTitle: "All Payments",
+  });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, worksheet, 'Payments');
-    XLSX.writeFile(wb, 'payments.xlsx');
-
-    toast.success('Excel export complete.');
-  } catch (err) {
-    toast.error('Failed to export to Excel.');
-    console.error(err);
-  }
-};
-
-const exportToCSV = async () => {
-  toast.info('Preparing CSV export...');
-  try {
-    const exportData = await getAllPaginatedDataForExport({
-      url: '/admin/payment/payments-admin/',
-      filters,
-      transformFn: transformExportPayment,
-    });
-    if (!exportData.length) return toast.warn('No data to export.');
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, worksheet, 'Payments');
-    XLSX.writeFile(wb, 'payments.csv', { bookType: 'csv' });
-
-    toast.success('CSV export complete.');
-  } catch (err) {
-    toast.error('Failed to export to CSV.');
-    console.error(err);
-  }
-};
-
-const exportToPDF = async () => {
-  toast.info('Preparing PDF export...');
-  try {
-    const exportData = await getAllPaginatedDataForExport({
-      url: '/admin/payment/payments-admin/',
-      filters,
-      transformFn: transformExportPayment,
-    });
-    if (!exportData.length) return toast.warn('No data to export.');
-
-    const doc = new jsPDF();
-    doc.text('All Payments', 14, 15);
-    autoTable(doc, {
-      startY: 20,
-      head: [['Member', 'Type', 'Amount', 'Verified', 'Created At', 'Ref']],
-      body: exportData.map((p) => Object.values(p)),
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [33, 150, 243] },
-    });
-    doc.save('payments.pdf');
-
-    toast.success('PDF export complete.');
-  } catch (err) {
-    toast.error('Failed to export to PDF.');
-    console.error(err);
-  }
-};
-
+  const previewExportData = (data || []).map(transformExportPayment);
 
   return (
     <div className="loan-management">
@@ -123,7 +61,7 @@ const exportToPDF = async () => {
         <input
           className="filter-input"
           placeholder="Member name"
-          value={filters.member__full_name || ''}
+          value={filters.member__full_name || ""}
           onChange={(e) =>
             setFilters((f) => ({ ...f, member__full_name: e.target.value }))
           }
@@ -158,7 +96,7 @@ const exportToPDF = async () => {
         <input
           type="date"
           className="filter-input"
-          value={filters.created_at_after || ''}
+          value={filters.created_at_after || ""}
           onChange={(e) =>
             setFilters((f) => ({ ...f, created_at_after: e.target.value }))
           }
@@ -168,7 +106,7 @@ const exportToPDF = async () => {
         <input
           type="date"
           className="filter-input"
-          value={filters.created_at_before || ''}
+          value={filters.created_at_before || ""}
           onChange={(e) =>
             setFilters((f) => ({ ...f, created_at_before: e.target.value }))
           }
@@ -176,9 +114,9 @@ const exportToPDF = async () => {
 
         <ExportPrintGroup
           data={previewExportData}
-          exportToExcel={exportToExcel}
-          exportToPDF={exportToPDF}
-          exportToCSV={exportToCSV}
+          exportToExcel={() => exportToExcel()}
+          exportToPDF={() => exportToPDF()}
+          exportToCSV={() => exportToCSV()}
         />
       </div>
 
@@ -194,24 +132,23 @@ const exportToPDF = async () => {
               <th>Amount</th>
               <th>Created At</th>
               <th>Verified</th>
-              
             </tr>
           </thead>
           <tbody>
             {data.length > 0 ? (
               data.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.member_name || 'N/A'}</td>
-                  <td>{p.payment_type.toUpperCase()}</td>
+                  <td>{p.member_name || "N/A"}</td>
+                  <td>{p.payment_type?.toUpperCase() || "N/A"}</td>
                   <td>{p.reference}</td>
                   <td>{formatNaira(p.amount)}</td>
-                  <td>{p.created_at?.split('T')[0]}</td>
-                  <td>{p.verified ? 'Yes' : 'No'}</td>
+                  <td>{p.created_at?.split("T")[0]}</td>
+                  <td>{p.verified ? "Yes" : "No"}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center' }}>
+                <td colSpan="6" style={{ textAlign: "center" }}>
                   No payments found.
                 </td>
               </tr>

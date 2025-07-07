@@ -9,7 +9,7 @@ import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
 import { FaCalendarAlt, FaChartPie, FaMoneyCheckAlt, FaClock  } from 'react-icons/fa';
 import { Tooltip } from 'react-tooltip';
-import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import ExportPrintGroup from '../../../utils/ExportPrintGroup';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';

@@ -1,11 +1,10 @@
-import React, { useRef } from 'react';
-import usePaginatedData from '../../utils/usePaginatedData';
-import '../../styles/admin/Members.css';
-import axiosAdminInstance from '../../utils/axiosAdminInstance';
-import ExportPrintGroup from '../../components/ExportPrintGroup';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import Spinner from '../../components/Spinner';
+import React, { useRef } from "react";
+import usePaginatedData from "../../utils/usePaginatedData";
+import "../../styles/admin/Members.css";
+import axiosAdminInstance from "../../utils/axiosAdminInstance";
+import ExportPrintGroup from "../../utils/ExportPrintGroup";
+import Spinner from "../../components/Spinner";
+import exportHelper from "../../utils/exportHelper";
 
 const PendingMemberList = () => {
   const {
@@ -18,64 +17,52 @@ const PendingMemberList = () => {
     setPageSize,
     filters,
     setFilters,
-  } = usePaginatedData('/admin/members/pending/', {
-    full_name: '',
-    email: '',
-    has_paid_shares: '',
-    has_paid_levy: '',
-    joined_on_after: '',
-    joined_on_before: '',
+  } = usePaginatedData("/admin/members/pending/", {
+    full_name: "",
+    email: "",
+    has_paid_shares: "",
+    has_paid_levy: "",
+    joined_on_after: "",
+    joined_on_before: "",
   });
 
   const printRef = useRef();
 
-  const exportData = members.map((member) => ({
-    Name: member.user?.username || 'Unnamed',
-    FullName: member.full_name,
-    Email: member.email,
-    SharesPaid: member.has_paid_shares ? 'Yes' : 'No',
-    LevyPaid: member.has_paid_levy ? 'Yes' : 'No',
-    JoinedOn: member.joined_on,
-  }));
+  const transformExport = (member) => ({
+    Name: member.user?.username || "Unnamed",
+    FullName: member.full_name || "N/A",
+    Email: member.email || "N/A",
+    SharesPaid: member.has_paid_shares ? "Yes" : "No",
+    LevyPaid: member.has_paid_levy ? "Yes" : "No",
+    JoinedOn: member.joined_on || "N/A",
+  });
+
+  const {
+    exportToExcel,
+    exportToCSV,
+    exportToPDF,
+  } = exportHelper({
+    url: "/admin/members/pending/",
+    filters,
+    transformFn: transformExport,
+    columns: ["Name", "FullName", "Email", "SharesPaid", "LevyPaid", "JoinedOn"],
+    fileName: "pending_members",
+    reportTitle: "Pending Member Applications",
+  });
+
+  const previewExportData = members.map(transformExport);
 
   const handleApprove = async (id) => {
     try {
       await axiosAdminInstance.patch(`/admin/members/${id}/approve/`, {
-        status: 'approved',
-        membership_status: 'active',
+        status: "approved",
+        membership_status: "active",
       });
       window.location.reload();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Approval failed');
+      alert(error.response?.data?.detail || "Approval failed");
     }
   };
-
-  const exportToExcel = () => {
-    const XLSX = require('xlsx');
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'PendingMembers');
-    XLSX.writeFile(workbook, 'pending_members.xlsx');
-  };
-
-  const exportToCSV = () => {
-    const XLSX = require('xlsx');
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'PendingMembers');
-    XLSX.writeFile(workbook, 'pending_members.csv', { bookType: 'csv' });
-  };
-
-  const exportToPDF = () => {
-  const doc = new jsPDF();
-  doc.text('Pending Member Applications', 14, 15);
-  autoTable(doc, {
-    startY: 20,
-    head: [['Name', 'Full Name', 'Email', 'Shares Paid', 'Levy Paid', 'Joined On']],
-    body: exportData.map(row => Object.values(row)),
-  });
-  doc.save('pending_members.pdf');
-};
 
   return (
     <div className="pending-member-list">
@@ -85,21 +72,21 @@ const PendingMemberList = () => {
         <input
           className="filter-input"
           placeholder="Full Name"
-          value={filters.full_name || ''}
-          onChange={(e) => setFilters(f => ({ ...f, full_name: e.target.value }))}
+          value={filters.full_name || ""}
+          onChange={(e) => setFilters((f) => ({ ...f, full_name: e.target.value }))}
         />
 
         <input
           className="filter-input"
           placeholder="Email"
-          value={filters.email || ''}
-          onChange={(e) => setFilters(f => ({ ...f, email: e.target.value }))}
+          value={filters.email || ""}
+          onChange={(e) => setFilters((f) => ({ ...f, email: e.target.value }))}
         />
 
         <select
           className="filter-select"
-          value={filters.has_paid_shares || ''}
-          onChange={(e) => setFilters(f => ({ ...f, has_paid_shares: e.target.value }))}
+          value={filters.has_paid_shares || ""}
+          onChange={(e) => setFilters((f) => ({ ...f, has_paid_shares: e.target.value }))}
         >
           <option value="">Shares Paid?</option>
           <option value="true">✅</option>
@@ -108,8 +95,8 @@ const PendingMemberList = () => {
 
         <select
           className="filter-select"
-          value={filters.has_paid_levy || ''}
-          onChange={(e) => setFilters(f => ({ ...f, has_paid_levy: e.target.value }))}
+          value={filters.has_paid_levy || ""}
+          onChange={(e) => setFilters((f) => ({ ...f, has_paid_levy: e.target.value }))}
         >
           <option value="">Levy Paid?</option>
           <option value="true">✅</option>
@@ -119,26 +106,26 @@ const PendingMemberList = () => {
         <input
           type="date"
           className="filter-input"
-          value={filters.joined_on_after || ''}
-          onChange={(e) => setFilters(f => ({ ...f, joined_on_after: e.target.value }))}
+          value={filters.joined_on_after || ""}
+          onChange={(e) => setFilters((f) => ({ ...f, joined_on_after: e.target.value }))}
         />
 
         <input
           type="date"
           className="filter-input"
-          value={filters.joined_on_before || ''}
-          onChange={(e) => setFilters(f => ({ ...f, joined_on_before: e.target.value }))}
+          value={filters.joined_on_before || ""}
+          onChange={(e) => setFilters((f) => ({ ...f, joined_on_before: e.target.value }))}
         />
 
         <ExportPrintGroup
-          data={exportData}
+          data={previewExportData}
           exportToExcel={exportToExcel}
           exportToPDF={exportToPDF}
           exportToCSV={exportToCSV}
         />
       </div>
 
-      {loading ? <Spinner size={30} /> : null}
+      {loading && <Spinner size={30} />}
 
       <div ref={printRef}>
         <table className="members-table pending">
@@ -162,8 +149,8 @@ const PendingMemberList = () => {
                     <td>{member.user?.username}</td>
                     <td>{member.email}</td>
                     <td>{member.full_name}</td>
-                    <td>{member.has_paid_shares ? '✅' : '❌'}</td>
-                    <td>{member.has_paid_levy ? '✅' : '❌'}</td>
+                    <td>{member.has_paid_shares ? "✅" : "❌"}</td>
+                    <td>{member.has_paid_levy ? "✅" : "❌"}</td>
                     <td>{member.joined_on}</td>
                     <td>
                       <button
@@ -179,7 +166,9 @@ const PendingMemberList = () => {
               })
             ) : (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center' }}>No pending members found.</td>
+                <td colSpan="7" style={{ textAlign: "center" }}>
+                  No pending members found.
+                </td>
               </tr>
             )}
           </tbody>
@@ -187,18 +176,26 @@ const PendingMemberList = () => {
       </div>
 
       <div className="pagination-controls">
-        <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+          disabled={currentPage === 1}
+        >
           Prev
         </button>
         <span>
           Page {currentPage} of {totalPages}
         </span>
-        <button onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+          disabled={currentPage === totalPages}
+        >
           Next
         </button>
         <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
           {[10, 20, 50].map((size) => (
-            <option key={size} value={size}>{size} / page</option>
+            <option key={size} value={size}>
+              {size} / page
+            </option>
           ))}
         </select>
       </div>

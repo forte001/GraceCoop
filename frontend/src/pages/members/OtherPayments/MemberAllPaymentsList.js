@@ -1,13 +1,12 @@
 import React, { useRef } from 'react';
 import usePaginatedData from '../../../utils/usePaginatedData';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { formatNaira } from '../../../utils/formatCurrency';
-import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import ExportPrintGroup from '../../../utils/ExportPrintGroup';
+import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
+import exportHelper from '../../../utils/exportHelper';
 import Spinner from '../../../components/Spinner';
 
 const MemberAllPaymentsList = () => {
@@ -32,84 +31,46 @@ const MemberAllPaymentsList = () => {
   const printRef = useRef();
 
   const transformExportPayment = (payment) => ({
-    Type: payment.payment_type.toUpperCase() || 'N/A',
+    Type: payment.payment_type?.toUpperCase() || 'N/A',
     Reference: payment.reference || 'N/A',
     Amount: `NGN ${Number(payment.amount).toLocaleString()}`,
     CreatedAt: payment.created_at?.split('T')[0] || 'N/A',
     Verified: payment.verified ? 'Yes' : 'No',
   });
 
-  const previewExportData = (data || []).map(transformExportPayment);
+  const previewExportData = data.map(transformExportPayment);
 
-  const exportToExcel = async () => {
-    toast.info('Preparing Excel export...');
+  const {
+    exportToExcel,
+    exportToCSV,
+    exportToPDF,
+  } = exportHelper({
+    url: '/members/payment/all-payments/',
+    filters,
+    transformFn: transformExportPayment,
+    columns: ['Type', 'Reference', 'Amount', 'CreatedAt', 'Verified'],
+    fileName: 'member_payments',
+    reportTitle: 'All Member Payments',
+    getAllDataFn: getAllPaginatedDataForExport,
+  });
+
+  const downloadReceipt = async (sourceReference) => {
     try {
-      const exportData = await getAllPaginatedDataForExport({
-        url: '/members/payment/all-payments/',
-        filters,
-        transformFn: transformExportPayment,
-      });
-      if (!exportData.length) return toast.warn('No data to export.');
+      const response = await axiosMemberInstance.get(
+        `/members/payment/receipt/${sourceReference}/`,
+        { responseType: 'blob' }
+      );
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, worksheet, 'Payments');
-      XLSX.writeFile(wb, 'member_payments.xlsx');
-
-      toast.success('Excel export complete.');
-    } catch (err) {
-      toast.error('Failed to export to Excel.');
-      console.error(err);
-    }
-  };
-
-  const exportToCSV = async () => {
-    toast.info('Preparing CSV export...');
-    try {
-      const exportData = await getAllPaginatedDataForExport({
-        url: '/members/payment/all-payments/',
-        filters,
-        transformFn: transformExportPayment,
-      });
-      if (!exportData.length) return toast.warn('No data to export.');
-
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, worksheet, 'Payments');
-      XLSX.writeFile(wb, 'member_payments.csv', { bookType: 'csv' });
-
-      toast.success('CSV export complete.');
-    } catch (err) {
-      toast.error('Failed to export to CSV.');
-      console.error(err);
-    }
-  };
-
-  const exportToPDF = async () => {
-    toast.info('Preparing PDF export...');
-    try {
-      const exportData = await getAllPaginatedDataForExport({
-        url: '/members/payment/all-payments/',
-        filters,
-        transformFn: transformExportPayment,
-      });
-      if (!exportData.length) return toast.warn('No data to export.');
-
-      const doc = new jsPDF();
-      doc.text('All Payments', 14, 15);
-      autoTable(doc, {
-        startY: 20,
-        head: [['Type', 'Amount', 'Verified', 'Created At', 'Ref']],
-        body: exportData.map((p) => Object.values(p)),
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [33, 150, 243] },
-      });
-      doc.save('member_payments.pdf');
-
-      toast.success('PDF export complete.');
-    } catch (err) {
-      toast.error('Failed to export to PDF.');
-      console.error(err);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `receipt_${sourceReference}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Failed to download receipt:', error);
+      toast.error('Could not download receipt. Please try again.');
     }
   };
 
@@ -121,9 +82,7 @@ const MemberAllPaymentsList = () => {
         <select
           className="filter-select"
           value={filters.payment_type}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, payment_type: e.target.value }))
-          }
+          onChange={(e) => setFilters(f => ({ ...f, payment_type: e.target.value }))}
         >
           <option value="">All Types</option>
           <option value="shares">Shares</option>
@@ -134,9 +93,7 @@ const MemberAllPaymentsList = () => {
         <select
           className="filter-select"
           value={filters.verified}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, verified: e.target.value }))
-          }
+          onChange={(e) => setFilters(f => ({ ...f, verified: e.target.value }))}
         >
           <option value="">Verified?</option>
           <option value="true">Yes</option>
@@ -148,9 +105,7 @@ const MemberAllPaymentsList = () => {
           type="date"
           className="filter-input"
           value={filters.created_at_after || ''}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, created_at_after: e.target.value }))
-          }
+          onChange={(e) => setFilters(f => ({ ...f, created_at_after: e.target.value }))}
         />
 
         <small className="form-hint">End Date:</small>
@@ -158,9 +113,7 @@ const MemberAllPaymentsList = () => {
           type="date"
           className="filter-input"
           value={filters.created_at_before || ''}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, created_at_before: e.target.value }))
-          }
+          onChange={(e) => setFilters(f => ({ ...f, created_at_before: e.target.value }))}
         />
 
         <ExportPrintGroup
@@ -182,7 +135,6 @@ const MemberAllPaymentsList = () => {
               <th>Amount</th>
               <th>Created At</th>
               <th>Verified</th>
-              
             </tr>
           </thead>
           <tbody>
@@ -194,47 +146,33 @@ const MemberAllPaymentsList = () => {
                   <td>{formatNaira(p.amount)}</td>
                   <td>{p.created_at?.split('T')[0]}</td>
                   <td>{p.verified ? 'Yes' : 'No'}</td>
-                  
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center' }}>
-                  No payments found.
-                </td>
+                <td colSpan="5" style={{ textAlign: 'center' }}>No payments found.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      <div className="pagination-controls">
-        <button
-          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-          disabled={currentPage === 1}
-        >
-          Prev
-        </button>
-        <span>
-          Page {currentPage} of {totalPages}
-        </span>
-        <button
-          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-          disabled={currentPage === totalPages}
-        >
-          Next
-        </button>
-        <select
-          value={pageSize}
-          onChange={(e) => setPageSize(Number(e.target.value))}
-        >
-          {[10, 20, 50].map((size) => (
-            <option key={size} value={size}>
-              {size} / page
-            </option>
-          ))}
-        </select>
-      </div>
+      {totalPages > 1 && (
+        <div className="pagination-controls">
+          <button onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))} disabled={currentPage === 1}>
+            Prev
+          </button>
+          <span>Page {currentPage} of {totalPages}</span>
+          <button onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))} disabled={currentPage === totalPages}>
+            Next
+          </button>
+          <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+            {[10, 20, 50].map(size => (
+              <option key={size} value={size}>{size} / page</option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,15 +1,13 @@
 import React, { useState, useRef } from 'react';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
-import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import ExportPrintGroup from '../../../utils/ExportPrintGroup';
 import usePaginatedData from '../../../utils/usePaginatedData';
-import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
+import exportHelper from '../../../utils/exportHelper';
+import { toast } from 'react-toastify';
 import axiosMemberInstance from '../../../utils/axiosMemberInstance';
 import Spinner from '../../../components/Spinner';
+import '../../../styles/admin/loan/LoanManagement.css';
 
 const MemberContributionList = () => {
   const [error, setError] = useState(null);
@@ -26,89 +24,53 @@ const MemberContributionList = () => {
     member_name: '',
     payment_date_after: '',
     payment_date_before: '',
-    source_reference: '', 
+    source_reference: '',
     ordering: '-date',
   });
 
   const printRef = useRef();
 
   const transformExportContribution = (item) => ({
-    PaidBy: item.member_name || 'N/A',
-    Amount: `NGN ${(item.amount)}`,
+    Reference: item.source_reference || 'N/A',
+    Amount: `NGN ${Number(item.amount).toLocaleString()}`,
     PaymentDate: item.date?.split('T')[0] || 'N/A',
   });
 
-  const previewExportData = (data || []).map(transformExportContribution);
+  const previewExportData = data.map(transformExportContribution);
 
-  const exportToExcel = async () => {
-    toast.info('Preparing Excel export...');
-    const exportData = await getAllPaginatedDataForExport({
-      url: '/members/contribution/contributions-list/',
-      filters,
-      transformFn: transformExportContribution,
-    });
-    if (!exportData.length) return toast.warn('No data to export.');
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
-    XLSX.writeFile(workbook, 'contributions.xlsx');
-    toast.success('Excel export complete.');
+  const {
+    exportToExcel,
+    exportToCSV,
+    exportToPDF,
+  } = exportHelper({
+    url: '/members/contribution/contributions-list/',
+    filters,
+    transformFn: transformExportContribution,
+    columns: ['Reference', 'Amount', 'PaymentDate'],
+    fileName: 'member_contributions',
+    reportTitle: 'Member Contributions',
+    getAllDataFn: getAllPaginatedDataForExport,
+  });
+
+  const downloadReceipt = async (sourceReference) => {
+    try {
+      const response = await axiosMemberInstance.get(
+        `/members/payment/receipt/${sourceReference}/`,
+        { responseType: 'blob' }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `receipt_${sourceReference}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Failed to download receipt:', error);
+      toast.error('Could not download receipt. Please try again.');
+    }
   };
-
-  const exportToCSV = async () => {
-    toast.info('Preparing CSV export...');
-    const exportData = await getAllPaginatedDataForExport({
-      url: '/members/contribution/contributions-list/',
-      filters,
-      transformFn: transformExportContribution,
-    });
-    if (!exportData.length) return toast.warn('No data to export.');
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Contributions');
-    XLSX.writeFile(workbook, 'contributions.csv', { bookType: 'csv' });
-    toast.success('CSV export complete.');
-  };
-
-  const exportToPDF = async () => {
-    toast.info('Preparing PDF export...');
-    const exportData = await getAllPaginatedDataForExport({
-      url: '/members/contribution/contributions-list/',
-      filters,
-      transformFn: transformExportContribution,
-    });
-    if (!exportData.length) return toast.warn('No data to export.');
-    const doc = new jsPDF();
-    doc.text('Contributions List', 14, 15);
-    autoTable(doc, {
-      startY: 20,
-      head: [['Paid By', 'Amount', 'Payment Date']],
-      body: exportData.map((item) => Object.values(item)),
-    });
-    doc.save('contributions.pdf');
-    toast.success('PDF export complete.');
-  };
-
-const downloadReceipt = async (sourceReference) => {
-  try {
-    const response = await axiosMemberInstance.get(`/members/payment/receipt/${sourceReference}/`, {
-      responseType: 'blob',  // important to treat as binary
-    });
-
-    // Create a blob URL and force download
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `receipt_${sourceReference}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  } catch (error) {
-    console.error('Failed to download receipt:', error);
-    toast.error('Could not download receipt. Please try again.');
-  }
-};
-
 
   return (
     <div className="loan-management">
@@ -121,9 +83,7 @@ const downloadReceipt = async (sourceReference) => {
           className="filter-input"
           placeholder="Enter reference"
           value={filters.source_reference}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, source_reference: e.target.value }))
-          }
+          onChange={(e) => setFilters(f => ({ ...f, source_reference: e.target.value }))}
         />
 
         <small className="form-hint">Start Date:</small>
@@ -131,18 +91,15 @@ const downloadReceipt = async (sourceReference) => {
           type="date"
           className="filter-input"
           value={filters.payment_date_after}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, payment_date_after: e.target.value }))
-          }
+          onChange={(e) => setFilters(f => ({ ...f, payment_date_after: e.target.value }))}
         />
+
         <small className="form-hint">End Date:</small>
         <input
           type="date"
           className="filter-input"
           value={filters.payment_date_before}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, payment_date_before: e.target.value }))
-          }
+          onChange={(e) => setFilters(f => ({ ...f, payment_date_before: e.target.value }))}
         />
 
         <ExportPrintGroup
@@ -170,7 +127,7 @@ const downloadReceipt = async (sourceReference) => {
             {data?.length > 0 ? (
               data.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.source_reference|| 'N/A'}</td>
+                  <td>{item.source_reference || 'N/A'}</td>
                   <td>{formatNaira(item.amount)}</td>
                   <td>{item.date?.split('T')[0] || 'N/A'}</td>
                   <td>
@@ -203,9 +160,7 @@ const downloadReceipt = async (sourceReference) => {
           <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
             Previous
           </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
+          <span>Page {currentPage} of {totalPages}</span>
           <button
             onClick={() => setCurrentPage(currentPage + 1)}
             disabled={currentPage === totalPages}

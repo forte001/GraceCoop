@@ -3,7 +3,7 @@ import usePaginatedData from '../../../utils/usePaginatedData';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import ExportPrintGroup from '../../../components/ExportPrintGroup';
+import ExportPrintGroup from '../../../utils/ExportPrintGroup';
 import Spinner from '../../../components/Spinner';
 import { toast } from 'react-toastify';
 import '../../../styles/admin/loan/LoanManagement.css';

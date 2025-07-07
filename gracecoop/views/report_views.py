@@ -3,16 +3,19 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from ..permissions import IsAdminUser, CanViewReports
 from django.db.models import Sum
+from django.db.models.functions import TruncMonth
 from decimal import Decimal
-from datetime import date
+from datetime import date, datetime
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from collections import OrderedDict
+from calendar import month_name
 from ..serializers import (
     MemberBalanceReportSerializer,
     ReportParametersSerializer,
     ReportSummarySerializer
 )
-from gracecoop.models import MemberProfile, LoanRepayment
+from gracecoop.models import MemberProfile, LoanRepayment, Payment
 from gracecoop.pagination import StandardResultsSetPagination
 
 User = get_user_model()
@@ -164,6 +167,65 @@ class ReportsViewSet(viewsets.ViewSet):
             "members": members_serializer.data,
         })
     
+    @action(detail=False, methods=["get"], url_path="monthly-receipts-analysis")
+    def monthly_receipts_analysis(self, request):
+        year = request.query_params.get("year")
+        if not year:
+            return Response({"error": "year parameter is required"}, status=400)
+        
+        year = int(year)
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        
+        monthly_data = OrderedDict()
+        for month_num in range(1, 13):
+            month_label = month_name[month_num]
+            if year < current_year or (year == current_year and month_num <= current_month):
+                # past or current month — default to 0
+                monthly_data[month_label] = {
+                    "shares": Decimal("0.00"),
+                    "levy": Decimal("0.00"),
+                    "loan_repayment": Decimal("0.00"),
+                    "total": Decimal("0.00")
+                }
+            else:
+                # future month — show dashes
+                monthly_data[month_label] = {
+                    "shares": "-",
+                    "levy": "-",
+                    "loan_repayment": "-",
+                    "total": "-"
+                }
+        
+        payments = (
+            Payment.objects.filter(
+                verified=True,
+                created_at__year=year
+            )
+            .annotate(month=TruncMonth("created_at"))
+            .values("month", "payment_type")
+            .order_by("month")
+            .annotate(total=Sum("amount"))
+        )
+
+        grand_total = Decimal("0.00")
+
+        for record in payments:
+            month_str = record["month"].strftime("%B")
+            ptype = record["payment_type"]
+            amt = record["total"]
+            
+            # only update if month was numeric before (skip dash months)
+            if isinstance(monthly_data[month_str][ptype], Decimal):
+                monthly_data[month_str][ptype] += amt
+                monthly_data[month_str]["total"] += amt
+                grand_total += amt
+
+        return Response({
+            "year": year,
+            "monthly_breakdown": monthly_data,
+            "grand_total": grand_total,
+        })
 
     @action(detail=False, methods=["get"], url_path="available-reports")
     def available_reports(self, request):

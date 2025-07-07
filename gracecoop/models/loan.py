@@ -61,7 +61,7 @@ class Loan(models.Model):
     reference = models.CharField(max_length=30, unique=True, null=True, blank=True)
     member = models.ForeignKey(MemberProfile, on_delete=models.CASCADE, related_name='loans')
     category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
     interest_rate = models.DecimalField(max_digits=5, decimal_places=2, editable=False)
     duration_months = models.PositiveIntegerField(editable=False)
     has_interest_schedule = models.BooleanField(default=False)
@@ -78,7 +78,7 @@ class Loan(models.Model):
         help_text="Total number of months the loan will be repaid over"
     )
 
-    disbursed_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    disbursed_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     disbursed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='disbursed_loans')
     disbursed_at = models.DateTimeField(null=True, blank=True)
 
@@ -100,7 +100,7 @@ class Loan(models.Model):
     
 class DisbursementLog(models.Model):
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE, related_name='disbursements')
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
     repayment_months = models.PositiveIntegerField(default=1, help_text="Number of months to repay this disbursement")
     disbursed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     disbursed_at = models.DateTimeField(auto_now_add=True)
@@ -144,8 +144,8 @@ class LoanApplication(models.Model):
 
 class LoanRepayment(models.Model):
     loan = models.ForeignKey('Loan', on_delete=models.CASCADE, related_name='repayments')
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    principal_component = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    principal_component = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     interest_component = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     paid_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     payment_date = models.DateField(null=True, blank=True)
@@ -173,7 +173,7 @@ class LoanRepaymentSchedule(models.Model):
     disbursement = models.ForeignKey(DisbursementLog, on_delete=models.CASCADE)
     installment = models.PositiveIntegerField()
     due_date = models.DateField()
-    principal = models.DecimalField(max_digits=10, decimal_places=2)
+    principal = models.DecimalField(max_digits=12, decimal_places=2)
     interest = models.DecimalField(max_digits=10, decimal_places=2)
     amount_due = models.DecimalField(max_digits=10, decimal_places=2)
     is_paid = models.BooleanField(default=False)

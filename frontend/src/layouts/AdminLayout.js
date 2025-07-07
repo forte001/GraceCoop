@@ -110,8 +110,8 @@ const AdminLayout = () => {
             {isReportsOpen && (
               <ul className="submenu">
                 <li><Link to="/admin/report/members-balances">Members Balances</Link></li>
-                {/* <li><Link to="#">Report 2</Link></li>
-                <li><Link to="#">Report 3</Link></li> */}
+                <li><Link to="/admin/report/analysis-of-receipts">Analysis of Receipts</Link></li>
+                {/* <li><Link to="#">Report 3</Link></li> */}
               </ul>
             )}
           </li>
