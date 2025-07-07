@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { ThemeContext } from '../components/ThemeContext';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FaBars, FaTachometerAlt, FaUsers, FaMoneyBill, FaCog, 
-  FaHandshake, FaBullhorn, FaFileAlt, FaSignOutAlt } from 'react-icons/fa';
+  FaHandshake, FaBullhorn, FaFileAlt, FaSignOutAlt, FaMoon, FaSun, FaDesktop,} from 'react-icons/fa';
 import '../styles/admin/AdminLayout.css';
 
 const AdminLayout = () => {
@@ -39,6 +39,19 @@ const AdminLayout = () => {
   const togglePaymentsMenu = () => setIsPaymentsOpen(prev => !prev);
   const toggleSettingsMenu = () => setIsSettingsOpen(prev => !prev);
   const toggleReportsMenu = () => setIsReportsOpen(prev => !prev);
+
+  const renderThemeIcon = () => {
+      switch (theme) {
+        case 'light': return <FaSun />;
+        case 'dark': return <FaMoon />;
+        default: return <FaDesktop />;
+      }
+    };
+
+  const cycleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    setTheme(nextTheme);
+  };
 
   return (
     <div className={`admin-layout ${isSidebarCollapsed ? 'collapsed' : ''}`}>
@@ -145,30 +158,11 @@ const AdminLayout = () => {
       </aside>
 
       <main className="main-content">
-        <div className="theme-toggle-floating">
-          <button
-            className={`theme-toggle-btn ${theme === 'light' ? 'active' : ''}`}
-            onClick={() => setTheme('light')}
-            title="Light mode"
-          >
-            🌞
-          </button>
-          <button
-            className={`theme-toggle-btn ${theme === 'dark' ? 'active' : ''}`}
-            onClick={() => setTheme('dark')}
-            title="Dark mode"
-          >
-            🌙
-          </button>
-          <button
-            className={`theme-toggle-btn ${theme === 'system' ? 'active' : ''}`}
-            onClick={() => setTheme('system')}
-            title="System default"
-          >
-            🖥
-          </button>
-        </div>
-
+        <div className="theme-toggle-container">
+        <button className="theme-toggle-btn" onClick={cycleTheme} title={`Theme: ${theme}`}>
+          {renderThemeIcon()}
+        </button>
+      </div>
         <Outlet />
       </main>
     </div>

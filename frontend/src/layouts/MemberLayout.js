@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MemberContext } from '../components/MemberContext';
 import { ThemeContext } from '../components/ThemeContext';
 import { FaMoon, FaSun, FaDesktop, FaBars, FaTachometerAlt, 
-  FaUser, FaMoneyBill, FaCog, FaFileAlt, FaHandshake, FaSignOutAlt } from 'react-icons/fa';
+  FaUser, FaMoneyBill, FaCog, FaHandshake, FaSignOutAlt } from 'react-icons/fa';
 import '../styles/members/MemberLayout.css';
 import Spinner from '../components/Spinner';
 

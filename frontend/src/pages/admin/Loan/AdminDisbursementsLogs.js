@@ -41,9 +41,9 @@ const AdminDisbursementLogs = () => {
 
   const previewExportData = (data || []).map(transformExportLog);
 
-  // using the new reusable exportHelper
-  const { exportToExcel, exportToCSV, exportToPDF } = exportHelper({
-    data,
+    const { exportToExcel, exportToCSV, exportToPDF } = exportHelper({
+    url: '/admin/loan/disbursements-admin/',
+    filters,
     transformFn: transformExportLog,
     columns: [
       'Reference',
@@ -56,6 +56,7 @@ const AdminDisbursementLogs = () => {
     fileName: 'disbursements',
     reportTitle: 'Loan Disbursement Logs'
   });
+
 
   return (
     <div className="loan-management">
