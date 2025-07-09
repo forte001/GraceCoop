@@ -13,7 +13,8 @@ User,
 CooperativeConfig,
 Payment,
 Levy,
-Announcement
+Announcement,
+Expense
 )
 class UserAdmin(admin.ModelAdmin):
     list_display = (
@@ -184,7 +185,13 @@ class AnnouncementAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'created_at']
     search_fields = ['title', 'message']
 
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ('id','title','vendor_name', 'category', 'amount', 'date_incurred', 'recorded_by')
+    list_filter = ('category', 'date_incurred')
+    search_fields = ('recorded_by','vendor_name', 'narration')
+
 # Register your models
+admin.site.register(Expense, ExpenseAdmin),
 admin.site.register(Announcement, AnnouncementAdmin),
 admin.site.register(Levy, LevyAdmin),
 admin.site.register(Payment,PaymentAdmin),

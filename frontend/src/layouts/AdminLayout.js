@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { ThemeContext } from '../components/ThemeContext';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FaBars, FaTachometerAlt, FaUsers, FaMoneyBill, FaCog, 
-  FaHandshake, FaBullhorn, FaFileAlt, FaSignOutAlt, FaMoon, FaSun, FaDesktop,} from 'react-icons/fa';
+  FaHandshake, FaBullhorn, FaFileAlt, FaSignOutAlt, FaMoon, FaSun, FaDesktop, FaFileInvoiceDollar } from 'react-icons/fa';
 import '../styles/admin/AdminLayout.css';
 
 const AdminLayout = () => {
@@ -127,6 +127,12 @@ const AdminLayout = () => {
                 {/* <li><Link to="#">Report 3</Link></li> */}
               </ul>
             )}
+          </li>
+          <li>
+            <Link to="/admin/expenses">
+              <FaFileInvoiceDollar  />
+              {!isSidebarCollapsed && ' Expense Management'}
+            </Link>
           </li>
 
           <li>

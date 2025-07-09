@@ -12,7 +12,8 @@ from gracecoop.models import (
     Contribution,
     Levy,
     CooperativeConfig,
-    Announcement)
+    Announcement,
+    Expense)
 from datetime import datetime
 from django.utils import timezone
 from .utils import create_member_profile_if_not_exists, generate_payment_reference
@@ -479,8 +480,6 @@ class DisbursementLogSerializer(serializers.ModelSerializer):
         return None
 
 
-
-
 class LoanSerializer(serializers.ModelSerializer):
     disbursements = DisbursementLogSerializer(many=True, read_only=True)
     disbursements_remaining = serializers.SerializerMethodField()
@@ -733,7 +732,6 @@ class LoanPaymentInitiateSerializer(serializers.Serializer):
         return data
 
 
-
 class LoanPaymentVerifySerializer(serializers.Serializer):
     reference = serializers.CharField()
 
@@ -959,13 +957,75 @@ class UserGroupUpdateSerializer(serializers.Serializer):
         if invalid_ids:
             raise serializers.ValidationError(f"Invalid group IDs: {invalid_ids}")
         return value
-    
+ ####
+ # Announcement
 class AnnouncementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Announcement
         fields = ['id', 'title', 'message', 'is_active', 'created_at']
 
+#################################################
+## EXPENSE SERIALIZER
+#################################################
+class ExpenseSerializer(serializers.ModelSerializer):
+    recorded_by_name = serializers.SerializerMethodField()
+    receipt_url = serializers.SerializerMethodField()
+    receipt = serializers.FileField(write_only=True, required=False)
 
+    class Meta:
+        model = Expense
+        fields = [
+            'id', 'title', 'vendor_name', 'category', 'amount', 'date_incurred',
+            'narration', 'recorded_by_name', 'created_at',
+            'receipt_url', 'receipt'
+        ]
+        read_only_fields = ['recorded_by', 'recorded_by_name', 'created_at']
+    
+    def validate_amount(self, value):
+        """Ensure amount is positive"""
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than 0")
+        return value
+    
+    def validate_date_incurred(self, value):
+        """Ensure date is not in the future"""
+        from datetime import date
+        if value > date.today():
+            raise serializers.ValidationError("Date incurred cannot be in the future")
+        return value
+    
+    def validate_receipt(self, value):
+        """Validate receipt file if provided"""
+        if value:
+            # Check file size (max 10MB)
+            max_size = 10 * 1024 * 1024  # 10MB
+            if value.size > max_size:
+                raise serializers.ValidationError("Receipt file size cannot exceed 10MB")
+            
+            # Check file type
+            allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+            if hasattr(value, 'content_type') and value.content_type not in allowed_types:
+                raise serializers.ValidationError(
+                    "Receipt file must be PDF, JPEG, PNG, or JPG format"
+                )
+        
+        return value
+    
+    def get_recorded_by_name(self, obj):
+        user = obj.recorded_by
+        if not user:
+            return "N/A"
+        full_name = f"{user.first_name} {user.last_name}".strip()
+        return full_name if full_name else user.username
+    
+    def get_receipt_url(self, obj):
+        request = self.context.get('request')
+        if obj.receipt_url:
+            return obj.receipt_url
+        elif obj.receipt and request:
+            return request.build_absolute_uri(obj.receipt.url)
+        return None
+    
 #################################################
 ## REPORTS SERIALIZER
 #################################################

@@ -21,12 +21,15 @@ from gracecoop.views.admin_views import (
     TwoFAStatusView,
     Disable2FAView,
     Verify2FALoginView,
-    CooperativeConfigAdminViewSet
+    CooperativeConfigAdminViewSet,
+    ExpenseViewSet
     
     )
 ### Cooperative admin config router
 router = DefaultRouter()
+expense_router = DefaultRouter()
 router.register(r'cooperative-config', CooperativeConfigAdminViewSet, basename='admin-cooperative-config')
+expense_router.register(r'expenses', ExpenseViewSet, basename='expense')
 
 urlpatterns = [
     path('login/', AdminLoginView.as_view(), name='admin-login'),
@@ -70,6 +73,9 @@ urlpatterns = [
 
    ### Cooperative admin config urls
    path('', include(router.urls)),
+
+   ### Expense urls
+   path('', include(expense_router.urls)),
 
 
    ### Announcement-related endpoints

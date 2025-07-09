@@ -1,7 +1,9 @@
 from datetime import timedelta
 from django.utils import timezone
 import traceback
+import uuid
 from django.shortcuts import get_object_or_404
+from rest_framework import serializers
 from rest_framework import status, viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.views import APIView
@@ -21,7 +23,8 @@ from rest_framework import generics, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from ..permissions import IsAdminUser, IsSuperUser, IsAdminWith2FA
 from django_filters.rest_framework import DjangoFilterBackend
-from ..filters import PendingMemberFilter, MemberFilter, CooperativeConfigFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
+from ..filters import PendingMemberFilter, MemberFilter, CooperativeConfigFilter, ExpenseFilter
 from gracecoop.pagination import StandardResultsSetPagination
 from gracecoop.serializers import (
 MemberProfileSerializer,
@@ -42,7 +45,8 @@ TwoFASetupVerifySerializer,
 Toggle2FASerializer,
 TwoFASetupSerializer,
 CooperativeConfigSerializer,
-AnnouncementSerializer
+AnnouncementSerializer,
+ExpenseSerializer
 )
 from gracecoop.permissions import (
     CanViewPendingApplications,
@@ -50,8 +54,10 @@ from gracecoop.permissions import (
     CanViewApprovedMembers,
     CanUpdateMemberProfile,
 )
-from gracecoop.models import CooperativeConfig, Payment, Announcement
+from gracecoop.models import CooperativeConfig, Payment, Announcement, Expense
 from django.db.models import Sum
+from gracecoop.utils import upload_receipt_to_supabase
+from django.conf import settings
 
 ###########################################################
 ### Admin Login View with 2FA implementaion
@@ -469,3 +475,101 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+#######################################
+## EXPENSES
+#######################################   
+class ExpenseViewSet(viewsets.ModelViewSet):
+    queryset = Expense.objects.all().order_by('-date_incurred')
+    serializer_class = ExpenseSerializer
+    permission_classes = [IsAdminUser]
+    filter_backends = [DjangoFilterBackend, OrderingFilter, SearchFilter]
+    filterset_class = ExpenseFilter
+    pagination_class = StandardResultsSetPagination
+
+    def perform_create(self, serializer):
+        request = self.request
+        receipt_file = request.FILES.get('receipt')
+        
+        
+        try:
+            if settings.DEBUG:
+                # Save using local FileField
+                print("DEBUG: Saving in DEBUG mode")
+                serializer.save(
+                    recorded_by=request.user,
+                    receipt=receipt_file
+                )
+            else:
+                # Receipt file is mandatory in production
+                if not receipt_file:
+                    print("ERROR: No receipt file provided in production")
+                    raise ValueError("Receipt file is required in production.")
+
+                try:
+                    file_ext = receipt_file.name.split('.')[-1]
+                    unique_name = f"receipt_expense_{uuid.uuid4()}.{file_ext}"
+                    print(f"DEBUG: Uploading to Supabase with name: {unique_name}")
+                    public_url = upload_receipt_to_supabase(receipt_file, unique_name)
+                    print(f"DEBUG: Upload successful, URL: {public_url}")
+                except Exception as upload_error:
+                    traceback_str = traceback.format_exc()
+                    print("UPLOAD ERROR:", traceback_str)
+                    raise ValueError(f"Error uploading to Supabase: {upload_error}")
+
+                serializer.save(
+                    recorded_by=request.user,
+                    receipt_url=public_url
+                )
+
+        except ValueError as ve:
+            print("VALUE ERROR:", str(ve))
+            raise serializers.ValidationError({'error': str(ve)})
+
+        except Exception as e:
+            traceback_str = traceback.format_exc()
+            print("UNEXPECTED ERROR:", traceback_str)
+            raise serializers.ValidationError({
+                'error': f"Unexpected error: {str(e)}",
+                'hint': 'See server logs for full traceback'
+            })
+    
+    def create(self, request, *args, **kwargs):
+        """Overridding create for better error handling and logging"""
+       
+        # Validate required fields before serialization
+        required_fields = ['title', 'vendor_name', 'amount', 'date_incurred', 'category']
+        missing_fields = []
+        
+        for field in required_fields:
+            if field not in request.POST or not request.POST[field]:
+                missing_fields.append(field)
+        
+        if missing_fields:
+            print(f"VALIDATION ERROR: Missing required fields: {missing_fields}")
+            return Response(
+                {'error': f'Missing required fields: {", ".join(missing_fields)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if receipt file is present (especially for production)
+        if not settings.DEBUG and 'receipt' not in request.FILES:
+            print("VALIDATION ERROR: Receipt file required")
+            return Response(
+                {'error': 'Receipt file is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            print("SERIALIZER ERRORS:", serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except serializers.ValidationError as e:
+            print("PERFORM_CREATE ERROR:", e.detail)
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+   

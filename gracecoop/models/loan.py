@@ -1,9 +1,7 @@
-from django.utils import timezone
 from django.db import models
 from .member import MemberProfile
 import uuid
 from django.conf import settings
-from django.utils import timezone
 from decimal import Decimal
 
 class LoanCategory(models.Model):

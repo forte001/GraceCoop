@@ -115,3 +115,13 @@
 .danger-button:hover {
   background-color: #d32f2f;
 }
+
+.receipt-button {
+  display: inline-block;
+  background-color: #007bff;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
