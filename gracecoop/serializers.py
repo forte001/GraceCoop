@@ -13,7 +13,8 @@ from gracecoop.models import (
     Levy,
     CooperativeConfig,
     Announcement,
-    Expense)
+    Expense,
+    LoanGuarantor)
 from datetime import datetime
 from django.utils import timezone
 from .utils import create_member_profile_if_not_exists, generate_payment_reference
@@ -434,6 +435,16 @@ class LoanCategorySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data)
+    
+class LoanGuarantorSerializer(serializers.ModelSerializer):
+    guarantor_name = serializers.CharField(source='guarantor.full_name', read_only=True)
+    guarantor_id = serializers.CharField(source='guarantor.member_id', read_only=True)
+    guarantor_phone = serializers.CharField(source='guarantor.phone', read_only=True)
+    
+    class Meta:
+        model = LoanGuarantor
+        fields = ['id', 'guarantor', 'guarantor_name', 'guarantor_id', 'guarantor_phone', 'added_at']
+
 
 class DisbursementLogSerializer(serializers.ModelSerializer):
     loan_reference = serializers.CharField(source='loan.reference', read_only=True)
@@ -488,54 +499,30 @@ class LoanSerializer(serializers.ModelSerializer):
     approval_date = serializers.DateTimeField(source='approved_at', read_only=True)
     total_paid = serializers.SerializerMethodField()
     grace_period_months = serializers.SerializerMethodField()
+    guarantors = serializers.SerializerMethodField()
 
     class Meta:
         model = Loan
         fields = [
-            'id',
-            'member',
-            'applicant_name',
-            'category',
-            'category_name',
-            'amount',
-            'interest_rate',
-            'duration_months',
-            'status',
-            'repayment_start_date',
-            'start_date',
-            'end_date',
-            'first_due_date',
-            'approved_by',
-            'approval_date',
-            'approved_at',
-            'disbursed_by',
-            'disbursed_at',
-            'total_repayment_months',
-            'grace_period_months',
-            'grace_applied',
-            'reference',
-            'disbursements',
-            'disbursements_remaining',
-            'total_paid',
-            
+            'id', 'member', 'applicant_name', 'category', 'category_name', 'amount',
+            'interest_rate', 'duration_months', 'status', 'repayment_start_date',
+            'start_date', 'end_date', 'first_due_date', 'approved_by',
+            'approval_date', 'approved_at', 'disbursed_by', 'disbursed_at',
+            'total_repayment_months', 'grace_period_months', 'grace_applied',
+            'reference', 'disbursements', 'disbursements_remaining', 'total_paid',
+            'guarantors'
         ]
         read_only_fields = [
-            'interest_rate',
-            'duration_months',
-            'start_date',
-            'end_date',
-            'first_due_date',
-            'approved_by',
-            'approved_at',
-            'disbursed_by',
-            'disbursed_at',
-            'total_repayment_months',
-            'grace_period_months',
-            'grace_applied',
-            'reference',
-            'total_paid'
+            'interest_rate', 'duration_months', 'start_date', 'end_date',
+            'first_due_date', 'approved_by', 'approved_at', 'disbursed_by',
+            'disbursed_at', 'total_repayment_months', 'grace_period_months',
+            'grace_applied', 'reference', 'total_paid'
         ]
-    ADMIN_ONLY_FIELDS = ['approved_by', 'approved_at', 'disbursed_by']
+
+    def get_guarantors(self, obj):
+        # Get guarantors from the loan's guarantors relationship
+        guarantors = obj.guarantors.all()
+        return LoanGuarantorSerializer(guarantors, many=True).data
 
     def get_applicant_name(self, obj):
         return obj.member.user.get_full_name() if obj.member and obj.member.user else ''
@@ -548,17 +535,8 @@ class LoanSerializer(serializers.ModelSerializer):
         total_paid = LoanRepayment.objects.filter(loan=obj).aggregate(total=Sum('amount'))['total']
         return float(total_paid or 0.00)
 
-    def to_representation(self, instance):
-        rep = super().to_representation(instance)
-        request = self.context.get('request')
-        if request and not request.user.is_staff:
-            for field in self.ADMIN_ONLY_FIELDS:
-                rep.pop(field, None)
-        return rep
-    
     def get_grace_period_months(self, obj):
         return obj.category.grace_period_months if obj.category else None
-
 
 class LoanCategorySummarySerializer(serializers.ModelSerializer):
     class Meta:
@@ -567,48 +545,122 @@ class LoanCategorySummarySerializer(serializers.ModelSerializer):
    
 class LoanApplicationSerializer(serializers.ModelSerializer):
     applicant_name = serializers.CharField(source='applicant.get_full_name', read_only=True)
-    category = LoanCategorySummarySerializer(read_only=True)  # Show nested category details
+    category = LoanCategorySummarySerializer(read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=LoanCategory.objects.all(), write_only=True, source='category'
     )
+    guarantors = LoanGuarantorSerializer(many=True, required=False)
 
     class Meta:
         model = LoanApplication
         fields = [
             'id', 'applicant_name', 'category', 'category_id', 'amount', 'interest_rate',
-            'repayment_months', 'status', 'application_date', 'approved_by', 'approval_date'
+            'repayment_months', 'status', 'application_date', 'approved_by', 'approval_date',
+            'guarantors', 'rejection_reason'
         ]
+        read_only_fields = ['applicant_name', 'status', 'application_date', 'approved_by', 'approval_date']
 
     def validate_category(self, category):
         if category.status in ['inactive', 'archived']:
             raise serializers.ValidationError("This loan category is not available for applications.")
-        return category    
+        return category
+
     def validate(self, data):
         user = self.context['request'].user
 
-        # check for active loans
+        # Check for active loans
         active_loans = Loan.objects.filter(
-                member=user.memberprofile,
-                status__in=['approved', 'disbursed', 'partially_disbursed']
-            )
+            member=user.memberprofile,
+            status__in=['approved', 'disbursed', 'partially_disbursed']
+        )
         if active_loans.exists():
-                raise serializers.ValidationError("You cannot apply for a new loan while an active loan exists.")
+            raise serializers.ValidationError("You cannot apply for a new loan while an active loan exists.")
 
-            # cap loan amount to 3x contribution
+        # Cap loan amount to 3x contributions
         total_contributions = (
-                user.memberprofile.contributions.aggregate(total=Sum('amount'))['total'] or 0
-            )
-
+            user.memberprofile.contributions.aggregate(total=Sum('amount'))['total'] or 0
+        )
         max_loan_amount = total_contributions * 3
         requested_amount = data.get('amount')
 
         if requested_amount > max_loan_amount:
-                raise serializers.ValidationError(
-                    f"Requested amount exceeds allowed limit. "
-                    f"Maximum allowed is 3× contributions (₦{max_loan_amount:,.2f})."
+            raise serializers.ValidationError(
+                f"Requested amount exceeds allowed limit. "
+                f"Maximum allowed is 3× contributions (₦{max_loan_amount:,.2f})."
+            )
+
+        # Validate guarantors
+        guarantors_raw = self.initial_data.get('guarantors', [])
+        if len(guarantors_raw) < 2:
+            raise serializers.ValidationError("You must provide at least two guarantors.")
+
+        for entry in guarantors_raw:
+            member_id = entry.get('guarantor')
+            try:
+                guarantor = MemberProfile.objects.get(id=member_id)
+            except MemberProfile.DoesNotExist:
+                raise serializers.ValidationError(f"Guarantor with ID {member_id} does not exist.")
+            if guarantor.user == user:
+                raise serializers.ValidationError("You cannot be your own guarantor.")
+            if guarantor.status != 'approved':
+                raise serializers.ValidationError(f"{guarantor.full_name} is not an approved member.")
+
+        return data
+
+    def create(self, validated_data):
+        guarantors_data = self.initial_data.get('guarantors', [])
+        category = validated_data.get('category')
+        user = self.context['request'].user
+
+        # Remove conflicting fields to avoid TypeError
+        for field in ['applicant', 'interest_rate', 'loan_period_months', 'guarantors']:
+            validated_data.pop(field, None)
+
+        application = LoanApplication.objects.create(
+            applicant=user,
+            interest_rate=category.interest_rate,
+            loan_period_months=category.loan_period_months,
+            **validated_data
+        )
+
+        # Save guarantors explicitly
+        for entry in guarantors_data:
+            LoanGuarantor.objects.create(
+                application=application,
+                guarantor_id=entry['guarantor']
+            )
+
+        return application
+
+
+    def update(self, instance, validated_data):
+        guarantors_data = self.initial_data.get('guarantors', None)
+
+        # 🚫 Prevent accidental reverse side assignment
+        validated_data.pop('guarantors', None)
+
+        # Safe update
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if guarantors_data is not None and instance.status == 'pending':
+            # Clear and re-add guarantors
+            instance.guarantors.all().delete()
+            for entry in guarantors_data:
+                LoanGuarantor.objects.create(
+                    application=instance,
+                    guarantor_id=entry['guarantor']
                 )
 
-        return data        
+        return instance
+
+
+class GuarantorOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MemberProfile
+        fields = ['id', 'full_name', 'member_id']
+    
                 
     
 class RepaymentSerializer(serializers.ModelSerializer):

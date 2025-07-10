@@ -56,6 +56,13 @@ class Loan(models.Model):
             ("can_disburse_loan", "Can Disburse Loan"),
             ("can_approve_grace_period", "Can Approve Grace Period")
     ]
+    application = models.OneToOneField(
+        'LoanApplication',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_loan'
+    )
     reference = models.CharField(max_length=30, unique=True, null=True, blank=True)
     member = models.ForeignKey(MemberProfile, on_delete=models.CASCADE, related_name='loans')
     category = models.ForeignKey(LoanCategory, on_delete=models.CASCADE)
@@ -126,6 +133,7 @@ class LoanApplication(models.Model):
         choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected')],
         default='pending'
     )
+    rejection_reason = models.TextField(blank=True, null=True)
     application_date = models.DateTimeField(auto_now_add=True)
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -138,6 +146,29 @@ class LoanApplication(models.Model):
 
     def __str__(self):
         return f"Loan Application by {self.applicant.username} for {self.amount}"
+    
+    def has_required_guarantors(self):
+        return self.guarantors.count() >= 2
+    
+
+class LoanGuarantor(models.Model):
+    application = models.ForeignKey(
+        'LoanApplication', on_delete=models.CASCADE, related_name='guarantors'
+    )
+    guarantor = models.ForeignKey(
+        MemberProfile, on_delete=models.CASCADE, related_name='guaranteeing_applications'
+    )
+    loan = models.ForeignKey( 
+        'Loan', on_delete=models.CASCADE, null=True, blank=True, related_name='guarantors'
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('application', 'guarantor')
+
+    def __str__(self):
+        return f"{self.guarantor.full_name} guarantees application #{self.application.id}"
+
     
 
 class LoanRepayment(models.Model):

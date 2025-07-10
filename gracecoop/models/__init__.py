@@ -4,7 +4,8 @@ from .loan import (Loan,
                    LoanApplication, 
                    DisbursementLog, 
                    LoanRepayment,
-                   LoanRepaymentSchedule)
+                   LoanRepaymentSchedule,
+                   LoanGuarantor)
 from .cooperative_config import CooperativeConfig
 from .levy import Levy
 from .contribution import Contribution

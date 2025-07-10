@@ -7,7 +7,7 @@ import axiosAdminInstance from '../../../utils/axiosAdminInstance';
 import { getCSRFToken } from '../../../utils/csrf';
 import '../../../styles/admin/loan/LoanManagement.css';
 import { formatNaira } from '../../../utils/formatCurrency';
-import { FaCalendarAlt, FaChartPie, FaMoneyCheckAlt, FaClock  } from 'react-icons/fa';
+import { FaCalendarAlt, FaChartPie, FaMoneyCheckAlt, FaClock, FaCheckCircle, FaTimesCircle  } from 'react-icons/fa';
 import { Tooltip } from 'react-tooltip';
 import ExportPrintGroup from '../../../utils/ExportPrintGroup';
 import * as XLSX from 'xlsx';
@@ -16,6 +16,7 @@ import autoTable from 'jspdf-autotable';
 import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 import { formatDateTime } from '../../../utils/formatDate';
+import exportHelper from '../../../utils/exportHelper';
 
 const LoanManagement = () => {
 
@@ -31,6 +32,9 @@ const LoanManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [isFullPayment, setIsFullPayment] = useState(false);
   const navigate = useNavigate();
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [selectedApplicationId, setSelectedApplicationId] = useState(null);
   
 
 const {
@@ -56,6 +60,8 @@ const {
   refresh: refreshLoans,
 } = usePaginatedData('/admin/loan/loans-admin/', filters);
 
+
+
   const handleApproveApplication = async (applicationId) => {
     try {
       await axiosAdminInstance.post(
@@ -76,6 +82,36 @@ const {
     }
   };
 
+  const handleRejectApplication = async () => {
+    if (!rejectionReason.trim()) {
+      alert('Please provide a rejection reason.');
+      return;
+    }
+
+    try {
+      await axiosAdminInstance.post(
+        `/admin/loan/loan-applications-admin/${selectedApplicationId}/reject/`,
+        { reason: rejectionReason },
+        {
+          headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'Content-Type': 'application/json', 
+          },
+        }
+      );
+
+      alert('Loan application rejected.');
+      refreshApplications();
+      closeRejectionModal();
+    } catch (error) {
+      if (error?.response?.status === 403) {
+        navigate('/forbidden');
+      } else {
+        alert(error?.response?.data?.error || 'Failed to reject application.');
+      }
+    }
+  };
+
   const openModal = (loan) => {
     setSelectedLoan(loan);
     setShowModal(true);
@@ -83,6 +119,19 @@ const {
     setDisbursementType('full');
     setIsFullPayment(false);
   };
+
+    const openRejectionModal = (applicationId) => {
+    setSelectedApplicationId(applicationId);
+    setRejectionReason('');
+    setShowRejectionModal(true);
+  };
+
+  const closeRejectionModal = () => {
+    setShowRejectionModal(false);
+    setSelectedApplicationId(null);
+    setRejectionReason('');
+  };
+
 
 const [receiptFile, setReceiptFile] = useState(null);
 
@@ -173,6 +222,7 @@ const [receiptFile, setReceiptFile] = useState(null);
   const getStatusBadge = (status) => {
     const colorMap = {
       pending: 'gray',
+      rejected: 'red',
       approved: 'blue',
       disbursed: 'green',
       partially_disbursed: 'orange',
@@ -194,80 +244,42 @@ const [receiptFile, setReceiptFile] = useState(null);
   };
 
 const transformExportLoan = (loan) => ({
-  LoanRef: loan.reference || 'N/A',
-  Member: loan.applicant_name || 'N/A',
-  Amount: `NGN ${Number(loan.amount || 0).toLocaleString()}`,
-  InterestRate: loan.interest_rate !== undefined ? `${loan.interest_rate}%` : 'N/A',
-  Duration: loan.duration_months !== undefined ? `${loan.duration_months} mo` : 'N/A',
-  Status: loan.status ? loan.status.toUpperCase() : 'N/A',
-  Start: loan.approval_date?.split('T')[0] || 'N/A',
-  DisbursedAmount: formatNaira(loan.total_disbursed ?? 0),
+  'Loan Ref': loan.reference || 'N/A',
+  'Member': loan.applicant_name || 'N/A',
+  'Amount': `NGN ${Number(loan.amount || 0).toLocaleString()}`,
+  'Interest Rate': loan.interest_rate !== undefined ? `${loan.interest_rate}%` : 'N/A',
+  'Duration': loan.duration_months !== undefined ? `${loan.duration_months} mo` : 'N/A',
+  'Status': loan.status ? loan.status.toUpperCase() : 'N/A',
+  'Start Date': loan.approval_date?.split('T')[0] || 'N/A',
+  'Disbursed': `NGN ${Number(loan.total_disbursed || 0).toLocaleString()}`,
 });
+
 
 const previewExportData = (loansData || []).map(transformExportLoan);
 
-const exportToExcel = async () => {
-  toast.info('Preparing Excel export...');
-  const exportData = await getAllPaginatedDataForExport({
-    url: '/admin/loan/loans-admin/',
-    filters,
-    transformFn: transformExportLoan,
-  });
-  if (!exportData?.length) return toast.warn('No data to export.');
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Loans');
-  XLSX.writeFile(workbook, 'loans.xlsx');
-  toast.success('Excel export complete.');
-};
+const exportColumns = [
+  'Loan Ref',
+  'Member',
+  'Amount',
+  'Interest Rate',
+  'Duration',
+  'Status',
+  'Start Date',
+  'Disbursed',
+];
 
-
-const exportToCSV = async () => {
-  toast.info('Preparing CSV export...');
-  const exportData = await getAllPaginatedDataForExport({
-    url: '/admin/loan/loans-admin/',
-    filters,
-    transformFn: transformExportLoan,
-  });
-  if (!exportData?.length) return toast.warn('No data to export.');
-
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Loans');
-  XLSX.writeFile(workbook, 'loans.csv', { bookType: 'csv' });
-  toast.success('CSV export complete.');
-};
-
-const exportToPDF = async () => {
-  toast.info('Preparing PDF export...');
-  try {
-    const exportData = await getAllPaginatedDataForExport({
-      url: '/admin/loan/loans-admin/',
-      filters,
-      transformFn: transformExportLoan,
-    });
-
-    if (!exportData || !Array.isArray(exportData) || exportData.length === 0) {
-      toast.warn('No data to export.');
-      return;
-    }
-
-    const doc = new jsPDF();
-    doc.text('Loan Management', 14, 15);
-    autoTable(doc, {
-      startY: 20,
-      head: [['Loan Ref', 'Member', 'Amount', 'Interest', 'Duration', 'Status', 'Start Date', 'Disbursed']],
-      body: exportData.map((loan) => Object.values(loan)),
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [63, 81, 181] },
-    });
-    doc.save('loans.pdf');
-    toast.success('PDF export complete.');
-  } catch (err) {
-    console.error('PDF export failed:', err);
-    toast.error('Failed to export PDF.');
-  }
-};
+const {
+  exportToExcel,
+  exportToCSV,
+  exportToPDF,
+} = exportHelper({
+  url: '/admin/loan/loans-admin/',
+  filters,
+  transformFn: transformExportLoan,
+  columns: exportColumns,
+  fileName: 'loans',
+  reportTitle: 'Loan Management Report',
+});
 
 
   const renderPagination = (page, totalPages, setPage) => (
@@ -342,7 +354,7 @@ const exportToPDF = async () => {
                 <th>Amount</th>
                 <th>Status</th>
                 <th>Application Date</th>
-                <th>Actions</th>
+                <th>Actions  </th>
               </tr>
             </thead>
             <tbody>
@@ -352,8 +364,25 @@ const exportToPDF = async () => {
                   <td>{app.category.name}</td>
                   <td>{formatNaira(app.amount)}</td>
                   <td>{getStatusBadge(app.status)}</td>
-                  <td>{new Date(app.application_date).toLocaleString()}</td>
-                  <td><button onClick={() => handleApproveApplication(app.id)}>Approve</button></td>
+                  <td>{formatDateTime(app.application_date)}</td>
+                  <td>
+                    <div className="loan-icon-actions">
+                      <button
+                        onClick={() => handleApproveApplication(app.id)}
+                        className="icon-button small approve"
+                        title="Approve"
+                      >
+                        <FaCheckCircle />
+                      </button>
+                      <button
+                        onClick={() => openRejectionModal(app.id)}
+                        className="icon-button small reject"
+                        title="Reject"
+                      >
+                        <FaTimesCircle />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -471,8 +500,14 @@ const exportToPDF = async () => {
                             )}
                           </div>
                           <div className="summary-column reserved">
-                            <h4>Reserved</h4>
-                            <p>Coming soon...</p>
+                            <h4>Guarantors</h4>
+                            {loan.guarantors?.length ? (
+                              loan.guarantors.map((g) => (
+                                <p key={g.id}>{g.guarantor_name} ({g.guarantor_id})</p>
+                              ))
+                            ) : (
+                              <p>No guarantors found</p>
+                            )}
                           </div>
                         </div>
 
@@ -593,6 +628,25 @@ const exportToPDF = async () => {
             </div>
           </div>
         )}
+
+        {showRejectionModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Reject Loan Application</h3>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter reason for rejection..."
+              rows={4}
+            />
+            <div className="modal-buttons">
+              <button onClick={handleRejectApplication} className="reject-btn">Submit</button>
+              <button onClick={closeRejectionModal} className="cancel-btn">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
 
     </div>

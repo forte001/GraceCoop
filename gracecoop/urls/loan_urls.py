@@ -8,8 +8,8 @@ from gracecoop.views.loan_views import (
     MemberLoanApplicationViewSet,
     AdminRepaymentListView,
     MemberRepaymentListView,
-    DisbursementLogAdminListView     
-    
+    DisbursementLogAdminListView,    
+    GuarantorCandidatesView
      )
 
 loan_router = DefaultRouter()
@@ -24,4 +24,5 @@ urlpatterns = [
     path('repayments-admin/', AdminRepaymentListView.as_view(), name='admin-repayments'),
     path('repayments/', MemberRepaymentListView.as_view(), name='member-repayments'),
     path('disbursements-admin/', DisbursementLogAdminListView.as_view()),
+    path('guarantor-candidates/', GuarantorCandidatesView.as_view(), name='guarantor-candidates'),
 ]

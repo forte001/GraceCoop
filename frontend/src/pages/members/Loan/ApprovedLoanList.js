@@ -181,10 +181,10 @@ const {
                           <>
                             <h3>Loan Summary</h3>
                             <p>Reference: {loanSummary.reference || 'N/A'}</p>
-                            <p>Member: {loanSummary.applicant_name}</p>
+                            <p>Member: {loanSummary.member_name}</p>
                             <p>Interest Rate: {loanSummary.interest_rate}%</p>
-                            <p>Amount Requested: {formatNaira(loanSummary.amount)}</p>
-                            <p>Remaining Disbursement Balance: {formatNaira(loanSummary.disbursements_remaining)}</p>
+                            <p>Amount Requested: {formatNaira(loanSummary.loan_amount)}</p>
+                            <p>Remaining Disbursement Balance: {formatNaira(loanSummary.remaining_balance)}</p>
                             <p>Total Repaid: {formatNaira(loanSummary.total_paid)}</p>
                             <p>Repayment Months: {loanSummary.total_repayment_months}</p>
                             <p>Start Date: {loanSummary.start_date}</p>
@@ -197,8 +197,8 @@ const {
                       <div className="loan-column loan-receipts-column">
                         <h3>Disbursement Receipts</h3>
                         <div className="receipt-list">
-                          {loanSummary?.disbursements?.length > 0 ? (
-                            loanSummary.disbursements.map((d) => (
+                          {loan?.disbursements?.length > 0 ? (
+                            loan.disbursements.map((d) => (
                               <div key={d.id} className="receipt-entry">
                                 <p>
                                   <strong>Amount:</strong> {formatNaira(d.amount)} <br />
@@ -224,10 +224,16 @@ const {
                         </div>
                       </div>
 
-                      {/* Reserved for future */}
-                      <div className="loan-column loan-future-column">
-                        <h3>Coming Soon</h3>
-                        <p>This area is reserved for future functionality.</p>
+                      {/* Loan Guarantors */}
+                      <div className="loan-column loan-guarantors-column">
+                        <h4>Guarantors</h4>
+                        {loan.guarantors?.length ? (
+                          loan.guarantors.map((g) => (
+                            <p key={g.id}>{g.guarantor_name} ({g.guarantor_id})</p>
+                          ))
+                        ) : (
+                          <p>No guarantors assigned</p>
+                        )}
                       </div>
                     </div>
                   )}

@@ -78,13 +78,19 @@
   background-color: var(--bg-alt);
 }
 
+.loan-table th:last-child,
+.loan-table td:last-child {
+  text-align: center;
+  vertical-align: middle;
+  min-width: 200px;
+}
+
 .loan-table tr:hover {
   background-color: var(--bg-alt);
 }
 
 .loan-table button {
-  padding: 8px 16px;
-  margin-right: 10px;
+  padding: 8px 12px;
   border: none;
   background-color: #007BFF;
   color: white;
@@ -92,11 +98,55 @@
   border-radius: 5px;
   font-size: 14px;
   transition: background-color 0.2s ease-in-out;
+  margin: 0 2px;
 }
 
 .loan-table button:hover {
   background-color: #0056b3;
 }
+
+.loan-icon-actions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+}
+
+.icon-button.small {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  color: white;
+}
+
+.icon-button.small svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-button.approve {
+  background-color: #4caf50;
+}
+
+.icon-button.approve:hover {
+  background-color: #388e3c;
+}
+
+.icon-button.reject {
+  background-color: #f44336;
+}
+
+.icon-button.reject:hover {
+  background-color: #d32f2f;
+}
+
 
 /* ============================================
    Repayment Schedule
@@ -522,7 +572,9 @@ input:disabled {
 .loan-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 2px;
+  justify-content: center;
+  align-items: center;
 }
 
 .loan-actions button {

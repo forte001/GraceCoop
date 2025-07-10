@@ -49,6 +49,7 @@ import AdminAnnouncements from './pages/admin/AnnouncementManager';
 import MembersBalancesReport from './pages/admin/Reports/MembersBalance';
 import MonthlyReceiptsReport from './pages/admin/Reports/AnalysisOfReceipts';
 import AdminExpenses from './pages/admin/AdminExpenses';
+import LoanApplicationDetails from './pages/members/Loan/LoanApplicationDetails';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -139,6 +140,8 @@ const App = () => {
       <Route path="complete-profile" element={<CompleteProfile />} />
       <Route path="loan-application-list" element={<LoanApplicationList />} />
       <Route path="loan-application" element={<LoanApplicationForm />} />
+      <Route path="loan-application-form/:id?" element={<LoanApplicationForm />} />
+      <Route path="loan-application-details/:id" element={<LoanApplicationDetails />} />
       <Route path="loans" element={<ApprovedLoansList />} />
       <Route path="loan-repayment-schedule" element={<LoanRepaymentForm />} />
       <Route path="loan-repayments" element={<MemberLoanRepaymentList />} />

@@ -141,7 +141,7 @@ const LoanApplicationList = () => {
               </div>
 
               <div className="card-item">
-                <a href={`/loan/loan-applications/${app.id}/`} className="view-details">View Details</a>
+                <a href={`/member/loan-application-details/${app.id}/`} className="view-details">View Details</a>
               </div>
             </div>
           ))}

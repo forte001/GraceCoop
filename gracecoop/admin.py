@@ -14,7 +14,8 @@ CooperativeConfig,
 Payment,
 Levy,
 Announcement,
-Expense
+Expense,
+LoanGuarantor
 )
 class UserAdmin(admin.ModelAdmin):
     list_display = (
@@ -111,6 +112,10 @@ class LoanApplicationAdmin(admin.ModelAdmin):
     list_filter = ('status', 'category', 'application_date')
     search_fields = ('applicant__username',)
 
+class LoanGuarantorAdmin(admin.ModelAdmin):
+    list_display = ('id', 'application', 'guarantor', 'added_at')
+    list_filter = ('application', 'guarantor', 'added_at')
+
 class LoanRepaymentAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'loan__reference', 'loan_id','source_reference', 'member_full_name', 'amount', 'principal_component',
@@ -191,6 +196,7 @@ class ExpenseAdmin(admin.ModelAdmin):
     search_fields = ('recorded_by','vendor_name', 'narration')
 
 # Register your models
+admin.site.register(LoanGuarantor, LoanGuarantorAdmin),
 admin.site.register(Expense, ExpenseAdmin),
 admin.site.register(Announcement, AnnouncementAdmin),
 admin.site.register(Levy, LevyAdmin),

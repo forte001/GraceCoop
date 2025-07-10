@@ -12,25 +12,26 @@ const usePaginatedData = (url, initialFilters = {}, initialPage = 1, pathname = 
   const totalPages = Math.ceil(fullData.count / pageSize);
   const axios = getAxiosByRole(pathname);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({
-          page: currentPage,
-          page_size: pageSize,
-          ...filters,
-        });
-        const response = await axios.get(`${url}?${params.toString()}`);
-        setFullData(response.data);
-      } catch (err) {
-        console.error('Failed to fetch paginated data:', err);
-        setFullData({ results: [], count: 0 });
-      } finally {
-        setLoading(false);
-      }
-    };
+  //FetchData moved outside useEffect so it can be reused
+  const fetchData = async (overridePage = currentPage, overrideFilters = filters) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: overridePage,
+        page_size: pageSize,
+        ...overrideFilters,
+      });
+      const response = await axios.get(`${url}?${params.toString()}`);
+      setFullData(response.data);
+    } catch (err) {
+      console.error('Failed to fetch paginated data:', err);
+      setFullData({ results: [], count: 0 });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, [url, filters, currentPage, pageSize, axios]);
 
@@ -45,6 +46,7 @@ const usePaginatedData = (url, initialFilters = {}, initialPage = 1, pathname = 
     pageSize,
     setPageSize,
     totalPages,
+    refresh: () => fetchData(), // ✅ Expose refresh function
   };
 };
 
