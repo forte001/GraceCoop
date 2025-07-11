@@ -280,10 +280,12 @@ def regenerate_repayment_schedule(loan):
     
     return True
 
+
 def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
     """
     Apply loan repayment correctly by allocating payment to unpaid installments
     in chronological order, properly tracking principal and interest components.
+    Only mark installments as paid when they are fully satisfied.
     """
     print(f"➡️ apply_loan_repayment called with amount={amount:.2f}, payoff={payoff}, ref={source_reference}")
     
@@ -316,7 +318,7 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
             total_paid = loan.repayments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             outstanding_amount = total_loan_amount + total_interest - total_paid
             
-            # Allow overpayment for payoff scenarios, but validate for regular payments
+            # Only allow overpayment for explicit payoff scenarios
             if not payoff and amount > outstanding_amount:
                 raise ValueError(f"Payment amount {amount} exceeds outstanding balance {outstanding_amount}")
             
@@ -326,7 +328,7 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
             installments_affected = []
             first_installment = None
             
-            # Process each unpaid installment
+            # Process each unpaid installment in chronological order
             for installment in unpaid_installments:
                 if remaining_payment <= 0:
                     break
@@ -343,6 +345,7 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
                     continue
                     
                 # Determine how much to apply to this installment
+                # Don't exceed what's owed on this installment
                 payment_for_installment = min(remaining_payment, amount_still_owed)
                 
                 # Calculate interest and principal components for this payment
@@ -357,7 +360,7 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
                 principal_component = payment_for_installment - interest_component
                 
                 # Create repayment record for this installment portion
-                repayment = LoanRepayment.objects.create(
+                LoanRepayment.objects.create(
                     loan=loan,
                     amount=payment_for_installment,
                     principal_component=principal_component,
@@ -367,7 +370,7 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
                     scheduled_installment=installment,
                     due_date=installment.due_date,
                     was_late=timezone.now().date() > installment.due_date,
-                    source_reference=f"{source_reference}_inst_{installment.installment}" if len(unpaid_installments) > 1 else source_reference
+                    source_reference=f"{source_reference}_inst_{installment.installment_number}" if len(unpaid_installments) > 1 else source_reference
                 )
                 
                 # Update totals
@@ -385,15 +388,30 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
                     total=Sum('amount')
                 )['total'] or Decimal('0.00')
                 
+                # Only mark as paid if the installment is fully satisfied
                 if total_paid_on_installment >= installment.amount_due:
                     installment.is_paid = True
                     installment.save()
-                    print(f"✅ Paid {payment_for_installment:.2f} toward installment #{installment.pk} and marked as paid")
+                    print(f"✅ Installment #{installment.installment_number} fully paid with {payment_for_installment:.2f} and marked as paid")
+                else:
+                    print(f"💰 Partial payment of {payment_for_installment:.2f} applied to installment #{installment.installment_number}. Still owed: {amount_still_owed - payment_for_installment:.2f}")
             
-            # Handle overpayment if any remains
-            if remaining_payment > 0:
-                print(f"💰 Overpayment detected: {remaining_payment:.2f}")
-                overpayment = LoanRepayment.objects.create(
+            # Handle explicit payoff scenario with remaining payment
+            if payoff and remaining_payment > 0:
+                print(f"🏁 Payoff mode: {remaining_payment:.2f} remaining after satisfying installments")
+                
+                # Mark ALL remaining unpaid installments as paid for payoff
+                remaining_unpaid = LoanRepaymentSchedule.objects.filter(
+                    loan=loan,
+                    is_paid=False
+                ).order_by('due_date')
+                
+                if remaining_unpaid.exists():
+                    print(f"🏁 Marking {remaining_unpaid.count()} remaining installments as paid due to payoff")
+                    remaining_unpaid.update(is_paid=True)
+                
+                # Create overpayment record only for payoff
+                LoanRepayment.objects.create(
                     loan=loan,
                     amount=remaining_payment,
                     principal_component=remaining_payment,  # Treat overpayment as principal
@@ -404,6 +422,10 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
                     source_reference=f"{source_reference}_overpay"
                 )
                 total_principal_paid += remaining_payment
+            
+            elif remaining_payment > 0:
+                # This shouldn't happen in normal flow due to validation above
+                print(f"⚠️ Unexpected remaining payment: {remaining_payment:.2f}")
             
             # Create a summary repayment record if multiple installments were affected
             if len(installments_affected) > 1:
@@ -428,8 +450,9 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
             
             print(f"✅ Repayment record created for ref: {source_reference} — total: {amount:.2f}")
             print(f"   Interest paid: {total_interest_paid:.2f}, Principal paid: {total_principal_paid:.2f}")
+            print(f"   Installments affected: {len(installments_affected)}")
             
-            # Mark loan as PAID if payoff or all installments paid
+            # Mark loan as PAID only if payoff or all installments are actually paid
             if payoff or not LoanRepaymentSchedule.objects.filter(loan=loan, is_paid=False).exists():
                 loan.status = 'paid'
                 loan.save()

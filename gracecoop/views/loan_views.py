@@ -388,7 +388,7 @@ class MemberLoanViewSet(BaseLoanViewSet, viewsets.ReadOnlyModelViewSet):
     
     @action(detail=True, methods=['post'], url_path='payoff')
     def payoff(self, request, pk=None):
-        """Calculate loan payoff amount"""
+        """Calculate and optionally process loan payoff"""
         loan = self.get_object()
         
         if loan.status not in ['disbursed', 'partially_disbursed']:
@@ -396,6 +396,7 @@ class MemberLoanViewSet(BaseLoanViewSet, viewsets.ReadOnlyModelViewSet):
                 'error': 'Only disbursed loans can be paid off.'
             }, status=400)
         
+        # Calculate payoff amount
         total_loan_amount = loan.amount
         total_interest = loan.repayment_schedule.aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
         total_paid = loan.repayments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
@@ -405,10 +406,92 @@ class MemberLoanViewSet(BaseLoanViewSet, viewsets.ReadOnlyModelViewSet):
         if outstanding_amount <= 0:
             return Response({'message': 'Loan is already fully paid.'})
         
-        return Response({
-            'message': 'Payoff amount calculated.',
-            'payoff_amount': float(outstanding_amount),
-        })
+        # Check if this is a calculation request or actual payoff
+        action_type = request.data.get('action', 'calculate')
+        
+        if action_type == 'calculate':
+            # Get unpaid installments for detailed breakdown
+            unpaid_installments = loan.repayment_schedule.filter(is_paid=False).order_by('due_date')
+            installments_breakdown = []
+            
+            for installment in unpaid_installments:
+                already_paid = installment.repayments.aggregate(
+                    total=Sum('amount')
+                )['total'] or Decimal('0.00')
+                
+                installments_breakdown.append({
+                    'installment_number': installment.installment_number,
+                    'due_date': installment.due_date,
+                    'amount_due': float(installment.amount_due),
+                    'already_paid': float(already_paid),
+                    'remaining': float(installment.amount_due - already_paid)
+                })
+            
+            return Response({
+                'message': 'Payoff amount calculated.',
+                'payoff_amount': float(outstanding_amount),
+                'breakdown': {
+                    'total_loan_amount': float(total_loan_amount),
+                    'total_interest': float(total_interest),
+                    'total_paid': float(total_paid),
+                    'outstanding_amount': float(outstanding_amount)
+                },
+                'unpaid_installments': installments_breakdown
+            })
+        
+        elif action_type == 'process':
+            # Process the actual payoff
+            payment_amount = request.data.get('amount')
+            source_reference = request.data.get('source_reference')
+            
+            if not payment_amount:
+                return Response({
+                    'error': 'Payment amount is required for payoff processing.'
+                }, status=400)
+            
+            if not source_reference:
+                return Response({
+                    'error': 'Source reference is required for payoff processing.'
+                }, status=400)
+            
+            payment_amount = Decimal(str(payment_amount))
+            
+            # Validate payment amount (should be at least the outstanding amount)
+            if payment_amount < outstanding_amount:
+                return Response({
+                    'error': f'Payment amount {payment_amount} is less than outstanding balance {outstanding_amount}.'
+                }, status=400)
+            
+            try:
+                # Process the payoff with payoff=True flag
+                repayment = apply_loan_repayment(
+                    loan=loan,
+                    amount=payment_amount,
+                    paid_by_user=request.user,
+                    payoff=True,
+                    source_reference=source_reference
+                )
+                
+                # Refresh loan status
+                loan.refresh_from_db()
+                
+                return Response({
+                    'message': 'Loan payoff processed successfully.',
+                    'repayment_id': repayment.id,
+                    'loan_status': loan.status,
+                    'amount_paid': float(payment_amount),
+                    'overpayment': float(max(0, payment_amount - outstanding_amount))
+                })
+                
+            except Exception as e:
+                return Response({
+                    'error': f'Payoff processing failed: {str(e)}'
+                }, status=500)
+        
+        else:
+            return Response({
+                'error': 'Invalid action. Use "calculate" or "process".'
+            }, status=400) 
 
 
 
