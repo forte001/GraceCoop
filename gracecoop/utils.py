@@ -406,26 +406,11 @@ def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
                 )
                 total_principal_paid += remaining_payment
             
-            # Create a summary repayment record if multiple installments were affected
-            if len(installments_affected) > 1:
-                summary_repayment = LoanRepayment.objects.create(
-                    loan=loan,
-                    amount=Decimal(amount),
-                    principal_component=total_principal_paid,
-                    interest_component=total_interest_paid,
-                    paid_by=paid_by_user,
-                    payment_date=timezone.now().date(),
-                    was_late=timezone.now().date() > first_installment.due_date if first_installment else False,
-                    due_date=first_installment.due_date if first_installment else None,
-                    scheduled_installment=first_installment,
-                    source_reference=f"{source_reference}_summary"
-                )
-                main_repayment = summary_repayment
-            else:
-                main_repayment = LoanRepayment.objects.filter(
-                    loan=loan,
-                    source_reference=source_reference
-                ).first()
+            # Return the first repayment record created as the main repayment
+            main_repayment = LoanRepayment.objects.filter(
+                loan=loan,
+                source_reference__startswith=source_reference
+            ).first()
             
             print(f"✅ Repayment record created for ref: {source_reference} — total: {amount:.2f}")
             print(f"   Interest paid: {total_interest_paid:.2f}, Principal paid: {total_principal_paid:.2f}")
