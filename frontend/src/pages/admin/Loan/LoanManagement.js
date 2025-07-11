@@ -76,7 +76,7 @@ const {
       if (error?.response?.status ===403){
         navigate('/forbidden');
       } else {
-        alert(error?.response?.data?.error || 'Failed to approve application.');
+        alert(error?.response?.data?.detail || error?.response?.data?.error || 'Failed to approve application.');
       }
       
     }

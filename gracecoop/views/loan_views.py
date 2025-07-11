@@ -1,6 +1,7 @@
 
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework import serializers
 from ..permissions import IsAdminUser
 from django.db.models import Sum
 from django.utils import timezone
@@ -163,18 +164,6 @@ class AdminLoanViewSet(BaseLoanViewSet):
         }
         return permission_map.get(self.action, [IsAdminUser()])
     
-    @action(detail=True, methods=['post'], url_path='approve')
-    def approve(self, request, pk=None):
-        """Approve a pending loan"""
-        loan = self.get_object()
-        if loan.status != 'pending':
-            return Response({'error': 'Loan has already been processed.'}, status=400)
-        
-        loan.status = 'approved'
-        loan.approved_by = request.user
-        loan.approved_at = timezone.now()
-        loan.save()
-        return Response({'status': 'approved'})
     
     @action(detail=True, methods=['post'], url_path='disburse')
     def disburse(self, request, pk=None):
@@ -364,23 +353,38 @@ class MemberLoanViewSet(BaseLoanViewSet, viewsets.ReadOnlyModelViewSet):
     
     @action(detail=True, methods=['post'], url_path='repay')
     def repay(self, request, pk=None):
-        """Make a loan repayment"""
+        """Make a loan repayment with proper allocation logic"""
         loan = self.get_object()
         serializer = RepaymentSerializer(data=request.data, context={'loan': loan})
         serializer.is_valid(raise_exception=True)
         
-        repayment = apply_loan_repayment(loan, serializer.validated_data['amount'], request.user)
-        
-        return Response({
-            'message': 'Repayment successful.',
-            'repayment': {
-                'id': repayment.id,
-                'amount': repayment.amount,
-                'interest_component': repayment.interest_component,
-                'principal_component': repayment.principal_component,
-                'paid_at': repayment.payment_date
-            }
-        })
+        try:
+            repayment = apply_loan_repayment(
+                loan, 
+                serializer.validated_data['amount'], 
+                request.user
+            )
+            
+            # Get updated loan status
+            loan.refresh_from_db()
+            
+            return Response({
+                'message': 'Repayment successful.',
+                'repayment': {
+                    'id': repayment.id,
+                    'amount': repayment.amount,
+                    'interest_component': repayment.interest_component,
+                    'principal_component': repayment.principal_component,
+                    'paid_at': repayment.payment_date
+                },
+                'loan_status': loan.status,
+                'remaining_installments': loan.repayment_schedule.filter(is_paid=False).count()
+            })
+        except ValueError as e:
+            return Response(
+                {'error': str(e)}, 
+                status=400
+            )
     
     @action(detail=True, methods=['post'], url_path='payoff')
     def payoff(self, request, pk=None):
@@ -418,7 +422,7 @@ class BaseLoanApplicationViewSet(viewsets.ModelViewSet):
     queryset = LoanApplication.objects.none()  # overridden in child
     serializer_class = LoanApplicationSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class= StandardResultsSetPagination
+    pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = LoanApplicationFilter 
     search_fields = ['applicant__username']
@@ -427,7 +431,7 @@ class BaseLoanApplicationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         category = serializer.validated_data.get('category')
         if category is None:
-            raise serializer.ValidationError("Category is required.")
+            raise serializers.ValidationError("Category is required.")
         serializer.save(
             applicant=self.request.user,
             interest_rate=category.interest_rate,
@@ -443,6 +447,13 @@ class BaseLoanApplicationViewSet(viewsets.ModelViewSet):
 
         if not application.category:
             return Response({'detail': 'Loan category is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ Validate guarantors before approval
+        guarantor_count = application.guarantors.count()
+        if guarantor_count < 2:
+            return Response({
+                'detail': f'Application must have at least 2 guarantors. Current count: {guarantor_count}'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         reference = generate_loan_reference(application.category.abbreviation)
 
@@ -470,23 +481,6 @@ class BaseLoanApplicationViewSet(viewsets.ModelViewSet):
         application.save()
 
         return Response({'detail': 'Application approved and loan created.', 'loan_id': loan.id})
-    
-    @action(detail=True, methods=['post'], url_path='reject')
-    def reject_application(self, request, pk=None):
-        application = self.get_object()
-        reason = request.data.get('reason')
-
-        if not reason:
-            return Response({'error': 'Rejection reason is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if application.status != 'pending':
-            return Response({'error': 'Only pending applications can be rejected.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        application.status = 'rejected'
-        application.rejection_reason = reason
-        application.save()
-
-        return Response({'message': 'Application rejected successfully.'}, status=status.HTTP_200_OK)
 
     
 class AdminLoanApplicationViewSet(BaseLoanApplicationViewSet):
@@ -518,10 +512,23 @@ class MemberLoanApplicationViewSet(BaseLoanApplicationViewSet):
         application = self.get_object()
 
         if application.status not in ['rejected', 'pending']:
-            return Response({'error': 'Only pending and rejected applications can be resubmitted.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'error': 'Only pending and rejected applications can be resubmitted.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        if not application.has_required_guarantors():
-            return Response({'error': 'At least two approved guarantors are required before resubmission.'}, status=status.HTTP_400_BAD_REQUEST)
+        # ✅ Consistent guarantor validation
+        guarantor_count = application.guarantors.count()
+        if guarantor_count < 2:
+            return Response({
+                'error': f'At least 2 guarantors are required before resubmission. Current count: {guarantor_count}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate that guarantors are still approved members
+        for guarantor_relation in application.guarantors.all():
+            if guarantor_relation.guarantor.status != 'approved':
+                return Response({
+                    'error': f'Guarantor {guarantor_relation.guarantor.full_name} is no longer an approved member.'
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         application.status = 'pending'
         application.rejection_reason = None

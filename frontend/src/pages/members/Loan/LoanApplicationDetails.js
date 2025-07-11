@@ -44,7 +44,6 @@ const LoanApplicationDetails = () => {
     status,
     application_date,
     approval_date,
-    approved_by,
     rejection_reason,
     guarantors
   } = application;
@@ -76,7 +75,7 @@ const LoanApplicationDetails = () => {
           <div className="guarantor-pill-container">
             {guarantors.map(g => (
               <span key={g.id} className="guarantor-pill selected">
-                {g.guarantor_name} ({g.member_id})
+                {g.guarantor_name} ({g.guarantor_id})
               </span>
             ))}
           </div>

@@ -565,16 +565,44 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This loan category is not available for applications.")
         return category
 
+    def validate_guarantors_data(self, guarantors_data, user):
+        """Centralized guarantor validation method"""
+        if len(guarantors_data) < 2:
+            raise serializers.ValidationError("You must provide at least two guarantors.")
+
+        valid_guarantors = []
+        for entry in guarantors_data:
+            member_id = entry.get('guarantor')
+            try:
+                guarantor = MemberProfile.objects.get(id=member_id)
+            except MemberProfile.DoesNotExist:
+                raise serializers.ValidationError(f"Guarantor with ID {member_id} does not exist.")
+            
+            if guarantor.user == user:
+                raise serializers.ValidationError("You cannot be your own guarantor.")
+            
+            if guarantor.status != 'approved':
+                raise serializers.ValidationError(f"{guarantor.full_name} is not an approved member.")
+            
+            valid_guarantors.append(guarantor)
+        
+        # Check for duplicate guarantors
+        guarantor_ids = [g.id for g in valid_guarantors]
+        if len(guarantor_ids) != len(set(guarantor_ids)):
+            raise serializers.ValidationError("Duplicate guarantors are not allowed.")
+        
+        return valid_guarantors
+
     def validate(self, data):
         user = self.context['request'].user
 
         # Check for active loans
-        active_loans = Loan.objects.filter(
-            member=user.memberprofile,
-            status__in=['approved', 'disbursed', 'partially_disbursed']
-        )
-        if active_loans.exists():
-            raise serializers.ValidationError("You cannot apply for a new loan while an active loan exists.")
+        # active_loans = Loan.objects.filter(
+        #     member=user.memberprofile,
+        #     status__in=['approved', 'disbursed', 'partially_disbursed']
+        # )
+        # if active_loans.exists():
+        #     raise serializers.ValidationError("You cannot apply for a new loan while an active loan exists.")
 
         # Cap loan amount to 3x contributions
         total_contributions = (
@@ -589,21 +617,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
                 f"Maximum allowed is 3× contributions (₦{max_loan_amount:,.2f})."
             )
 
-        # Validate guarantors
+        # Validate guarantors using centralized method
         guarantors_raw = self.initial_data.get('guarantors', [])
-        if len(guarantors_raw) < 2:
-            raise serializers.ValidationError("You must provide at least two guarantors.")
-
-        for entry in guarantors_raw:
-            member_id = entry.get('guarantor')
-            try:
-                guarantor = MemberProfile.objects.get(id=member_id)
-            except MemberProfile.DoesNotExist:
-                raise serializers.ValidationError(f"Guarantor with ID {member_id} does not exist.")
-            if guarantor.user == user:
-                raise serializers.ValidationError("You cannot be your own guarantor.")
-            if guarantor.status != 'approved':
-                raise serializers.ValidationError(f"{guarantor.full_name} is not an approved member.")
+        self.validate_guarantors_data(guarantors_raw, user)
 
         return data
 
@@ -632,19 +648,28 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
         return application
 
-
     def update(self, instance, validated_data):
         guarantors_data = self.initial_data.get('guarantors', None)
+        user = self.context['request'].user
 
         # 🚫 Prevent accidental reverse side assignment
         validated_data.pop('guarantors', None)
+
+        # Only allow updates for pending applications
+        if instance.status not in ['pending', 'rejected']:
+            raise serializers.ValidationError("Only pending or rejected applications can be updated.")
+
+        # Validate guarantors if they're being updated
+        if guarantors_data is not None:
+            self.validate_guarantors_data(guarantors_data, user)
 
         # Safe update
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        if guarantors_data is not None and instance.status == 'pending':
+        # Update guarantors if provided
+        if guarantors_data is not None and instance.status in ['pending', 'rejected']:
             # Clear and re-add guarantors
             instance.guarantors.all().delete()
             for entry in guarantors_data:
@@ -722,24 +747,23 @@ class LoanRepaymentScheduleSerializer(serializers.ModelSerializer):
     amount_paid = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
     total_paid = serializers.SerializerMethodField()
+    remaining_balance = serializers.SerializerMethodField()
 
     class Meta:
         model = LoanRepaymentSchedule
         fields = [
-                  'installment', 
-                  'disbursement', 
-                  'due_date', 
-                  'principal', 
-                  'interest', 
-                  'amount_due', 
-                  'is_paid',
-                  'amount_paid',
-                  'status',
-                  'total_paid',
-                  ]
-
-    def get_is_paid(self, obj):
-        return obj.repayments.exists()
+            'installment',
+            'disbursement',
+            'due_date',
+            'principal',
+            'interest',
+            'amount_due',
+            'is_paid',
+            'amount_paid',
+            'status',
+            'total_paid',
+            'remaining_balance',
+        ]
 
     def get_amount_paid(self, obj):
         """Amount paid specifically for this installment."""
@@ -747,9 +771,23 @@ class LoanRepaymentScheduleSerializer(serializers.ModelSerializer):
 
     def get_total_paid(self, obj):
         """Total amount paid so far on the entire loan."""
-        from .models import LoanRepayment
-        loan = obj.disbursement.loan
-        return LoanRepayment.objects.filter(loan=loan).aggregate(total=Sum('amount'))['total'] or 0
+        return obj.loan.repayments.aggregate(total=Sum('amount'))['total'] or 0
+
+    def get_remaining_balance(self, obj):
+        """Calculate remaining principal balance after this installment."""
+        # Get all installments up to and including this one
+        installments_to_date = obj.loan.repayment_schedule.filter(
+            installment__lte=obj.installment,
+            disbursement=obj.disbursement
+        ).order_by('installment')
+        
+        # Calculate remaining balance
+        original_amount = obj.disbursement.amount
+        total_principal_scheduled = installments_to_date.aggregate(
+            total=Sum('principal')
+        )['total'] or Decimal('0.00')
+        
+        return original_amount - total_principal_scheduled
 
     def get_status(self, obj):
         amount_paid = self.get_amount_paid(obj)
@@ -757,8 +795,7 @@ class LoanRepaymentScheduleSerializer(serializers.ModelSerializer):
             return 'paid'
         elif amount_paid > 0:
             return 'partial'
-        return 'unpaid'
-      
+        return 'unpaid'     
 
 
 # =======================

@@ -51,233 +51,396 @@ def generate_loan_reference(category_abbreviation):
 
 
 def generate_repayment_schedule(loan):
+    """
+    Generate repayment schedule where interest is calculated on remaining balance
+    at each installment. Creates unified schedule for all disbursements.
+    """
     # Clear old schedule
     loan.repayment_schedule.all().delete()
-
+    
     disbursements = loan.disbursements.all()
     if not disbursements.exists():
-        return False  # No disbursements
-
-    monthly_interest_rate = loan.interest_rate / Decimal('100') / 12  # Annual to monthly
-
+        return False
+    
+    # Calculate total disbursed amount
+    total_disbursed = disbursements.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    monthly_interest_rate = loan.interest_rate / Decimal('100') / 12
+    
+    # Use loan duration, not individual disbursement months
+    months = loan.duration_months
+    
+    # Calculate monthly payment using amortization formula on total disbursed amount
+    if monthly_interest_rate > 0:
+        numerator = monthly_interest_rate * (1 + monthly_interest_rate) ** months
+        denominator = (1 + monthly_interest_rate) ** months - 1
+        monthly_payment = (total_disbursed * numerator / denominator).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
+        )
+    else:
+        # If no interest, just divide principal equally
+        monthly_payment = (total_disbursed / months).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
+        )
+    
+    # Use first disbursement date for schedule start
+    first_disbursement = disbursements.order_by('disbursed_at').first()
+    first_due = first_disbursement.disbursed_at.date() + relativedelta(months=1)
+    
+    # Use the most recent disbursement as the primary reference
+    primary_disbursement = disbursements.order_by('-disbursed_at').first()
+    
+    remaining_balance = total_disbursed
     schedule_items = []
-
-    for disb in disbursements:
-        principal = disb.amount
-        months = disb.repayment_months
-
-        monthly_principal = (principal / months).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        remaining_principal = principal
-
-        first_due = disb.disbursed_at.date() + relativedelta(months=1)
-
-        for i in range(months):
-            interest = (remaining_principal * monthly_interest_rate).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            total_due = (monthly_principal + interest).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            due_date = first_due + relativedelta(months=i)
-
-            schedule_items.append(
-                LoanRepaymentSchedule(
-                    loan=loan,
-                    disbursement=disb,
-                    installment=i + 1,
-                    due_date=due_date,
-                    principal=monthly_principal,
-                    interest=interest,
-                    amount_due=total_due,
-                    is_paid=False,
-                )
+    
+    for i in range(months):
+        # Calculate interest on remaining balance
+        interest_payment = (remaining_balance * monthly_interest_rate).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
+        )
+        
+        # Principal payment is the difference
+        principal_payment = monthly_payment - interest_payment
+        
+        # For the last installment, adjust to clear any remaining balance
+        if i == months - 1:
+            principal_payment = remaining_balance
+            monthly_payment = interest_payment + principal_payment
+        
+        due_date = first_due + relativedelta(months=i)
+        
+        schedule_items.append(
+            LoanRepaymentSchedule(
+                loan=loan,
+                disbursement=primary_disbursement,
+                installment=i + 1,
+                due_date=due_date,
+                principal=principal_payment,
+                interest=interest_payment,
+                amount_due=monthly_payment,
+                is_paid=False,
             )
-
-            remaining_principal -= monthly_principal
-
+        )
+        
+        # Update remaining balance
+        remaining_balance -= principal_payment
+    
     LoanRepaymentSchedule.objects.bulk_create(schedule_items)
+    print(f"Generated {len(schedule_items)} installments for total disbursed: {total_disbursed}")
     return True
 
-
 def update_loan_disbursement_status(loan):
-    total_disbursed = loan.disbursements.aggregate(total=Sum('amount'))['total'] or 0
-    loan.disbursed_amount = total_disbursed
-
-    if total_disbursed >= loan.amount:
-        # Fully disbursed
-        loan.status = 'disbursed'
-        loan.remaining_disbursement = False
-        loan.total_repayment_months = loan.duration_months
-    else:
-        # Still partial
-        loan.status = 'partially_disbursed'
-        loan.remaining_disbursement = True
-
-    # Set start, repayment, and end dates
-    first_disbursement = loan.disbursements.order_by('disbursed_at').first()
-    if first_disbursement:
-        loan.start_date = first_disbursement.disbursed_at.date()
-        loan.repayment_start_date = first_disbursement.disbursed_at.date()
-        months = loan.total_repayment_months or loan.duration_months
-        if months:
-            loan.end_date = loan.start_date + relativedelta(months=months)
-    else:
-        # fallback
-        loan.start_date = timezone.now().date()
-
-    loan.has_interest_schedule = True
-    loan.save()
-
-    regenerate_repayment_schedule(loan)
-
-    # ✅ Regenerate the repayment schedule based on updated disbursements
-    regenerate_repayment_schedule(loan)
-
-
+    with transaction.atomic():
+        total_disbursed = loan.disbursements.aggregate(total=Sum('amount'))['total'] or 0
+        loan.disbursed_amount = total_disbursed
+        
+        if total_disbursed >= loan.amount:
+            # Fully disbursed
+            loan.status = 'disbursed'
+            loan.remaining_disbursement = False
+            loan.total_repayment_months = loan.duration_months
+        else:
+            # Still partial
+            loan.status = 'partially_disbursed'
+            loan.remaining_disbursement = True
+        
+        # Set start, repayment, and end dates
+        first_disbursement = loan.disbursements.order_by('disbursed_at').first()
+        if first_disbursement:
+            loan.start_date = first_disbursement.disbursed_at.date()
+            loan.repayment_start_date = first_disbursement.disbursed_at.date()
+            months = loan.total_repayment_months or loan.duration_months
+            if months:
+                loan.end_date = loan.start_date + relativedelta(months=months)
+        else:
+            # fallback
+            loan.start_date = timezone.now().date()
+        
+        loan.has_interest_schedule = True
+        loan.save()
+        
+        # ✅ Regenerate the repayment schedule based on updated disbursements
+        regenerate_repayment_schedule(loan)
 
 def regenerate_repayment_schedule(loan):
+    """
+    Regenerate repayment schedule while preserving paid installments.
+    Creates a unified schedule based on total disbursed amount.
+    """
+    
     # Step 1: Get all disbursements
     disbursements = loan.disbursements.all()
     if not disbursements.exists():
         print("No disbursements found.")
         return
-
-    # Step 2: Identify fully paid installments
-    paid_installments = LoanRepaymentSchedule.objects.filter(loan=loan, is_paid=True)
-
-    # Step 3: Delete all unpaid schedule entries
-    LoanRepaymentSchedule.objects.filter(loan=loan, is_paid=False).delete()
-
-    # Step 4: Calculate principal remaining per disbursement
-    total_paid_principal = paid_installments.aggregate(total=Sum('principal'))['total'] or Decimal('0.00')
+    
+    # Step 2: Calculate total disbursed amount
     total_disbursed = disbursements.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
-    principal_remaining = total_disbursed - total_paid_principal
-
-    if principal_remaining <= 0:
-        print("Nothing left to schedule.")
+    
+    # Step 3: Use the same monthly interest rate calculation as generate_repayment_schedule
+    monthly_interest_rate = loan.interest_rate / Decimal('100') / 12
+    
+    # Step 4: Get all paid installments (across all disbursements)
+    paid_installments = LoanRepaymentSchedule.objects.filter(
+        loan=loan, 
+        is_paid=True
+    ).order_by('installment')
+    
+    # Step 5: Delete all unpaid schedule entries
+    LoanRepaymentSchedule.objects.filter(
+        loan=loan, 
+        is_paid=False
+    ).delete()
+    
+    # Step 6: Calculate remaining principal across all disbursements
+    total_paid_principal = paid_installments.aggregate(
+        total=Sum('principal')
+    )['total'] or Decimal('0.00')
+    
+    remaining_principal = total_disbursed - total_paid_principal
+    
+    if remaining_principal <= 0:
+        print("No remaining principal to schedule")
         return
-
-    # Step 5: Define remaining months
-    months_remaining = months_remaining = loan.total_repayment_months - paid_installments.count()
+    
+    # Step 7: Calculate remaining months
+    # Use the loan's duration, not individual disbursement months
+    total_months = loan.duration_months
+    months_remaining = total_months - paid_installments.count()
     months_remaining = max(1, months_remaining)
-
-    # Step 6: Calculate EMI over remaining principal
-    monthly_rate = loan.interest_rate / Decimal('100')  # Convert annual to monthly
-
-    if monthly_rate > 0:
-        emi = (principal_remaining * monthly_rate * (1 + monthly_rate)**months_remaining) / \
-              ((1 + monthly_rate)**months_remaining - 1)
-    else:
-        emi = principal_remaining / months_remaining
-
-    # Step 7: Get latest disbursement (for tagging)
-    latest_disbursement = disbursements.order_by('-disbursed_at').first()
-
-    # Step 8: Generate new repayment schedule
-    start_date = loan.start_date or timezone.now().date()
-    next_due_date = start_date + relativedelta(months=paid_installments.count() + 1)
-
-    balance = principal_remaining
-
-    for i in range(months_remaining):
-        interest = (balance * monthly_rate).quantize(Decimal('0.01'))
-        principal = (emi - interest).quantize(Decimal('0.01'))
-        amount_due = (principal + interest).quantize(Decimal('0.01'))
-
-        LoanRepaymentSchedule.objects.create(
-            loan=loan,
-            disbursement=latest_disbursement,
-            installment=paid_installments.count() + i + 1,
-            due_date=next_due_date,
-            principal=principal,
-            interest=interest,
-            amount_due=amount_due,
-            is_paid=False,
+    
+    # Step 8: Calculate monthly payment using the same formula as generate_repayment_schedule
+    if monthly_interest_rate > 0:
+        numerator = monthly_interest_rate * (1 + monthly_interest_rate) ** months_remaining
+        denominator = (1 + monthly_interest_rate) ** months_remaining - 1
+        monthly_payment = (remaining_principal * numerator / denominator).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
         )
-
-        balance -= principal
-        next_due_date += relativedelta(months=1)
-
-    print(f"Regenerated repayment schedule for loan {loan.id}.")
-
-
+    else:
+        # If no interest, just divide principal equally
+        monthly_payment = (remaining_principal / months_remaining).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
+        )
+    
+    # Step 9: Determine the next due date and installment number
+    if paid_installments.exists():
+        last_paid_installment = paid_installments.last()
+        next_due_date = last_paid_installment.due_date + relativedelta(months=1)
+        next_installment_number = last_paid_installment.installment + 1
+    else:
+        # No paid installments, start from first disbursement date
+        first_disbursement = disbursements.order_by('disbursed_at').first()
+        next_due_date = first_disbursement.disbursed_at.date() + relativedelta(months=1)
+        next_installment_number = 1
+    
+    # Step 10: Generate new unified schedule entries
+    remaining_balance = remaining_principal
+    schedule_items = []
+    
+    # For partial disbursements, we need to link to the most recent disbursement
+    # or create a logical association
+    primary_disbursement = disbursements.order_by('-disbursed_at').first()
+    
+    for i in range(months_remaining):
+        # Calculate interest on remaining balance
+        interest_payment = (remaining_balance * monthly_interest_rate).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
+        )
+        
+        # Principal payment is the difference
+        principal_payment = monthly_payment - interest_payment
+        
+        # For the last installment, adjust to clear any remaining balance
+        if i == months_remaining - 1:
+            principal_payment = remaining_balance
+            monthly_payment = interest_payment + principal_payment
+        
+        due_date = next_due_date + relativedelta(months=i)
+        
+        schedule_items.append(
+            LoanRepaymentSchedule(
+                loan=loan,
+                disbursement=primary_disbursement,  # Link to primary disbursement
+                installment=next_installment_number + i,
+                due_date=due_date,
+                principal=principal_payment,
+                interest=interest_payment,
+                amount_due=monthly_payment,
+                is_paid=False,
+            )
+        )
+        
+        # Update remaining balance
+        remaining_balance -= principal_payment
+    
+    # Step 11: Bulk create the schedule items
+    LoanRepaymentSchedule.objects.bulk_create(schedule_items)
+    print(f"Regenerated {len(schedule_items)} installments for loan {loan.id}")
+    print(f"Total disbursed: {total_disbursed}, Remaining principal: {remaining_principal}")
+    
+    return True
 
 def apply_loan_repayment(loan, amount, paid_by_user, payoff, source_reference):
+    """
+    Apply loan repayment correctly by allocating payment to unpaid installments
+    in chronological order, properly tracking principal and interest components.
+    """
     print(f"➡️ apply_loan_repayment called with amount={amount:.2f}, payoff={payoff}, ref={source_reference}")
-
+    
     try:
         with transaction.atomic():
+            # Use select_for_update for proper locking
             loan = Loan.objects.select_for_update().get(pk=loan.pk)
-
+            
+            # Check for duplicate payments
             if LoanRepayment.objects.filter(source_reference=source_reference).exists():
                 print(f"⏩ Repayment already exists for {source_reference}, skipping.")
-                return
-
-            # Calculate outstanding balance fresh
+                return LoanRepayment.objects.filter(source_reference=source_reference).first()
+            
+            if amount <= 0:
+                raise ValueError("Payment amount must be greater than zero")
+            
+            # Get unpaid installments in chronological order with locking
+            unpaid_installments = LoanRepaymentSchedule.objects.select_for_update().filter(
+                loan=loan,
+                is_paid=False
+            ).order_by('due_date')
+            
+            if not unpaid_installments.exists():
+                print("⚠️ No unpaid installments found.")
+                raise ValueError("No unpaid installments found for this loan")
+            
+            # Calculate outstanding balance for validation
             total_loan_amount = loan.amount
             total_interest = loan.repayment_schedule.aggregate(total=Sum('interest'))['total'] or Decimal('0.00')
             total_paid = loan.repayments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
             outstanding_amount = total_loan_amount + total_interest - total_paid
-
-            if amount > outstanding_amount:
+            
+            # Allow overpayment for payoff scenarios, but validate for regular payments
+            if not payoff and amount > outstanding_amount:
                 raise ValueError(f"Payment amount {amount} exceeds outstanding balance {outstanding_amount}")
-
-            installments = LoanRepaymentSchedule.objects.select_for_update().filter(
-                loan=loan,
-                is_paid=False
-            ).order_by('due_date')
-
-            if not installments.exists():
-                print("⚠️ No unpaid installments found.")
-                return
-
-            remaining_amount = Decimal(amount)
-            total_applied = Decimal("0.00")
+            
+            remaining_payment = Decimal(str(amount))
+            total_interest_paid = Decimal('0.00')
+            total_principal_paid = Decimal('0.00')
+            installments_affected = []
             first_installment = None
-
-            for installment in installments:
-                if remaining_amount <= 0:
+            
+            # Process each unpaid installment
+            for installment in unpaid_installments:
+                if remaining_payment <= 0:
                     break
-
-                installment_due = installment.amount_due
-                pay_amount = min(remaining_amount, installment_due)
-
-                remaining_amount -= pay_amount
-                total_applied += pay_amount
-
-                installment.is_paid = True
-                installment.save()
-
-                print(f"✅ Paid {pay_amount:.2f} toward installment #{installment.pk} and marked as paid")
-
+                    
+                # Calculate how much has already been paid on this installment
+                already_paid = installment.repayments.aggregate(
+                    total=Sum('amount')
+                )['total'] or Decimal('0.00')
+                
+                amount_still_owed = installment.amount_due - already_paid
+                
+                if amount_still_owed <= 0:
+                    # This installment is already fully paid, skip it
+                    continue
+                    
+                # Determine how much to apply to this installment
+                payment_for_installment = min(remaining_payment, amount_still_owed)
+                
+                # Calculate interest and principal components for this payment
+                # First pay interest, then principal
+                unpaid_interest = installment.interest - (
+                    installment.repayments.aggregate(
+                        total=Sum('interest_component')
+                    )['total'] or Decimal('0.00')
+                )
+                
+                interest_component = min(payment_for_installment, unpaid_interest)
+                principal_component = payment_for_installment - interest_component
+                
+                # Create repayment record for this installment portion
+                repayment = LoanRepayment.objects.create(
+                    loan=loan,
+                    amount=payment_for_installment,
+                    principal_component=principal_component,
+                    interest_component=interest_component,
+                    paid_by=paid_by_user,
+                    payment_date=timezone.now().date(),
+                    scheduled_installment=installment,
+                    due_date=installment.due_date,
+                    was_late=timezone.now().date() > installment.due_date,
+                    source_reference=f"{source_reference}_inst_{installment.installment}" if len(unpaid_installments) > 1 else source_reference
+                )
+                
+                # Update totals
+                total_interest_paid += interest_component
+                total_principal_paid += principal_component
+                remaining_payment -= payment_for_installment
+                installments_affected.append(installment)
+                
+                # Track first installment for reference
                 if not first_installment:
                     first_installment = installment
-
-            was_late = timezone.now().date() > first_installment.due_date if first_installment else False
-
-            # Record full payment amount from gateway, not just applied amount
-            LoanRepayment.objects.create(
-                loan=loan,
-                amount=Decimal(amount),  # Full amount paid recorded here
-                principal_component=Decimal("0.00"), 
-                interest_component=Decimal("0.00"),
-                paid_by=paid_by_user,
-                payment_date=timezone.now().date(),
-                was_late=was_late,
-                due_date=first_installment.due_date if first_installment else None,
-                scheduled_installment=first_installment,
-                source_reference=source_reference
-            )
-
+                
+                # Check if this installment is now fully paid
+                total_paid_on_installment = installment.repayments.aggregate(
+                    total=Sum('amount')
+                )['total'] or Decimal('0.00')
+                
+                if total_paid_on_installment >= installment.amount_due:
+                    installment.is_paid = True
+                    installment.save()
+                    print(f"✅ Paid {payment_for_installment:.2f} toward installment #{installment.pk} and marked as paid")
+            
+            # Handle overpayment if any remains
+            if remaining_payment > 0:
+                print(f"💰 Overpayment detected: {remaining_payment:.2f}")
+                overpayment = LoanRepayment.objects.create(
+                    loan=loan,
+                    amount=remaining_payment,
+                    principal_component=remaining_payment,  # Treat overpayment as principal
+                    interest_component=Decimal('0.00'),
+                    paid_by=paid_by_user,
+                    payment_date=timezone.now().date(),
+                    was_late=False,
+                    source_reference=f"{source_reference}_overpay"
+                )
+                total_principal_paid += remaining_payment
+            
+            # Create a summary repayment record if multiple installments were affected
+            if len(installments_affected) > 1:
+                summary_repayment = LoanRepayment.objects.create(
+                    loan=loan,
+                    amount=Decimal(amount),
+                    principal_component=total_principal_paid,
+                    interest_component=total_interest_paid,
+                    paid_by=paid_by_user,
+                    payment_date=timezone.now().date(),
+                    was_late=timezone.now().date() > first_installment.due_date if first_installment else False,
+                    due_date=first_installment.due_date if first_installment else None,
+                    scheduled_installment=first_installment,
+                    source_reference=f"{source_reference}_summary"
+                )
+                main_repayment = summary_repayment
+            else:
+                main_repayment = LoanRepayment.objects.filter(
+                    loan=loan,
+                    source_reference=source_reference
+                ).first()
+            
             print(f"✅ Repayment record created for ref: {source_reference} — total: {amount:.2f}")
-
+            print(f"   Interest paid: {total_interest_paid:.2f}, Principal paid: {total_principal_paid:.2f}")
+            
             # Mark loan as PAID if payoff or all installments paid
             if payoff or not LoanRepaymentSchedule.objects.filter(loan=loan, is_paid=False).exists():
                 loan.status = 'paid'
                 loan.save()
                 print(f"🏁 Loan {loan.pk} marked as PAID")
-
+            
+            return main_repayment
+            
     except Exception as e:
         print(f"❌ Repayment application failed: {e}")
         raise
-
+####################################################################################
 def generate_payment_reference(member, payment_type):
     member_id_str = str(member.id).zfill(6)  # Ensures 6-digit format
     unique_suffix = uuid.uuid4().hex[:6].upper()
