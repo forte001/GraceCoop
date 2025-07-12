@@ -93,7 +93,9 @@ class ReportsViewSet(viewsets.ViewSet):
                 loan__member=member, payment_date__lte=as_of_date
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
-            outstanding_loans = loans_disbursed - loan_repayments
+            # Fix: Ensure outstanding loans cannot be negative
+            outstanding_loans = max(loans_disbursed - loan_repayments, Decimal("0.00"))
+            
             total_assets = contributions_sum + levies_sum
             net_position = total_assets - outstanding_loans
 
@@ -125,6 +127,9 @@ class ReportsViewSet(viewsets.ViewSet):
 
         total_members = len(members_data)
         total_assets = totals["contributions"] + totals["levies"]
+        
+        # Ensure total outstanding loans cannot be negative
+        totals["outstanding_loans"] = max(totals["outstanding_loans"], Decimal("0.00"))
         net_coop_position = total_assets - totals["outstanding_loans"]
 
         summary_data = {
@@ -159,7 +164,6 @@ class ReportsViewSet(viewsets.ViewSet):
             paginated_response = paginator.get_paginated_response(page)
             paginated_response.data["summary"] = summary_data
             return paginated_response
-
 
         # fallback if pagination fails
         return Response({
