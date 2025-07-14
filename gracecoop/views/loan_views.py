@@ -1,10 +1,12 @@
 
-from rest_framework import viewsets, status, generics, filters
+from rest_framework import viewsets,views, status, generics, filters
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework import serializers
 from ..permissions import IsAdminUser
 from django.db.models import Sum
+from django.db import transaction
 from django.utils import timezone
+from datetime import timedelta
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from decimal import Decimal, InvalidOperation
@@ -44,7 +46,8 @@ from ..serializers import (
     RepaymentSerializer,
     LoanRepaymentScheduleSerializer,
     DisbursementLogSerializer,
-    GuarantorOptionSerializer
+    GuarantorOptionSerializer,
+    LoanGuarantorSerializer
     )
 from ..permissions import (
     CanCreateLoanCategory, 
@@ -520,50 +523,52 @@ class BaseLoanApplicationViewSet(viewsets.ModelViewSet):
             interest_rate=category.interest_rate,
             loan_period_months=category.loan_period_months
         )
-
-    @action(detail=True, methods=['post'], url_path='approve')
-    def approve_application(self, request, pk=None):
+    
+    @action(detail=True, methods=['get'], url_path='guarantor-status')
+    def get_guarantor_status(self, request, pk=None):
+        """Get detailed guarantor status for an application"""
         application = self.get_object()
-
-        if application.status != 'pending':
-            return Response({'detail': 'Application already processed.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not application.category:
-            return Response({'detail': 'Loan category is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # ✅ Validate guarantors before approval
-        guarantor_count = application.guarantors.count()
-        if guarantor_count < 2:
-            return Response({
-                'detail': f'Application must have at least 2 guarantors. Current count: {guarantor_count}'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        reference = generate_loan_reference(application.category.abbreviation)
-
-        loan = Loan.objects.create(
-            member=application.applicant.memberprofile,
-            amount=application.amount,
-            category=application.category,
-            interest_rate=application.category.interest_rate,
-            duration_months=application.category.loan_period_months,
-            status='approved',
-            approved_by=request.user,
-            approved_at=timezone.now(),
-            reference=reference,
-            application=application  # Link the application
-        )
         
-        # Update existing guarantors to link to the loan
-        for guarantor in application.guarantors.all():
-            guarantor.loan = loan
-            guarantor.save()
+        guarantors = application.guarantors.all().select_related('guarantor')
+        guarantor_details = []
+        
+        # Time-based logic for identifying long-pending guarantors
+        cutoff_date = timezone.now() - timedelta(days=7)
+        
+        for guarantor in guarantors:
+            days_pending = (timezone.now() - guarantor.created_at).days if guarantor.consent_status == 'pending' else None
+            is_long_pending = guarantor.consent_status == 'pending' and guarantor.created_at < cutoff_date
+            
+            guarantor_details.append({
+                'id': guarantor.id,
+                'guarantor_id': guarantor.guarantor.id,
+                'guarantor_name': guarantor.guarantor.full_name,
+                'consent_status': guarantor.consent_status,
+                'response_date': guarantor.response_date,
+                'rejection_reason': guarantor.rejection_reason,
+                'created_at': guarantor.created_at,
+                'days_pending': days_pending,
+                'is_long_pending': is_long_pending,
+                'can_replace': guarantor.consent_status in ['rejected'] or is_long_pending
+            })
+        
+        summary = {
+            'total_guarantors': len(guarantor_details),
+            'approved': len([g for g in guarantor_details if g['consent_status'] == 'approved']),
+            'rejected': len([g for g in guarantor_details if g['consent_status'] == 'rejected']),
+            'pending': len([g for g in guarantor_details if g['consent_status'] == 'pending']),
+            'long_pending': len([g for g in guarantor_details if g['is_long_pending']]),
+            'all_approved': all(g['consent_status'] == 'approved' for g in guarantor_details),
+            'can_be_approved': all(g['consent_status'] == 'approved' for g in guarantor_details) and len(guarantor_details) >= 2,
+            'can_resubmit': application.status in ['pending', 'rejected'],
+            'has_replaceable_guarantors': any(g['can_replace'] for g in guarantor_details)
+        }
+        
+        return Response({
+            'summary': summary,
+            'guarantors': guarantor_details
+        })
 
-        application.status = 'approved'
-        application.approved_by = request.user
-        application.approval_date = timezone.now()
-        application.save()
-
-        return Response({'detail': 'Application approved and loan created.', 'loan_id': loan.id})
 
     
 class AdminLoanApplicationViewSet(BaseLoanApplicationViewSet):
@@ -575,6 +580,138 @@ class AdminLoanApplicationViewSet(BaseLoanApplicationViewSet):
     def list(self, request, *args, **kwargs):
         print("💡 Incoming query params:", request.query_params)
         return super().list(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['post'], url_path='approve')
+    def approve_application(self, request, pk=None):
+        application = self.get_object()
+        
+        if application.status != 'pending':
+            return Response({'detail': 'Application already processed.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not application.category:
+            return Response({'detail': 'Loan category is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # ✅ Ensure at least 2 guarantors exist
+        guarantor_count = application.guarantors.count()
+        if guarantor_count < 2:
+            return Response({
+                'detail': f'Application must have at least 2 guarantors. Current count: {guarantor_count}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # ✅ Ensure ALL guarantors have approved
+        non_approved_guarantors = application.guarantors.exclude(consent_status='approved')
+        if non_approved_guarantors.exists():
+            rejected_guarantors = application.guarantors.filter(consent_status='rejected')
+            pending_guarantors = application.guarantors.filter(consent_status='pending')
+            
+            # Time-based logic for long-pending guarantors
+            cutoff_date = timezone.now() - timedelta(days=7)
+            long_pending_guarantors = pending_guarantors.filter(created_at__lt=cutoff_date)
+            
+            response_data = {
+                'detail': 'Not all guarantors have approved this application.',
+                'guarantor_status': {
+                    'total': guarantor_count,
+                    'approved': application.guarantors.filter(consent_status='approved').count(),
+                    'rejected': rejected_guarantors.count(),
+                    'pending': pending_guarantors.count(),
+                    'long_pending': long_pending_guarantors.count()
+                }
+            }
+            
+            if rejected_guarantors.exists():
+                response_data['rejected_guarantors'] = [
+                    {
+                        'id': g.id,
+                        'name': g.guarantor.full_name,
+                        'rejection_reason': g.rejection_reason or 'No reason provided'
+                    } for g in rejected_guarantors
+                ]
+            
+            if long_pending_guarantors.exists():
+                response_data['long_pending_guarantors'] = [
+                    {
+                        'id': g.id,
+                        'name': g.guarantor.full_name,
+                        'days_pending': (timezone.now() - g.created_at).days
+                    } for g in long_pending_guarantors
+                ]
+            
+            response_data['suggestion'] = 'Applicant can resubmit with updated guarantors if needed.'
+            
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+        
+        # ✅ Generate loan reference and create loan
+        reference = generate_loan_reference(application.category.abbreviation)
+        
+        loan = Loan.objects.create(
+            member=application.applicant.memberprofile,
+            amount=application.amount,
+            category=application.category,
+            interest_rate=application.category.interest_rate,
+            duration_months=application.category.loan_period_months,
+            status='approved',
+            approved_by=request.user,
+            approved_at=timezone.now(),
+            reference=reference,
+            application=application
+        )
+        
+        # ✅ Link guarantors to the new loan
+        application.guarantors.update(loan=loan)
+        
+        # ✅ Update application status
+        application.status = 'approved'
+        application.approved_by = request.user
+        application.approval_date = timezone.now()
+        application.save()
+        
+        return Response({
+            'detail': 'Application approved and loan created.',
+            'loan_id': loan.id
+        })
+    
+    @action(detail=True, methods=['post'], url_path='auto-reject-stale')
+    def auto_reject_stale_application(self, request, pk=None):
+        """Auto-reject applications with long-pending guarantors (admin only)"""
+        application = self.get_object()
+        
+        # Only admins can use this endpoint
+        if not request.user.is_staff:
+            return Response({
+                'error': 'Only admin users can auto-reject stale applications.'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        if application.status != 'pending':
+            return Response({
+                'error': 'Only pending applications can be auto-rejected.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check for long-pending guarantors
+        cutoff_date = timezone.now() - timedelta(days=14)  # 14 days for auto-rejection
+        long_pending_guarantors = application.guarantors.filter(
+            consent_status='pending',
+            created_at__lt=cutoff_date
+        )
+        
+        if not long_pending_guarantors.exists():
+            return Response({
+                'error': 'No long-pending guarantors found. Application cannot be auto-rejected.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Auto-reject the application
+        application.status = 'rejected'
+        application.rejection_reason = (
+            f'Auto-rejected due to {long_pending_guarantors.count()} guarantor(s) '
+            f'not responding for more than 14 days.'
+        )
+        application.save()
+        
+        return Response({
+            'message': 'Application auto-rejected due to stale guarantor responses.',
+            'long_pending_count': long_pending_guarantors.count()
+        })
+
         
 class MemberLoanApplicationViewSet(BaseLoanApplicationViewSet):
     def get_queryset(self):
@@ -594,10 +731,50 @@ class MemberLoanApplicationViewSet(BaseLoanApplicationViewSet):
     def resubmit_application(self, request, pk=None):
         application = self.get_object()
 
+        # Only the applicant can resubmit their own application
+        if application.applicant != request.user:
+            return Response({
+                'error': 'Only the applicant can resubmit their application.'
+            }, status=status.HTTP_403_FORBIDDEN)
+
         if application.status not in ['rejected', 'pending']:
             return Response({
                 'error': 'Only pending and rejected applications can be resubmitted.'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ Get new guarantors data from request
+        new_guarantors_data = request.data.get('guarantors', None)
+        
+        # If new guarantors are provided, validate and update them
+        if new_guarantors_data is not None:
+            try:
+                # Validate new guarantors
+                serializer = LoanApplicationSerializer(
+                    instance=application,
+                    data={'guarantors': new_guarantors_data},
+                    partial=True,
+                    context={'request': request}
+                )
+                if not serializer.is_valid():
+                    return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Update guarantors
+                with transaction.atomic():
+                    # Clear existing guarantors
+                    application.guarantors.all().delete()
+                    
+                    # Add new guarantors
+                    for entry in new_guarantors_data:
+                        LoanGuarantor.objects.create(
+                            application=application,
+                            guarantor_id=entry['guarantor'],
+                            consent_status='pending'
+                        )
+                        
+            except Exception as e:
+                return Response({
+                    'error': f'Error updating guarantors: {str(e)}'
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         # ✅ Consistent guarantor validation
         guarantor_count = application.guarantors.count()
@@ -613,12 +790,18 @@ class MemberLoanApplicationViewSet(BaseLoanApplicationViewSet):
                     'error': f'Guarantor {guarantor_relation.guarantor.full_name} is no longer an approved member.'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+        # ✅ Reset application status and clear rejection reason
         application.status = 'pending'
         application.rejection_reason = None
         application.save()
 
-        return Response({'message': 'Application resubmitted successfully.'}, status=status.HTTP_200_OK)
-    
+        return Response({
+            'message': 'Application resubmitted successfully.',
+            'guarantor_count': guarantor_count,
+            'guarantors_updated': new_guarantors_data is not None
+        }, status=status.HTTP_200_OK)
+
+        
 
 class GuarantorCandidatesView(generics.ListAPIView):
     """
@@ -635,6 +818,90 @@ class GuarantorCandidatesView(generics.ListAPIView):
         return MemberProfile.objects.filter(
             status='approved'
         ).exclude(user=self.request.user)
+    
+class AllGuarantorRequestsView(generics.ListAPIView):
+    """
+    API endpoint for guarantors to view ALL their consent requests (pending, approved, rejected).
+    """
+    serializer_class = LoanGuarantorSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    
+    def get_queryset(self):
+        return LoanGuarantor.objects.filter(
+            guarantor=self.request.user.memberprofile,
+        ).select_related(
+            'application', 
+            'application__applicant', 
+            'application__applicant__memberprofile',
+            'application__category'
+        ).order_by('-created_at')  # Latest first
+
+
+class PendingGuarantorRequestsView(generics.ListAPIView):
+    """
+    API endpoint for guarantors to view their pending consent requests.
+    """
+    serializer_class = LoanGuarantorSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    
+    def get_queryset(self):
+        return LoanGuarantor.objects.filter(
+            guarantor=self.request.user.memberprofile,
+            consent_status='pending'
+        ).select_related(
+            'application', 
+            'application__applicant', 
+            'application__applicant__memberprofile',
+            'application__category'
+        ).order_by('-created_at')
+
+
+class GuarantorConsentView(views.APIView):
+    """
+    API endpoint for guarantors to approve or reject their participation in loan applications.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, guarantor_id):
+        """
+        Handle guarantor consent (approve/reject)
+        """
+        try:
+            guarantor = LoanGuarantor.objects.select_related(
+                'application', 'application__applicant'
+            ).get(
+                id=guarantor_id, 
+                guarantor=request.user.memberprofile,
+                consent_status='pending'  # Only allow pending requests
+            )
+        except LoanGuarantor.DoesNotExist:
+            return Response(
+                {'error': 'Guarantor request not found or already processed.'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        action_value = request.data.get('action')
+        if action_value not in ['approve', 'reject']:
+            return Response(
+                {'error': 'Invalid action. Must be "approve" or "reject".'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update consent status
+        with transaction.atomic():
+            guarantor.consent_status = 'approved' if action_value == 'approve' else 'rejected'
+            guarantor.response_date = timezone.now()
+            guarantor.save()
+            
+            # May implement logging mechanism for audit trail here in the future
+            
+        return Response({
+            'message': f'You have {action_value}d the guarantor request for {guarantor.application.applicant.get_full_name()}.',
+            'consent_status': guarantor.consent_status,
+            'response_date': guarantor.response_date
+        }, status=status.HTTP_200_OK)
     
 ### Loan repayment list view
 class BaseRepaymentListView(generics.ListAPIView):

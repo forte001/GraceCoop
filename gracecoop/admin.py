@@ -113,8 +113,8 @@ class LoanApplicationAdmin(admin.ModelAdmin):
     search_fields = ('applicant__username',)
 
 class LoanGuarantorAdmin(admin.ModelAdmin):
-    list_display = ('id', 'application', 'guarantor', 'added_at')
-    list_filter = ('application', 'guarantor', 'added_at')
+    list_display = ('id', 'application', 'guarantor', 'created_at')
+    list_filter = ('application', 'guarantor','consent_status', 'created_at', 'response_date')
 
 class LoanRepaymentAdmin(admin.ModelAdmin):
     list_display = (

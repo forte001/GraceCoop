@@ -15,7 +15,7 @@ from gracecoop.models import (
     Announcement,
     Expense,
     LoanGuarantor)
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils import timezone
 from .utils import create_member_profile_if_not_exists, generate_payment_reference
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -437,13 +437,82 @@ class LoanCategorySerializer(serializers.ModelSerializer):
         return super().create(validated_data)
     
 class LoanGuarantorSerializer(serializers.ModelSerializer):
+    # Guarantor details
     guarantor_name = serializers.CharField(source='guarantor.full_name', read_only=True)
     guarantor_id = serializers.CharField(source='guarantor.member_id', read_only=True)
-    guarantor_phone = serializers.CharField(source='guarantor.phone', read_only=True)
+    guarantor_phone = serializers.CharField(source='guarantor.memberprofile.phone_number', read_only=True)
+    
+    # Application details 
+    applicant = serializers.CharField(source='application.applicant.get_full_name', read_only=True)
+    applicant_member_id = serializers.CharField(source='application.applicant.memberprofile.member_id', read_only=True)
+    amount = serializers.DecimalField(source='application.amount', max_digits=10, decimal_places=2, read_only=True)
+    application_id = serializers.IntegerField(source='application.id', read_only=True)
+    submitted_on = serializers.DateTimeField(source='application.application_date', read_only=True)
+    loan_category = serializers.CharField(source='application.category.name', read_only=True)
+    repayment_months = serializers.IntegerField(source='application.repayment_months', read_only=True)
+    interest_rate = serializers.DecimalField(source='application.interest_rate', max_digits=5, decimal_places=2, read_only=True)
+    
+    # Status fields
+    status = serializers.CharField(source='consent_status', read_only=True)
+    responded_on = serializers.DateTimeField(source='response_date', read_only=True)
+    
+    # Enhanced time-based fields
+    days_pending = serializers.SerializerMethodField()
+    is_long_pending = serializers.SerializerMethodField()
+    can_be_replaced = serializers.SerializerMethodField()
     
     class Meta:
         model = LoanGuarantor
-        fields = ['id', 'guarantor', 'guarantor_name', 'guarantor_id', 'guarantor_phone', 'added_at']
+        fields = [
+            'id', 'guarantor', 'guarantor_name', 'guarantor_id', 'guarantor_phone',
+            'created_at', 'consent_status', 'response_date', 'rejection_reason',
+            
+            'applicant', 'applicant_member_id', 'amount', 'application_id', 
+            'submitted_on', 'loan_category', 'repayment_months', 'interest_rate',
+            'status', 'responded_on',
+            # Enhanced time-based fields
+            'days_pending', 'is_long_pending', 'can_be_replaced'
+        ]
+        read_only_fields = [
+            'created_at', 'response_date', 'days_pending', 'is_long_pending', 
+            'can_be_replaced', 'status', 'responded_on'
+        ]
+    
+    def get_days_pending(self, obj):
+        """Get the number of days this guarantor has been pending"""
+        return obj.days_pending
+    
+    def get_is_long_pending(self, obj):
+        """Check if this guarantor has been pending for more than 7 days"""
+        return obj.is_long_pending
+    
+    def get_can_be_replaced(self, obj):
+        """Check if this guarantor can be replaced"""
+        return obj.can_be_replaced
+    
+    def validate_consent_status(self, value):
+        """Validate consent status changes"""
+        if self.instance and self.instance.consent_status != 'pending' and value == 'pending':
+            raise serializers.ValidationError("Cannot change status back to pending once decided.")
+        return value
+    
+    def validate(self, data):
+        """Cross-field validation"""
+        consent_status = data.get('consent_status')
+        rejection_reason = data.get('rejection_reason')
+        
+        # If rejecting, ensure rejection reason is provided
+        if consent_status == 'rejected' and not rejection_reason:
+            raise serializers.ValidationError({
+                'rejection_reason': 'Rejection reason is required when rejecting a guarantor request.'
+            })
+        
+        # If approving, clear any rejection reason
+        if consent_status == 'approved':
+            data['rejection_reason'] = None
+        
+        return data
+    
 
 
 class DisbursementLogSerializer(serializers.ModelSerializer):
@@ -550,15 +619,41 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         queryset=LoanCategory.objects.all(), write_only=True, source='category'
     )
     guarantors = LoanGuarantorSerializer(many=True, required=False)
+    guarantor_summary = serializers.SerializerMethodField()
 
     class Meta:
         model = LoanApplication
         fields = [
             'id', 'applicant_name', 'category', 'category_id', 'amount', 'interest_rate',
             'repayment_months', 'status', 'application_date', 'approved_by', 'approval_date',
-            'guarantors', 'rejection_reason'
+            'guarantors', 'guarantor_summary', 'rejection_reason'
         ]
         read_only_fields = ['applicant_name', 'status', 'application_date', 'approved_by', 'approval_date']
+
+    def get_guarantor_summary(self, obj):
+        """Return summary of guarantor statuses"""
+        total_guarantors = obj.guarantors.count()
+        approved_guarantors = obj.guarantors.filter(consent_status='approved').count()
+        rejected_guarantors = obj.guarantors.filter(consent_status='rejected').count()
+        pending_guarantors = obj.guarantors.filter(consent_status='pending').count()
+        
+        # Time-based logic for long-pending guarantors
+        cutoff_date = timezone.now() - timedelta(days=7)  # 7 days timeout
+        long_pending_guarantors = obj.guarantors.filter(
+            consent_status='pending',
+            created_at__lt=cutoff_date
+        ).count()
+        
+        return {
+            'total': total_guarantors,
+            'approved': approved_guarantors,
+            'rejected': rejected_guarantors,
+            'pending': pending_guarantors,
+            'long_pending': long_pending_guarantors,
+            'all_approved': approved_guarantors == total_guarantors and total_guarantors >= 2,
+            'has_rejections': rejected_guarantors > 0,
+            'can_replace_some': (rejected_guarantors + long_pending_guarantors) > 0 and obj.status in ['pending', 'rejected']
+        }
 
     def validate_category(self, category):
         if category.status in ['inactive', 'archived']:
@@ -595,6 +690,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         user = self.context['request'].user
+        requested_amount = data.get('amount')
 
         # Check for active loans
         # active_loans = Loan.objects.filter(
@@ -609,7 +705,6 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             user.memberprofile.contributions.aggregate(total=Sum('amount'))['total'] or 0
         )
         max_loan_amount = total_contributions * 3
-        requested_amount = data.get('amount')
 
         if requested_amount > max_loan_amount:
             raise serializers.ValidationError(
@@ -643,7 +738,8 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         for entry in guarantors_data:
             LoanGuarantor.objects.create(
                 application=application,
-                guarantor_id=entry['guarantor']
+                guarantor_id=entry['guarantor'],
+                consent_status='pending'
             )
 
         return application
@@ -675,7 +771,8 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             for entry in guarantors_data:
                 LoanGuarantor.objects.create(
                     application=instance,
-                    guarantor_id=entry['guarantor']
+                    guarantor_id=entry['guarantor'],
+                    consent_status='pending'
                 )
 
         return instance

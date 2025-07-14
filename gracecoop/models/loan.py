@@ -3,6 +3,7 @@ from .member import MemberProfile
 import uuid
 from django.conf import settings
 from decimal import Decimal
+from django.utils import timezone
 
 class LoanCategory(models.Model):
     STATUS_CHOICES = [
@@ -122,7 +123,7 @@ class LoanApplication(models.Model):
         ordering = ['-application_date']
 
     applicant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    category = models.ForeignKey(LoanCategory, on_delete=models.PROTECT)
+    category = models.ForeignKey('LoanCategory', on_delete=models.PROTECT)
     interest_rate = models.DecimalField(max_digits=5, decimal_places=2, editable=False, default=0.0)
     loan_period_months = models.PositiveIntegerField(editable=False, default=0)
 
@@ -150,24 +151,120 @@ class LoanApplication(models.Model):
     def has_required_guarantors(self):
         return self.guarantors.count() >= 2
     
+    def has_all_guarantors_approved(self):
+        """Check if all guarantors have approved their participation"""
+        guarantors = self.guarantors.all()
+        if guarantors.count() < 2:
+            return False
+        return all(g.consent_status == 'approved' for g in guarantors)
+    
+    def get_guarantor_approval_summary(self):
+        """Get a summary of guarantor approval status with enhanced time-based logic"""
+        guarantors = self.guarantors.all()
+        total = guarantors.count()
+        approved = guarantors.filter(consent_status='approved').count()
+        rejected = guarantors.filter(consent_status='rejected').count()
+        pending = guarantors.filter(consent_status='pending').count()
+        
+        # Time-based logic for long-pending guarantors
+        cutoff_date = timezone.now() - timezone.timedelta(days=7)
+        long_pending = guarantors.filter(
+            consent_status='pending',
+            created_at__lt=cutoff_date
+        ).count()
+        
+        return {
+            'total': total,
+            'approved': approved,
+            'rejected': rejected,
+            'pending': pending,
+            'long_pending': long_pending,
+            'all_approved': approved >= 2 and pending == 0 and rejected == 0,
+            'has_rejections': rejected > 0,
+            'can_replace_some': (rejected + long_pending) > 0 and self.status in ['pending', 'rejected']
+        }
+    
+    def can_be_processed(self):
+        """Check if the application can be processed (all guarantors approved)"""
+        return (
+            self.status == 'pending' and 
+            self.has_all_guarantors_approved() and 
+            self.guarantors.count() >= 2
+        )
+
+    def get_replaceable_guarantors(self):
+        """Get guarantors that can be replaced (rejected or long pending)"""
+        cutoff_date = timezone.now() - timezone.timedelta(days=7)
+        return self.guarantors.filter(
+            models.Q(consent_status='rejected') |
+            models.Q(consent_status='pending', created_at__lt=cutoff_date)
+        )
+
+    def can_be_resubmitted(self):
+        """Check if application can be resubmitted"""
+        return self.status in ['pending', 'rejected']
+        
+    
 
 class LoanGuarantor(models.Model):
+    CONSENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
     application = models.ForeignKey(
         'LoanApplication', on_delete=models.CASCADE, related_name='guarantors'
     )
     guarantor = models.ForeignKey(
-        MemberProfile, on_delete=models.CASCADE, related_name='guaranteeing_applications'
+        'MemberProfile', on_delete=models.CASCADE, related_name='guaranteeing_applications'
     )
-    loan = models.ForeignKey( 
+    loan = models.ForeignKey(
         'Loan', on_delete=models.CASCADE, null=True, blank=True, related_name='guarantors'
     )
-    added_at = models.DateTimeField(auto_now_add=True)
+    
+    # Time tracking fields
+    created_at = models.DateTimeField(auto_now_add=True)  # When guarantor was added
+    consent_status = models.CharField(
+        max_length=10, choices=CONSENT_STATUS_CHOICES, default='pending'
+    )
+    response_date = models.DateTimeField(null=True, blank=True)  # When status changed from pending
+    rejection_reason = models.TextField(blank=True, null=True)  # Reason for rejection
 
     class Meta:
         unique_together = ('application', 'guarantor')
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.guarantor.full_name} guarantees application #{self.application.id}"
+
+    def save(self, *args, **kwargs):
+        """Auto-set response_date when status changes from pending"""
+        if self.pk:
+            try:
+                old_instance = LoanGuarantor.objects.get(pk=self.pk)
+                if old_instance.consent_status == 'pending' and self.consent_status != 'pending':
+                    self.response_date = timezone.now()
+            except LoanGuarantor.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)
+
+    @property
+    def days_pending(self):
+        """Calculate days since guarantor was added (if still pending)"""
+        if self.consent_status == 'pending':
+            return (timezone.now() - self.created_at).days
+        return None
+
+    @property
+    def is_long_pending(self):
+        """Check if guarantor has been pending for more than 7 days"""
+        return self.consent_status == 'pending' and self.days_pending and self.days_pending > 7
+
+    @property
+    def can_be_replaced(self):
+        """Check if this guarantor can be replaced (rejected or long pending)"""
+        return self.consent_status == 'rejected' or self.is_long_pending
 
     
 

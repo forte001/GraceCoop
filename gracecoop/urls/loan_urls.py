@@ -1,6 +1,8 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from gracecoop.views.loan_views import (
+    AllGuarantorRequestsView,
+    GuarantorConsentView,
     MemberLoanViewSet,
     LoanCategoryViewSet, 
     AdminLoanViewSet,
@@ -9,7 +11,8 @@ from gracecoop.views.loan_views import (
     AdminRepaymentListView,
     MemberRepaymentListView,
     DisbursementLogAdminListView,    
-    GuarantorCandidatesView
+    GuarantorCandidatesView,
+    PendingGuarantorRequestsView
      )
 
 loan_router = DefaultRouter()
@@ -25,4 +28,7 @@ urlpatterns = [
     path('repayments/', MemberRepaymentListView.as_view(), name='member-repayments'),
     path('disbursements-admin/', DisbursementLogAdminListView.as_view()),
     path('guarantor-candidates/', GuarantorCandidatesView.as_view(), name='guarantor-candidates'),
+    path('guarantor-requests/', AllGuarantorRequestsView.as_view(), name='all-guarantor-requests'),
+    path('guarantor-requests/pending/', PendingGuarantorRequestsView.as_view(), name='pending-guarantor-requests'),
+    path('guarantor-requests/<int:guarantor_id>/consent/', GuarantorConsentView.as_view(), name='guarantor-consent'),
 ]

@@ -105,6 +105,7 @@ const MemberLayout = () => {
                     <li><Link to="/member/loan-application">Apply for Loan</Link></li>
                     <li><Link to="/member/loan-application-list">Loan Application History</Link></li>
                     <li><Link to="/member/loans">Loans</Link></li>
+                    <li><Link to="/member/guarantor-requests">Guarantor Requests</Link></li>
                   </ul>
                 )}
               </li>

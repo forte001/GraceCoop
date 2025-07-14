@@ -22,7 +22,7 @@ import TwoFASetup from './components/TwoFASetup';
 import TwoFAToggle from './components/TwoFAToggle';
 import Verify2FA from './components/Verify2FA';
 import LoanCategories from './pages/admin/Loan/LoanCategories'
-import LoanManagement from './pages/admin/Loan/LoanManagement';
+import LoanManagement from './pages/admin/Loan/LoanManagement/LoanManagement';
 import LoanApplicationForm from './pages/members/Loan/LoanApplicationForm';
 import LoanApplicationList from './pages/members/Loan/LoanApplicationList';
 import LoanRepaymentForm from './pages/members/Loan/LoanRepaymentForm';
@@ -50,6 +50,7 @@ import MembersBalancesReport from './pages/admin/Reports/MembersBalance';
 import MonthlyReceiptsReport from './pages/admin/Reports/AnalysisOfReceipts';
 import AdminExpenses from './pages/admin/AdminExpenses';
 import LoanApplicationDetails from './pages/members/Loan/LoanApplicationDetails';
+import GuarantorRequests from './pages/members/Loan/GuarantorRequests';
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -142,6 +143,7 @@ const App = () => {
       <Route path="loan-application" element={<LoanApplicationForm />} />
       <Route path="loan-application-form/:id?" element={<LoanApplicationForm />} />
       <Route path="loan-application-details/:id" element={<LoanApplicationDetails />} />
+      <Route path="guarantor-requests" element={<GuarantorRequests />} />
       <Route path="loans" element={<ApprovedLoansList />} />
       <Route path="loan-repayment-schedule" element={<LoanRepaymentForm />} />
       <Route path="loan-repayments" element={<MemberLoanRepaymentList />} />
@@ -163,7 +165,7 @@ const App = () => {
         <Route path="members/pending" element={<PendingMembersList />} />
         <Route path="members/approved" element={<MembersList />} />
         <Route path="loan/categories" element={<LoanCategories />} />
-        <Route path="loan/management" element={<LoanManagement />} />
+        <Route path="loan/management" element={<LoanManagement/>} />
         <Route path="loan/repayment-list" element={<AdminLoanRepaymentList />} />
         <Route path="payments/contributions" element={<AdminContributionList />} />
         <Route path="payments/levies" element={<AdminLevyList />} />

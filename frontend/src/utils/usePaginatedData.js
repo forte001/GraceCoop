@@ -12,7 +12,7 @@ const usePaginatedData = (url, initialFilters = {}, initialPage = 1, pathname = 
   const totalPages = Math.ceil(fullData.count / pageSize);
   const axios = getAxiosByRole(pathname);
 
-  //FetchData moved outside useEffect so it can be reused
+  // FetchData moved outside useEffect so it can be reused
   const fetchData = async (overridePage = currentPage, overrideFilters = filters) => {
     setLoading(true);
     try {
@@ -46,7 +46,8 @@ const usePaginatedData = (url, initialFilters = {}, initialPage = 1, pathname = 
     pageSize,
     setPageSize,
     totalPages,
-    refresh: () => fetchData(), // ✅ Expose refresh function
+    refresh: () => fetchData(), 
+    refetch: () => fetchData(),
   };
 };
 
