@@ -1,15 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "../../utils/getAxiosByRole";
 import ExportPrintGroup from "../../utils/ExportPrintGroup";
+import exportHelper from "../../utils/exportHelper";
 import Spinner from "../../components/Spinner";
 import { toast } from "react-toastify";
 import { formatNaira } from "../../utils/formatCurrency";
 import "../../styles/admin/loan/LoanManagement.css";
+// import "../../styles/member/LedgerReport.css";
 
 const LedgerReport = () => {
   const currentYear = new Date().getFullYear();
   const [filters, setFilters] = useState({ year: currentYear });
   const [data, setData] = useState([]);
+  const [memberInfo, setMemberInfo] = useState({ full_name: "", member_id: "" });
   const [grandTotal, setGrandTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const printRef = useRef();
@@ -20,7 +23,7 @@ const LedgerReport = () => {
         setLoading(true);
         const params = new URLSearchParams(filters).toString();
         const res = await axios().get(`/members/profiles/my-ledger/?${params}`);
-        const { monthly_breakdown, grand_total } = res.data;
+        const { monthly_breakdown, grand_total, full_name, member_id } = res.data;
 
         const arr = Object.entries(monthly_breakdown).map(([month, values]) => ({
           month,
@@ -29,6 +32,7 @@ const LedgerReport = () => {
 
         setData(arr);
         setGrandTotal(grand_total);
+        setMemberInfo({ full_name, member_id });
       } catch (err) {
         console.error(err);
         toast.error("Failed to load member ledger report");
@@ -40,92 +44,158 @@ const LedgerReport = () => {
     fetchLedger();
   }, [filters]);
 
+  // Transform function for export
   const transformExport = (row) => ({
     Month: row.month,
     Shares: row.shares === "-" ? "-" : `NGN ${Number(row.shares).toLocaleString()}`,
-    Levy: row.shares === "-" ? "-" : `NGN ${Number(row.levy).toLocaleString()}`,
-    LoanRepayment:
-      row.shares === "-" ? "-" : `NGN ${Number(row.loan_repayment).toLocaleString()}`,
-    Total: row.shares === "-" ? "-" : `NGN ${Number(row.total).toLocaleString()}`,
+    Levy: row.levy === "-" ? "-" : `NGN ${Number(row.levy).toLocaleString()}`,
+    "Loan Repayment": row.loan_repayment === "-" ? "-" : `NGN ${Number(row.loan_repayment).toLocaleString()}`,
+    Total: row.total === "-" ? "-" : `NGN ${Number(row.total).toLocaleString()}`,
   });
 
-
-
-  const handleExport = async (format) => {
+  // Custom export handlers using exportHelper
+  const handleExcelExport = async () => {
     if (!data.length) {
       toast.warn("No data to export");
       return;
     }
 
+    toast.loading("Exporting as EXCEL...", { toastId: "export-toast" });
+
     try {
-      toast.loading(`Exporting as ${format.toUpperCase()}...`, { toastId: "export-toast" });
-
+      const XLSX = await import("xlsx");
       const transformedData = data.map(transformExport);
-
-      if (format === "excel" || format === "csv") {
-        const XLSX = await import("xlsx");
-        const worksheet = XLSX.utils.json_to_sheet(transformedData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, worksheet, "MemberLedger");
-        XLSX.writeFile(wb, `member_ledger.${format === "excel" ? "xlsx" : "csv"}`);
-      } else if (format === "pdf") {
-        const { default: jsPDF } = await import("jspdf");
-        const autoTable = (await import("jspdf-autotable")).default;
-        const doc = new jsPDF();
-        autoTable(doc, {
-          startY: 60,
-          head: [["Month", "Shares", "Levy", "LoanRepayment", "Total"]],
-          body: transformedData.map((row) =>
-            ["Month", "Shares", "Levy", "LoanRepayment", "Total"].map((col) => row[col])
-          ),
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [63, 81, 181] },
-          didDrawPage: (data) => {
-            if (doc.internal.getNumberOfPages() === 1) {
-              doc.addImage("/logo.png", "PNG", 95, 10, 20, 20);
-              doc.setFontSize(14);
-              doc.text("GraceCoop", doc.internal.pageSize.width / 2, 40, { align: "center" });
-              doc.setFontSize(12);
-              doc.text(
-                `Member Ledger Report - ${filters.year}`,
-                doc.internal.pageSize.width / 2,
-                50,
-                { align: "center" }
-              );
-            }
-
-            doc.setTextColor(180);
-            doc.setFontSize(25);
-            doc.text(
-              "GraceCoop",
-              doc.internal.pageSize.width / 2,
-              doc.internal.pageSize.height / 2,
-              { angle: 45, align: "center", opacity: 0.02 }
-            );
-
-            const dateStr = `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
-            doc.setFontSize(8);
-            doc.setTextColor(100);
-            doc.text(
-              dateStr,
-              doc.internal.pageSize.width - 10,
-              doc.internal.pageSize.height - 5,
-              { align: "right" }
-            );
-          },
-        });
-        doc.save("member_ledger.pdf");
-      }
+      const worksheet = XLSX.utils.json_to_sheet(transformedData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, worksheet, "MemberLedger");
+      XLSX.writeFile(wb, `${memberInfo.full_name}_ledger_${filters.year}.xlsx`);
 
       toast.update("export-toast", {
-        render: `Exported as ${format.toUpperCase()}`,
+        render: "EXCEL export complete.",
         type: "success",
         isLoading: false,
         autoClose: 3000,
       });
     } catch (err) {
+      console.error(err);
       toast.update("export-toast", {
-        render: `Failed to export as ${format.toUpperCase()}`,
+        render: "Failed to export as EXCEL",
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handleCSVExport = async () => {
+    if (!data.length) {
+      toast.warn("No data to export");
+      return;
+    }
+
+    toast.loading("Exporting as CSV...", { toastId: "export-toast" });
+
+    try {
+      const XLSX = await import("xlsx");
+      const transformedData = data.map(transformExport);
+      const worksheet = XLSX.utils.json_to_sheet(transformedData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, worksheet, "MemberLedger");
+      XLSX.writeFile(wb, `${memberInfo.full_name}_ledger_${filters.year}.csv`, { bookType: "csv" });
+
+      toast.update("export-toast", {
+        render: "CSV export complete.",
+        type: "success",
+        isLoading: false,
+        autoClose: 3000,
+      });
+    } catch (err) {
+      console.error(err);
+      toast.update("export-toast", {
+        render: "Failed to export as CSV",
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handlePDFExport = async () => {
+    if (!data.length) {
+      toast.warn("No data to export");
+      return;
+    }
+
+    toast.loading("Exporting as PDF...", { toastId: "export-toast" });
+
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+      const doc = new jsPDF();
+      
+      const transformedData = data.map(transformExport);
+      
+      autoTable(doc, {
+        startY: 60,
+        head: [["Month", "Shares", "Levy", "Loan Repayment", "Total"]],
+        body: transformedData.map((row) =>
+          ["Month", "Shares", "Levy", "Loan Repayment", "Total"].map((col) => row[col] ?? "")
+        ),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [63, 81, 181] },
+        didDrawPage: (data) => {
+          // header on first page only
+          if (doc.internal.getNumberOfPages() === 1) {
+            const logoPath = "/logo.png";
+            doc.addImage(logoPath, "PNG", 95, 10, 20, 20);
+            doc.setFontSize(14);
+            doc.text("GraceCoop", doc.internal.pageSize.width / 2, 40, {
+              align: "center",
+            });
+            doc.setFontSize(12);
+            doc.text(
+              `${memberInfo.full_name} Ledger Report - ${filters.year}`,
+              doc.internal.pageSize.width / 2,
+              50,
+              { align: "center" }
+            );
+          }
+          
+          // watermark on every page
+          doc.setTextColor(180);
+          doc.setFontSize(25);
+          doc.text(
+            "GraceCoop",
+            doc.internal.pageSize.width / 2,
+            doc.internal.pageSize.height / 2,
+            { angle: 45, align: "center", opacity: 0.02 }
+          );
+
+          // footer on every page
+          const dateStr = `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+          doc.setFontSize(8);
+          doc.setTextColor(100);
+          doc.text(
+            dateStr,
+            doc.internal.pageSize.width - 10,
+            doc.internal.pageSize.height - 5,
+            { align: "right" }
+          );
+        },
+      });
+
+      doc.save(`${memberInfo.full_name}_ledger_${filters.year}.pdf`);
+
+      toast.update("export-toast", {
+        render: "PDF export complete.",
+        type: "success",
+        isLoading: false,
+        autoClose: 3000,
+      });
+    } catch (err) {
+      console.error(err);
+      toast.update("export-toast", {
+        render: "Failed to export as PDF",
         type: "error",
         isLoading: false,
         autoClose: 3000,
@@ -135,7 +205,7 @@ const LedgerReport = () => {
 
   return (
     <div className="loan-management">
-      <h2>Member Ledger Report</h2>
+      <h2>{memberInfo.full_name} Ledger Report - {filters.year}</h2>
 
       <div className="filter-section">
         <small className="form-hint">Year:</small>
@@ -148,9 +218,9 @@ const LedgerReport = () => {
         <div className="export-button-group">
           <ExportPrintGroup
             data={data.map(transformExport)}
-            exportToExcel={() => handleExport("excel")}
-            exportToCSV={() => handleExport("csv")}
-            exportToPDF={() => handleExport("pdf")}
+            exportToExcel={handleExcelExport}
+            exportToCSV={handleCSVExport}
+            exportToPDF={handlePDFExport}
           />
         </div>
       </div>
@@ -162,7 +232,9 @@ const LedgerReport = () => {
         <div className="summary-grid">
           <div>
             <strong>Total for {filters.year}</strong>
-            <div>{formatNaira(grandTotal)}</div>
+            <div className={`grand-total-amount ${grandTotal >= 0 ? "positive" : "negative"}`}>
+              {formatNaira(grandTotal)}
+            </div>
           </div>
         </div>
       </div>
@@ -184,14 +256,18 @@ const LedgerReport = () => {
                 <tr key={idx}>
                   <td>{row.month}</td>
                   <td>{row.shares === "-" ? "-" : formatNaira(row.shares)}</td>
-                  <td>{row.shares === "-" ? "-" : formatNaira(row.levy)}</td>
-                  <td>{row.shares === "-" ? "-" : formatNaira(row.loan_repayment)}</td>
-                  <td>{row.shares === "-" ? "-" : formatNaira(row.total)}</td>
+                  <td>{row.levy === "-" ? "-" : formatNaira(row.levy)}</td>
+                  <td className={row.loan_repayment !== "-" && Number(row.loan_repayment) < 0 ? "negative-amount" : ""}>
+                    {row.loan_repayment === "-" ? "-" : formatNaira(row.loan_repayment)}
+                  </td>
+                  <td className={`total-cell ${row.total !== "-" && Number(row.total) < 0 ? "negative" : ""}`}>
+                    {row.total === "-" ? "-" : formatNaira(row.total)}
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5" style={{ textAlign: "center" }}>
+                <td colSpan="5" className="no-data-message">
                   No data found.
                 </td>
               </tr>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "../../../utils/getAxiosByRole";
 import ExportPrintGroup from "../../../utils/ExportPrintGroup";
+import exportHelper from "../../../utils/exportHelper";
 import Spinner from "../../../components/Spinner";
 import { toast } from "react-toastify";
 import "../../../styles/admin/loan/LoanManagement.css";
@@ -99,7 +100,6 @@ const MemberLedgerReport = () => {
     }
   };
 
-
   const handleSuggestionClick = (suggestion) => {
     setFilters((f) => ({ ...f, search: suggestion.display_text }));
     setShowSuggestions(false);
@@ -107,117 +107,167 @@ const MemberLedgerReport = () => {
     setTimeout(() => fetchMemberLedger(), 100);
   };
 
+  // Transform function for export
   const transformExport = (row) => ({
     Month: row.month,
     Shares: row.shares === "-" ? "-" : `NGN ${Number(row.shares).toLocaleString()}`,
     Levy: row.levy === "-" ? "-" : `NGN ${Number(row.levy).toLocaleString()}`,
-    LoanRepayment:
+    "Loan Repayment":
       row.loan_repayment === "-" ? "-" : `NGN ${Number(row.loan_repayment).toLocaleString()}`,
     Total: row.total === "-" ? "-" : `NGN ${Number(row.total).toLocaleString()}`,
   });
 
-  // Custom export handler for member ledger
-  const handleExport = async (format) => {
+  // Custom data fetcher for export (since we already have the data)
+  const getExportData = async () => {
+    if (!data.length || !memberInfo) {
+      return [];
+    }
+    return data.map(transformExport);
+  };
+
+  // Initialize export helper
+  const { exportToExcel, exportToCSV, exportToPDF } = exportHelper({
+    url: null, // We'll override with custom data fetcher
+    filters: {},
+    transformFn: transformExport,
+    columns: ["Month", "Shares", "Levy", "Loan Repayment", "Total"],
+    fileName: memberInfo ? `member_ledger_${memberInfo.member_id}` : "member_ledger",
+    reportTitle: memberInfo 
+      ? `Member Ledger - ${memberInfo.full_name} (${memberInfo.member_id}) - ${filters.year}`
+      : "Member Ledger Report",
+  });
+
+  // Custom export handlers that use the export helper
+  const handleExcelExport = async () => {
+    if (!data.length || !memberInfo) {
+      toast.warn("No data to export");
+      return;
+    }
+    
+    // Create a custom export helper instance with current data
+    const exporter = exportHelper({
+      url: null,
+      filters: {},
+      transformFn: (row) => row, // Data is already transformed
+      columns: ["Month", "Shares", "Levy", "Loan Repayment", "Total"],
+      fileName: `member_ledger_${memberInfo.member_id}`,
+      reportTitle: `Member Ledger - ${memberInfo.full_name} (${memberInfo.member_id}) - ${filters.year}`,
+    });
+
+    // Override the data fetching with our local data
+    const originalGetAllData = exporter.getAllPaginatedDataForExport;
+    exporter.getAllPaginatedDataForExport = async () => data.map(transformExport);
+    
+    await exporter.exportToExcel();
+  };
+
+  const handleCSVExport = async () => {
+    if (!data.length || !memberInfo) {
+      toast.warn("No data to export");
+      return;
+    }
+    
+    const exporter = exportHelper({
+      url: null,
+      filters: {},
+      transformFn: (row) => row,
+      columns: ["Month", "Shares", "Levy", "Loan Repayment", "Total"],
+      fileName: `member_ledger_${memberInfo.member_id}`,
+      reportTitle: `Member Ledger - ${memberInfo.full_name} (${memberInfo.member_id}) - ${filters.year}`,
+    });
+
+    exporter.getAllPaginatedDataForExport = async () => data.map(transformExport);
+    await exporter.exportToCSV();
+  };
+
+  const handlePDFExport = async () => {
     if (!data.length || !memberInfo) {
       toast.warn("No data to export");
       return;
     }
 
-    try {
-      toast.loading(`Exporting as ${format.toUpperCase()}...`, { toastId: "export-toast" });
+    toast.loading("Exporting as PDF...", { toastId: "export-toast" });
 
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+      const doc = new jsPDF();
+      
       const transformedData = data.map(transformExport);
       const reportTitle = `Member Ledger - ${memberInfo.full_name} (${memberInfo.member_id}) - ${filters.year}`;
-
-      if (format === "excel") {
-        const XLSX = await import("xlsx");
-        const worksheet = XLSX.utils.json_to_sheet(transformedData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, worksheet, "MemberLedger");
-        XLSX.writeFile(wb, `member_ledger_${memberInfo.member_id}.xlsx`);
-      } else if (format === "csv") {
-        const XLSX = await import("xlsx");
-        const worksheet = XLSX.utils.json_to_sheet(transformedData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, worksheet, "MemberLedger");
-        XLSX.writeFile(wb, `member_ledger_${memberInfo.member_id}.csv`, { bookType: "csv" });
-      } else if (format === "pdf") {
-        const { default: jsPDF } = await import("jspdf");
-        const autoTable = (await import("jspdf-autotable")).default;
-        const doc = new jsPDF();
-        
-        // Add member info header
-        autoTable(doc, {
-          startY: 80,
-          head: [["Month", "Shares", "Levy", "Loan Repayment", "Total"]],
-          body: transformedData.map((row) =>
-            ["Month", "Shares", "Levy", "LoanRepayment", "Total"].map(
-              (col) => row[col]
-            )
-          ),
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [63, 81, 181] },
-          didDrawPage: (data) => {
-            if (doc.internal.getNumberOfPages() === 1) {
-              const logoPath = "/logo.png";
-              doc.addImage(logoPath, "PNG", 95, 10, 20, 20);
-              doc.setFontSize(14);
-              doc.text(
-                "GraceCoop",
-                doc.internal.pageSize.width / 2,
-                40,
-                { align: "center" }
-              );
-              doc.setFontSize(12);
-              doc.text(
-                reportTitle,
-                doc.internal.pageSize.width / 2,
-                50,
-                { align: "center" }
-              );
-              
-              // Member details
-              doc.setFontSize(10);
-              doc.text(`Email: ${memberInfo.email}`, 20, 65);
-              doc.text(`Phone: ${memberInfo.phone_number}`, 20, 72);
-              doc.text(`Status: ${memberInfo.membership_status}`, 120, 65);
-              doc.text(`Grand Total: NGN ${Number(grandTotal).toLocaleString()}`, 120, 72);
-            }
-            
-            // Watermark
-            doc.setTextColor(180);
-            doc.setFontSize(25);
+      
+      autoTable(doc, {
+        startY: 80,
+        head: [["Month", "Shares", "Levy", "Loan Repayment", "Total"]],
+        body: transformedData.map((row) =>
+          ["Month", "Shares", "Levy", "Loan Repayment", "Total"].map(
+            (col) => row[col] ?? ""
+          )
+        ),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [63, 81, 181] },
+        didDrawPage: (data) => {
+          if (doc.internal.getNumberOfPages() === 1) {
+            const logoPath = "/logo.png";
+            doc.addImage(logoPath, "PNG", 95, 10, 20, 20);
+            doc.setFontSize(14);
             doc.text(
               "GraceCoop",
               doc.internal.pageSize.width / 2,
-              doc.internal.pageSize.height / 2,
-              { angle: 45, align: "center", opacity: 0.02 }
+              40,
+              { align: "center" }
+            );
+            doc.setFontSize(12);
+            doc.text(
+              reportTitle,
+              doc.internal.pageSize.width / 2,
+              50,
+              { align: "center" }
             );
             
-            // Footer
-            const dateStr = `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
-            doc.setFontSize(8);
-            doc.setTextColor(100);
-            doc.text(
-              dateStr,
-              doc.internal.pageSize.width - 10,
-              doc.internal.pageSize.height - 5,
-              { align: "right" }
-            );
-          },
-        });
-        doc.save(`member_ledger_${memberInfo.member_id}.pdf`);
-      }
+            // Member details
+            doc.setFontSize(10);
+            doc.text(`Email: ${memberInfo.email}`, 20, 65);
+            doc.text(`Phone: ${memberInfo.phone_number}`, 20, 72);
+            doc.text(`Status: ${memberInfo.membership_status}`, 120, 65);
+            doc.text(`Grand Total: NGN ${Number(grandTotal).toLocaleString()}`, 120, 72);
+          }
+          
+          // Watermark
+          doc.setTextColor(180);
+          doc.setFontSize(25);
+          doc.text(
+            "GraceCoop",
+            doc.internal.pageSize.width / 2,
+            doc.internal.pageSize.height / 2,
+            { angle: 45, align: "center", opacity: 0.02 }
+          );
+          
+          // Footer
+          const dateStr = `Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+          doc.setFontSize(8);
+          doc.setTextColor(100);
+          doc.text(
+            dateStr,
+            doc.internal.pageSize.width - 10,
+            doc.internal.pageSize.height - 5,
+            { align: "right" }
+          );
+        },
+      });
+      
+      doc.save(`member_ledger_${memberInfo.member_id}.pdf`);
 
       toast.update("export-toast", {
-        render: `Exported as ${format.toUpperCase()}`,
+        render: "Exported as PDF",
         type: "success",
         isLoading: false,
         autoClose: 3000,
       });
     } catch (err) {
+      console.error(err);
       toast.update("export-toast", {
-        render: `Failed to export as ${format.toUpperCase()}`,
+        render: "Failed to export as PDF",
         type: "error",
         isLoading: false,
         autoClose: 3000,
@@ -230,7 +280,7 @@ const MemberLedgerReport = () => {
       <h2>Member Ledger Report</h2>
 
       <div className="filter-section">
-        <div style={{ position: "relative" }}>
+        <div className="search-container">
           <small className="form-hint">Member Name or ID:</small>
           <input
             type="text"
@@ -243,33 +293,15 @@ const MemberLedgerReport = () => {
           
           {/* Search Suggestions Dropdown */}
           {showSuggestions && searchSuggestions.length > 0 && (
-            <div style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              right: 0,
-              backgroundColor: "white",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              maxHeight: "200px",
-              overflowY: "auto",
-              zIndex: 1000
-            }}>
+            <div className="suggestions-dropdown">
               {searchSuggestions.map((suggestion) => (
                 <div
                   key={suggestion.member_id}
+                  className="suggestion-item"
                   onClick={() => handleSuggestionClick(suggestion)}
-                  style={{
-                    padding: "8px 12px",
-                    cursor: "pointer",
-                    borderBottom: "1px solid #eee"
-                  }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = "#f5f5f5"}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = "white"}
                 >
-                  <div style={{ fontWeight: "bold" }}>{suggestion.display_text}</div>
-                  <div style={{ fontSize: "12px", color: "#666" }}>
+                  <div className="suggestion-name">{suggestion.display_text}</div>
+                  <div className="suggestion-details">
                     {suggestion.email} • {suggestion.membership_status}
                   </div>
                 </div>
@@ -298,9 +330,9 @@ const MemberLedgerReport = () => {
         <div className="export-button-group">
           <ExportPrintGroup
             data={data.map(transformExport)}
-            exportToExcel={() => handleExport("excel")}
-            exportToCSV={() => handleExport("csv")}
-            exportToPDF={() => handleExport("pdf")}
+            exportToExcel={handleExcelExport}
+            exportToCSV={handleCSVExport}
+            exportToPDF={handlePDFExport}
           />
         </div>
       </div>
@@ -311,7 +343,7 @@ const MemberLedgerReport = () => {
       {memberInfo && (
         <div className="summary-section">
           <h3>Member Information</h3>
-          <div className="summary-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px" }}>
+          <div className="member-info-grid">
             <div>
               <strong>Member ID:</strong>
               <div>{memberInfo.member_id}</div>
@@ -330,20 +362,13 @@ const MemberLedgerReport = () => {
             </div>
             <div>
               <strong>Status:</strong>
-              <div style={{ 
-                color: memberInfo.membership_status === "active" ? "green" : "orange",
-                fontWeight: "bold"
-              }}>
+              <div className={`status-badge ${memberInfo.membership_status === "active" ? "active" : "inactive"}`}>
                 {memberInfo.membership_status?.toUpperCase()}
               </div>
             </div>
             <div>
               <strong>Grand Total ({filters.year}):</strong>
-              <div style={{ 
-                fontSize: "18px", 
-                fontWeight: "bold",
-                color: grandTotal >= 0 ? "green" : "red"
-              }}>
+              <div className={`grand-total ${grandTotal >= 0 ? "positive" : "negative"}`}>
                 {formatNaira(grandTotal)}
               </div>
             </div>
@@ -375,22 +400,17 @@ const MemberLedgerReport = () => {
                     <td>
                       {row.levy === "-" ? "-" : formatNaira(row.levy)}
                     </td>
-                    <td style={{ 
-                      color: row.loan_repayment !== "-" && Number(row.loan_repayment) < 0 ? "red" : "inherit"
-                    }}>
+                    <td className={row.loan_repayment !== "-" && Number(row.loan_repayment) < 0 ? "negative-amount" : ""}>
                       {row.loan_repayment === "-" ? "-" : formatNaira(row.loan_repayment)}
                     </td>
-                    <td style={{ 
-                      fontWeight: "bold",
-                      color: row.total !== "-" && Number(row.total) < 0 ? "red" : "inherit"
-                    }}>
+                    <td className={`total-amount ${row.total !== "-" && Number(row.total) < 0 ? "negative" : ""}`}>
                       {row.total === "-" ? "-" : formatNaira(row.total)}
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: "center" }}>
+                  <td colSpan="5" className="no-data">
                     {memberInfo ? "No transactions found for this period." : "Use the search above to find a member's ledger."}
                   </td>
                 </tr>
