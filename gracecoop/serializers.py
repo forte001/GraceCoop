@@ -1275,3 +1275,20 @@ class ReportParametersSerializer(serializers.Serializer):
         required=False
     )
     include_inactive = serializers.BooleanField(default=False)
+
+
+class MemberLedgerSerializer(serializers.Serializer):
+    """Serializer for member ledger data"""
+    member_id = serializers.CharField()
+    full_name = serializers.CharField()
+    email = serializers.EmailField()
+    phone_number = serializers.CharField()
+    membership_status = serializers.CharField()
+    year = serializers.IntegerField()
+    monthly_breakdown = serializers.DictField()
+    grand_total = serializers.DecimalField(max_digits=12, decimal_places=2)
+    
+class MemberSearchSerializer(serializers.Serializer):
+    """Serializer for member search parameters"""
+    search = serializers.CharField(required=True, help_text="Member name or member ID")
+    year = serializers.IntegerField(required=False, help_text="Year for ledger (default: current year)")

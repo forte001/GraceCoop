@@ -48,9 +48,12 @@ import PasswordResetConfirm from './pages/members/PasswordResetConfirm';
 import AdminAnnouncements from './pages/admin/AnnouncementManager';
 import MembersBalancesReport from './pages/admin/Reports/MembersBalance';
 import MonthlyReceiptsReport from './pages/admin/Reports/AnalysisOfReceipts';
+import MemberLedgerReport from './pages/admin/Reports/MemberLedgerReport';
+import LedgerReport from './pages/members/LedgerReport';
 import AdminExpenses from './pages/admin/AdminExpenses';
 import LoanApplicationDetails from './pages/members/Loan/LoanApplicationDetails';
 import GuarantorRequests from './pages/members/Loan/GuarantorRequests';
+
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -152,6 +155,7 @@ const App = () => {
       <Route path="contribution-list" element={<MemberContributionList />} />
       <Route path="levy-list" element={<MemberLevyList />} />
       <Route path="all-payments" element={<MemberAllPaymentsList/>} />
+      <Route path="report/my-ledger" element={<LedgerReport/>} />
       <Route path="edit-profile" element={<EditProfilePage />} />
       <Route path="settings/2fa" element={<TwoFAToggle />} />
       <Route path="2fa/setup" element={<TwoFASetup />} />
@@ -173,6 +177,7 @@ const App = () => {
         <Route path="disbursement-logs" element={<AdminDisbursementLogs/>} />
         <Route path="report/members-balances" element={<MembersBalancesReport/>} />
         <Route path="report/analysis-of-receipts" element={<MonthlyReceiptsReport/>} />
+        <Route path="report/member-ledger" element={<MemberLedgerReport/>} />
         <Route path="expenses" element={<AdminExpenses/>} />
         <Route path="settings/theme" element={<ThemeSwitcher />} />
         <Route path="permissions" element={<Permissions />} />

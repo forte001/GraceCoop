@@ -29,10 +29,10 @@ const CompleteProfile = () => {
         const response = await axiosMemberInstance.get("/members/my-profile/");
         const { full_name, phone_number, address, title, next_of_kin, next_of_kin_relationship,
           next_of_kin_phone, next_of_kin_address } = response.data;
-        setFormData({ full_name, phone_number, address, title,
+        setFormData({ full_name, phone_number, address,
           title: title || "",
         next_of_kin: next_of_kin || "",
-        next_of_kin: next_of_kin_relationship || "",
+        next_of_kin_relationship: next_of_kin_relationship || "",
         next_of_kin_phone: next_of_kin_phone || "",
         next_of_kin_address: next_of_kin_address || "" });
       } catch (err) {

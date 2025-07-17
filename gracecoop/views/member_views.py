@@ -6,12 +6,18 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.db.models import Sum
+from django.db.models.functions import TruncMonth
+from collections import OrderedDict
+from calendar import month_name
+from decimal import Decimal
 from ..models import (MemberProfile, 
                       CooperativeConfig,
                       Levy,
                       LoanRepayment,
                       LoanRepaymentSchedule,
-                      Contribution, User
+                      Contribution, User,
+                      Payment
                       )
 from ..serializers import (
     UserSerializer,
@@ -20,7 +26,8 @@ from ..serializers import (
     UserLoginSerializer,
     TwoFASetupVerifySerializer,
     TwoFASetupSerializer,
-    CooperativeConfigSerializer
+    CooperativeConfigSerializer,
+    MemberLedgerSerializer,
 )
 from datetime import datetime
 from gracecoop.utils import send_verification_email, send_password_reset_email
@@ -240,6 +247,103 @@ class MemberViewSet(viewsets.ModelViewSet):
                 {"error": "Unable to retrieve or create your profile."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    ### Generate Member ledger report   
+    @action(detail=False, methods=["get"], url_path="my-ledger")
+    def my_ledger(self, request):
+        """
+        Generate ledger for the authenticated member.
+        """
+        
+        # Get the authenticated member
+        try:
+            member = MemberProfile.objects.select_related("user").get(user=request.user)
+        except MemberProfile.DoesNotExist:
+            return Response(
+                {"error": "Member profile not found"}, 
+                status=404
+            )
+        
+        # Get year parameter
+        year = request.query_params.get("year", datetime.now().year)
+        try:
+            year = int(year)
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Invalid year parameter"}, 
+                status=400
+            )
+        
+        # Initialize monthly data structure
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        
+        monthly_data = OrderedDict()
+        for month_num in range(1, 13):
+            month_label = month_name[month_num]
+            if year < current_year or (year == current_year and month_num <= current_month):
+                # Past or current month - default to 0
+                monthly_data[month_label] = {
+                    "shares": Decimal("0.00"),
+                    "levy": Decimal("0.00"),
+                    "loan_repayment": Decimal("0.00"),
+                    "total": Decimal("0.00")
+                }
+            else:
+                # Future month - show dashes
+                monthly_data[month_label] = {
+                    "shares": "-",
+                    "levy": "-",
+                    "loan_repayment": "-",
+                    "total": "-"
+                }
+        
+        # Get member's payments for the specified year
+        member_payments = (
+            Payment.objects.filter(
+                member=member,
+                verified=True,
+                created_at__year=year
+            )
+            .annotate(month=TruncMonth("created_at"))
+            .values("month", "payment_type")
+            .order_by("month")
+            .annotate(total=Sum("amount"))
+        )
+        
+        grand_total = Decimal("0.00")
+        
+        # Process payments and populate monthly data
+        for record in member_payments:
+            month_str = record["month"].strftime("%B")
+            ptype = record["payment_type"]
+            amt = record["total"]
+            
+            # Make loan repayments negative to show money going out
+            if ptype == "loan_repayment":
+                amt = -amt
+            
+            # Only update if month was numeric before (skip dash months)
+            if isinstance(monthly_data[month_str][ptype], Decimal):
+                monthly_data[month_str][ptype] += amt
+                monthly_data[month_str]["total"] += amt
+                grand_total += amt
+        
+        # Prepare response data
+        ledger_data = {
+            "member_id": member.member_id,
+            "full_name": member.full_name,
+            "email": member.email,
+            "phone_number": member.phone_number,
+            "membership_status": member.membership_status,
+            "year": year,
+            "monthly_breakdown": monthly_data,
+            "grand_total": grand_total,
+        }
+        
+        # Serialize the data
+        serializer = MemberLedgerSerializer(ledger_data)
+        
+        return Response(serializer.data)
 
 
 

@@ -3,7 +3,8 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MemberContext } from '../components/MemberContext';
 import { ThemeContext } from '../components/ThemeContext';
 import { FaMoon, FaSun, FaDesktop, FaBars, FaTachometerAlt, 
-  FaUser, FaMoneyBill, FaCog, FaHandshake, FaSignOutAlt } from 'react-icons/fa';
+  FaUser, FaMoneyBill, FaCog, FaHandshake, FaSignOutAlt, 
+  FaFileAlt} from 'react-icons/fa';
 import '../styles/members/MemberLayout.css';
 import Spinner from '../components/Spinner';
 
@@ -23,6 +24,9 @@ const MemberLayout = () => {
     location.pathname.startsWith('/member/development_levy') ||
     location.pathname.startsWith('/member/loan-repayments')
   );
+  const [isReportsOpen, setIsReportsOpen] = useState(
+    location.pathname.startsWith('/member/report')
+  );
   const [isSettingsOpen, setIsSettingsOpen] = useState(location.pathname.startsWith('/member/settings'));
 
   const handleLogout = () => {
@@ -38,6 +42,7 @@ const MemberLayout = () => {
   const toggleLoanMenu = () => setIsLoanOpen(prev => !prev);
   const toggleOtherPaymentsMenu = () => setIsOtherPaymentsOpen(prev => !prev);
   const togglePaymentsMenu = () => setIsPaymentsOpen(prev => !prev);
+  const toggleReportsMenu = () => setIsReportsOpen(prev => !prev);
   const toggleSettingsMenu = () => setIsSettingsOpen(prev => !prev);
 
   const fullName = memberProfile?.user?.username || '';
@@ -132,6 +137,19 @@ const MemberLayout = () => {
                     <li><Link to="/member/loan-repayments">Loan Repayments</Link></li>
                     <li><Link to="/member/contribution-list">Contribution</Link></li>
                     <li><Link to="/member/levy-list">Development Levy</Link></li>
+                  </ul>
+                )}
+              </li>
+
+              <li>
+                <button onClick={toggleReportsMenu} className="sidebar-link collapsible">
+                  <FaFileAlt />
+                  {!isSidebarCollapsed && ` Reports ${isReportsOpen ? '▾' : '▸'}`}
+                </button>
+                {isReportsOpen && (
+                  <ul className="submenu">
+                    <li><Link to="/member/report/my-ledger">Member Ledger</Link></li>
+                    
                   </ul>
                 )}
               </li>

@@ -65,9 +65,8 @@ const ProfilePage = () => {
       <h1>Welcome, {user?.username || "Member"}!</h1>
       <main className="dashboard-main">
         <div className="dashboard-card">
-          {/* <h2>My Profile</h2> */}
           <div className="profile-header">
-          <h2>My Profile</h2>
+          <h2>Your Profile</h2>
               <button className="edit-profile-button" onClick={() => navigate("/member/edit-profile")}>
                 ✏️ Edit Profile
               </button>

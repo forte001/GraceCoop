@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from ..permissions import IsAdminUser, CanViewReports
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.db.models.functions import TruncMonth
 from decimal import Decimal
 from datetime import date, datetime
@@ -13,7 +13,9 @@ from calendar import month_name
 from ..serializers import (
     MemberBalanceReportSerializer,
     ReportParametersSerializer,
-    ReportSummarySerializer
+    ReportSummarySerializer,
+    MemberLedgerSerializer,
+    MemberSearchSerializer
 )
 from gracecoop.models import MemberProfile, LoanRepayment, Payment
 from gracecoop.pagination import StandardResultsSetPagination
@@ -231,6 +233,156 @@ class ReportsViewSet(viewsets.ViewSet):
             "grand_total": grand_total,
         })
 
+
+    @action(detail=False, methods=["get"], url_path="member-ledger")
+    def member_ledger(self, request):
+        """
+        Generate Member Ledger Report - shows payment breakdown for a specific member.
+        Admin can search by member name or member_ID.
+        """
+        
+        # Validate search parameters
+        search_serializer = MemberSearchSerializer(data=request.query_params)
+        search_serializer.is_valid(raise_exception=True)
+        
+        search_term = search_serializer.validated_data.get("search")
+        year = search_serializer.validated_data.get("year", datetime.now().year)
+        
+        # Find the member
+        try:
+            # Search by member_id first, then by name
+            member = MemberProfile.objects.select_related("user").filter(
+                Q(member_id__icontains=search_term) | 
+                Q(user__first_name__icontains=search_term) |
+                Q(user__last_name__icontains=search_term) |
+                Q(user__first_name__icontains=search_term.split()[0]) |
+                (Q(user__last_name__icontains=search_term.split()[-1]) if len(search_term.split()) > 1 else Q())
+            ).first()
+            
+            if not member:
+                return Response(
+                    {"error": f"No member found matching '{search_term}'"}, 
+                    status=404
+                )
+                
+        except Exception as e:
+            return Response(
+                {"error": "Invalid search parameters"}, 
+                status=400
+            )
+        
+        # Initialize monthly data structure
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        
+        monthly_data = OrderedDict()
+        for month_num in range(1, 13):
+            month_label = month_name[month_num]
+            if year < current_year or (year == current_year and month_num <= current_month):
+                # Past or current month - default to 0
+                monthly_data[month_label] = {
+                    "shares": Decimal("0.00"),
+                    "levy": Decimal("0.00"),
+                    "loan_repayment": Decimal("0.00"),
+                    "total": Decimal("0.00")
+                }
+            else:
+                # Future month - show dashes
+                monthly_data[month_label] = {
+                    "shares": "-",
+                    "levy": "-",
+                    "loan_repayment": "-",
+                    "total": "-"
+                }
+        
+        # Get member's payments for the specified year
+        member_payments = (
+            Payment.objects.filter(
+                member=member,
+                verified=True,
+                created_at__year=year
+            )
+            .annotate(month=TruncMonth("created_at"))
+            .values("month", "payment_type")
+            .order_by("month")
+            .annotate(total=Sum("amount"))
+        )
+        
+        grand_total = Decimal("0.00")
+        
+        # Process payments and populate monthly data
+        for record in member_payments:
+            month_str = record["month"].strftime("%B")
+            ptype = record["payment_type"]
+            amt = record["total"]
+            
+            # Make loan repayments negative to show money going out
+            if ptype == "loan_repayment":
+                amt = -amt
+            
+            # Only update if month was numeric before (skip dash months)
+            if isinstance(monthly_data[month_str][ptype], Decimal):
+                monthly_data[month_str][ptype] += amt
+                monthly_data[month_str]["total"] += amt
+                grand_total += amt
+        
+        # Prepare response data
+        ledger_data = {
+            "member_id": member.member_id,
+            "full_name": member.full_name,
+            "email": member.email,
+            "phone_number": member.phone_number,
+            "membership_status": member.membership_status,
+            "year": year,
+            "monthly_breakdown": monthly_data,
+            "grand_total": grand_total,
+        }
+        
+        # Serialize the data
+        serializer = MemberLedgerSerializer(ledger_data)
+        
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=["get"], url_path="search-members")
+    def search_members(self, request):
+        """
+        Search members by name or member ID for ledger lookup.
+        Useful for admin interface autocomplete/suggestions.
+        """
+        
+        search_term = request.query_params.get("q", "").strip()
+        
+        if not search_term:
+            return Response({"error": "Search term 'q' is required"}, status=400)
+        
+        if len(search_term) < 2:
+            return Response({"error": "Search term must be at least 2 characters"}, status=400)
+        
+        # Search members
+        members = MemberProfile.objects.select_related("user").filter(
+            Q(member_id__icontains=search_term) | 
+            Q(user__first_name__icontains=search_term) |
+            Q(user__last_name__icontains=search_term)
+        ).filter(
+            membership_status="active"  # Only show active members
+        )[:10]  # Limit results to prevent overwhelming the interface
+        
+        # Format results
+        results = []
+        for member in members:
+            results.append({
+                "member_id": member.member_id,
+                "full_name": member.full_name,
+                "email": member.email,
+                "membership_status": member.membership_status,
+                "display_text": f"{member.full_name} ({member.member_id})"
+            })
+        
+        return Response({
+            "results": results,
+            "count": len(results)
+        })
+
     @action(detail=False, methods=["get"], url_path="available-reports")
     def available_reports(self, request):
         return Response(
@@ -240,6 +392,11 @@ class ReportsViewSet(viewsets.ViewSet):
                         "name": "members_balances",
                         "description": "Shows current balance of members' contributions and loans",
                         "endpoint": "/api/reports/members-balances/",
+                    },
+                    {
+                        "name": "member_ledger",
+                        "description": "Individual member payment history breakdown",
+                        "endpoint": "/api/reports/member-ledger/",
                     },
                     {
                         "name": "loan_portfolio",

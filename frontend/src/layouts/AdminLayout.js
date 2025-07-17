@@ -124,7 +124,7 @@ const AdminLayout = () => {
               <ul className="submenu">
                 <li><Link to="/admin/report/members-balances">Members Balances</Link></li>
                 <li><Link to="/admin/report/analysis-of-receipts">Analysis of Receipts</Link></li>
-                {/* <li><Link to="#">Report 3</Link></li> */}
+                <li><Link to="/admin/report/member-ledger">Member Ledger Report</Link></li>
               </ul>
             )}
           </li>

@@ -80,6 +80,9 @@ urlpatterns = [
     ### Payment-related endpoints
     path('payment/', include('gracecoop.urls.payment_urls')),
 
+    ### Member Report-related endpoints
+    # path('my-ledger/', MemberViewSet.as_view(), name="ledger-report" ),
+
 
     ### New member entry payments endpoints
     path('entry-payment/initiate/', EntryPaymentInitiateView.as_view(), name='entry-initiate'),
