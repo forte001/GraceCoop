@@ -6,8 +6,6 @@ import { formatDateTime } from '../../../../utils/formatDate';
 import { 
   FaCheckCircle, 
   FaTimesCircle, 
-  FaChevronDown, 
-  FaChevronUp, 
   FaUsers, 
   FaClock, 
   FaExclamationTriangle,
@@ -33,6 +31,7 @@ const PendingApplications = ({
   const [rejectionReason, setRejectionReason] = useState('');
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
   const [expandedRows, setExpandedRows] = useState(new Set());
+  
 
   const handleApproveApplication = async (applicationId) => {
     try {
@@ -240,6 +239,7 @@ const PendingApplications = ({
             {pendingApplications.map(app => {
               const guarantorSummary = getGuarantorSummary(app.guarantors);
               const isExpanded = expandedRows.has(app.id);
+              const applicantMemberId = app.guarantors?.[0]?.applicant_member_id || 'N/A';
               
               return (
                 <React.Fragment key={app.id}>
@@ -308,7 +308,7 @@ const PendingApplications = ({
                             <div className="details-grid">
                               <div className="detail-item">
                                 <span className="detail-label">Applicant ID:</span>
-                                <span className="detail-value">{app.applicant_member_id || 'N/A'}</span>
+                                <span className="detail-value">{applicantMemberId}</span>
                               </div>
                               <div className="detail-item">
                                 <span className="detail-label">Repayment Period:</span>
@@ -318,10 +318,10 @@ const PendingApplications = ({
                                 <span className="detail-label">Interest Rate:</span>
                                 <span className="detail-value">{app.interest_rate || 'N/A'}%</span>
                               </div>
-                              <div className="detail-item">
+                              {/* <div className="detail-item">
                                 <span className="detail-label">Purpose:</span>
                                 <span className="detail-value">{app.purpose || 'N/A'}</span>
-                              </div>
+                              </div> */}
                             </div>
                           </div>
                           

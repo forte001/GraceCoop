@@ -149,9 +149,10 @@ class MemberProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = MemberProfile
         fields = [
-            'id', 'user', 'full_name', 'email', 'phone_number',
+            'id', 'title', 'user', 'full_name', 'email', 'phone_number',
             'address', 'joined_on', 'status', 'membership_status', 'member_id',
-            'has_paid_shares', 'has_paid_levy',
+            'has_paid_shares', 'has_paid_levy', 'next_of_kin','next_of_kin_relationship',
+            'next_of_kin_phone', 'next_of_kin_address'
         ]
         read_only_fields = [
             'id', 'user', 'email', 'joined_on', 'status',
@@ -440,11 +441,11 @@ class LoanGuarantorSerializer(serializers.ModelSerializer):
     # Guarantor details
     guarantor_name = serializers.CharField(source='guarantor.full_name', read_only=True)
     guarantor_id = serializers.CharField(source='guarantor.member_id', read_only=True)
-    guarantor_phone = serializers.CharField(source='guarantor.memberprofile.phone_number', read_only=True)
+    guarantor_phone = serializers.CharField(source='guarantor.phone_number', read_only=True)
     
     # Application details 
     applicant = serializers.CharField(source='application.applicant.get_full_name', read_only=True)
-    applicant_member_id = serializers.CharField(source='application.applicant.memberprofile.member_id', read_only=True)
+    applicant_member_id = serializers.SerializerMethodField()
     amount = serializers.DecimalField(source='application.amount', max_digits=10, decimal_places=2, read_only=True)
     application_id = serializers.IntegerField(source='application.id', read_only=True)
     submitted_on = serializers.DateTimeField(source='application.application_date', read_only=True)
@@ -466,7 +467,6 @@ class LoanGuarantorSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'guarantor', 'guarantor_name', 'guarantor_id', 'guarantor_phone',
             'created_at', 'consent_status', 'response_date', 'rejection_reason',
-            
             'applicant', 'applicant_member_id', 'amount', 'application_id', 
             'submitted_on', 'loan_category', 'repayment_months', 'interest_rate',
             'status', 'responded_on',
@@ -477,7 +477,20 @@ class LoanGuarantorSerializer(serializers.ModelSerializer):
             'created_at', 'response_date', 'days_pending', 'is_long_pending', 
             'can_be_replaced', 'status', 'responded_on'
         ]
-    
+    def get_applicant_member_id(self, obj):
+        """Get the applicant's member ID, handling cases where memberprofile might not exist"""
+        applicant = obj.application.applicant
+        
+        if hasattr(applicant, 'memberprofile'):
+            try:
+                member_profile = applicant.memberprofile
+                return member_profile.member_id
+            except Exception as e:
+                print(f"DEBUG: Exception getting memberprofile: {e}")
+                return None
+        else:
+            print("DEBUG: Applicant has no memberprofile attribute")
+            return None
     def get_days_pending(self, obj):
         """Get the number of days this guarantor has been pending"""
         return obj.days_pending

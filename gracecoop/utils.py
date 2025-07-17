@@ -1,11 +1,17 @@
 # utils.py
 
 import uuid
+from gracecoop import models
 from gracecoop.models import MemberProfile
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 from decimal import Decimal,ROUND_HALF_UP
-from .models import LoanRepaymentSchedule, LoanRepayment, Loan
+from .models import (LoanRepaymentSchedule, 
+                     LoanRepayment, Loan, 
+                     MemberProfile, )
+                    #  IDDocumentHistory,
+                    #  MemberIDDocument,
+                    #  MemberDocumentRequest
 from django.utils import timezone
 from django.db.models import Sum
 import datetime
@@ -24,6 +30,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.core.mail import send_mail
 import requests
+
 
 def create_member_profile_if_not_exists(user):
     # Check if the profile already exists
@@ -555,3 +562,407 @@ def upload_receipt_to_supabase(file, filename):
     return public_url
 
 
+### Member Document utility
+
+# class IDDocumentManager:
+#     """Enhanced utility class for managing ID documents with comprehensive history tracking"""
+    
+#     @staticmethod
+#     def create_document_history(id_document=None, member=None, action=None, 
+#                                performed_by=None, notes="", field_changes=None,
+#                                ip_address=None, metadata=None):
+#         """
+#         Create a comprehensive history record for an ID document action
+        
+#         Args:
+#             id_document: MemberIDDocument instance (optional)
+#             member: MemberProfile instance (optional, auto-set from id_document)
+#             action: Action performed
+#             performed_by: User who performed the action
+#             notes: Additional notes
+#             field_changes: Dict of field changes
+#             ip_address: IP address of the user
+#             metadata: Additional metadata
+        
+#         Returns:
+#             IDDocumentHistory instance
+#         """
+#         if not id_document and not member:
+#             raise ValueError("Either id_document or member must be provided")
+        
+#         # Validate action is in allowed choices
+#         valid_actions = [choice[0] for choice in IDDocumentHistory.ACTION_CHOICES]
+#         if action not in valid_actions:
+#             raise ValueError(f"Invalid action '{action}'. Must be one of: {valid_actions}")
+        
+#         return IDDocumentHistory.objects.create(
+#             id_document=id_document,
+#             member=member or (id_document.member if id_document else None),
+#             action=action,
+#             performed_by=performed_by,
+#             notes=notes,
+#             field_changes=field_changes or {},
+#             ip_address=ip_address,
+#             metadata=metadata or {}
+#         )
+    
+#     @staticmethod
+#     def track_document_changes(old_document, new_document, performed_by=None, 
+#                              action='modified', notes="", ip_address=None):
+#         """
+#         Track changes between old and new document states
+        
+#         Args:
+#             old_document: Original document state (dict or model instance)
+#             new_document: New document state (dict or model instance)
+#             performed_by: User who made the changes
+#             action: Action type
+#             notes: Additional notes
+#             ip_address: IP address of the user
+        
+#         Returns:
+#             IDDocumentHistory instance or None if no changes
+#         """
+#         # Fields to track for changes
+#         tracked_fields = [
+#             'document_type', 'document_number', 'priority', 
+#             'verification_status', 'expires_at', 'is_active', 'notes'
+#         ]
+        
+#         field_changes = {}
+        
+#         for field in tracked_fields:
+#             old_value = getattr(old_document, field, None) if hasattr(old_document, field) else old_document.get(field)
+#             new_value = getattr(new_document, field, None) if hasattr(new_document, field) else new_document.get(field)
+            
+#             # Handle date fields properly
+#             if field == 'expires_at':
+#                 old_value = old_value.isoformat() if old_value else None
+#                 new_value = new_value.isoformat() if new_value else None
+            
+#             if old_value != new_value:
+#                 field_changes[field] = {
+#                     'old': str(old_value) if old_value is not None else None,
+#                     'new': str(new_value) if new_value is not None else None
+#                 }
+        
+#         if field_changes:
+#             return IDDocumentManager.create_document_history(
+#                 id_document=new_document if hasattr(new_document, 'id') else None,
+#                 member=new_document.member if hasattr(new_document, 'member') else None,
+#                 action=action,
+#                 performed_by=performed_by,
+#                 notes=notes or f"Document modified: {', '.join(field_changes.keys())}",
+#                 field_changes=field_changes,
+#                 ip_address=ip_address
+#             )
+        
+#         return None
+    
+#     @staticmethod
+#     def bulk_verify_documents(documents, verified_by_user, approved=True, 
+#                             rejection_reason="", notes=""):
+#         """
+#         Bulk verify multiple documents
+        
+#         Args:
+#             documents: List of MemberIDDocument instances
+#             verified_by_user: User performing the verification
+#             approved: Whether to approve or reject
+#             rejection_reason: Reason for rejection if not approved
+#             notes: Additional notes
+        
+#         Returns:
+#             Dict with results
+#         """
+#         results = {
+#             'successful': [],
+#             'failed': [],
+#             'total': len(documents)
+#         }
+        
+#         for document in documents:
+#             try:
+#                 document.verify_document(
+#                     verified_by_user=verified_by_user,
+#                     approved=approved,
+#                     rejection_reason=rejection_reason,
+#                     notes=notes
+#                 )
+#                 results['successful'].append(document)
+#             except Exception as e:
+#                 results['failed'].append({
+#                     'document': document,
+#                     'error': str(e)
+#                 })
+        
+#         return results
+    
+#     @staticmethod
+#     def get_document_timeline(document):
+#         """
+#         Get complete timeline for a document
+        
+#         Args:
+#             document: MemberIDDocument instance
+        
+#         Returns:
+#             QuerySet of IDDocumentHistory ordered by timestamp
+#         """
+#         return document.history.all().order_by('-timestamp')
+    
+#     @staticmethod
+#     def get_member_document_timeline(member):
+#         """
+#         Get complete document timeline for a member
+        
+#         Args:
+#             member: MemberProfile instance
+        
+#         Returns:
+#             QuerySet of IDDocumentHistory ordered by timestamp
+#         """
+#         return IDDocumentHistory.objects.filter(member=member).order_by('-timestamp')
+    
+#     @staticmethod
+#     def get_verification_history(document):
+#         """
+#         Get verification history for a document
+        
+#         Args:
+#             document: MemberIDDocument instance
+        
+#         Returns:
+#             QuerySet of verification-related history
+#         """
+#         verification_actions = ['verified', 'rejected', 'resubmitted']
+#         return document.history.filter(action__in=verification_actions).order_by('-timestamp')
+    
+#     @staticmethod
+#     def get_recent_activities(days=30, limit=100):
+#         """
+#         Get recent document activities
+        
+#         Args:
+#             days: Number of days to look back
+#             limit: Maximum number of records to return
+        
+#         Returns:
+#             QuerySet of recent IDDocumentHistory
+#         """
+#         cutoff_date = timezone.now() - timedelta(days=days)
+#         return IDDocumentHistory.objects.filter(
+#             timestamp__gte=cutoff_date
+#         ).order_by('-timestamp')[:limit]
+    
+#     @staticmethod
+#     def get_admin_activity_report(admin_user, days=30):
+#         """
+#         Get activity report for a specific admin user
+        
+#         Args:
+#             admin_user: User instance
+#             days: Number of days to look back
+        
+#         Returns:
+#             Dict with activity summary
+#         """
+#         cutoff_date = timezone.now() - timedelta(days=days)
+#         activities = IDDocumentHistory.objects.filter(
+#             performed_by=admin_user,
+#             timestamp__gte=cutoff_date
+#         )
+        
+#         # Group by action
+#         action_counts = {}
+#         for activity in activities:
+#             action = activity.action
+#             action_counts[action] = action_counts.get(action, 0) + 1
+        
+#         return {
+#             'total_actions': activities.count(),
+#             'actions_by_type': action_counts,
+#             'recent_activities': activities.order_by('-timestamp')[:10],
+#             'period_start': cutoff_date,
+#             'period_end': timezone.now()
+#         }
+    
+#     @staticmethod
+#     def get_document_statistics(member=None, days=30):
+#         """
+#         Get document statistics for a member or system-wide
+        
+#         Args:
+#             member: MemberProfile instance (optional)
+#             days: Number of days to look back
+        
+#         Returns:
+#             Dict with statistics
+#         """
+#         cutoff_date = timezone.now() - timedelta(days=days)
+        
+#         # Base queryset
+#         if member:
+#             documents = MemberIDDocument.objects.filter(member=member)
+#             history = IDDocumentHistory.objects.filter(
+#                 member=member,
+#                 timestamp__gte=cutoff_date
+#             )
+#         else:
+#             documents = MemberIDDocument.objects.all()
+#             history = IDDocumentHistory.objects.filter(timestamp__gte=cutoff_date)
+        
+#         # Document counts by status
+#         status_counts = {}
+#         for status, _ in MemberIDDocument.VERIFICATION_STATUS_CHOICES:
+#             status_counts[status] = documents.filter(verification_status=status).count()
+        
+#         # Document counts by type
+#         type_counts = {}
+#         for doc_type, _ in MemberIDDocument.DOCUMENT_TYPE_CHOICES:
+#             type_counts[doc_type] = documents.filter(document_type=doc_type).count()
+        
+#         # Recent activity counts
+#         activity_counts = {}
+#         for action, _ in IDDocumentHistory.ACTION_CHOICES:
+#             activity_counts[action] = history.filter(action=action).count()
+        
+#         return {
+#             'total_documents': documents.count(),
+#             'by_status': status_counts,
+#             'by_type': type_counts,
+#             'recent_activities': activity_counts,
+#             'expired_documents': documents.filter(
+#                 expires_at__lt=timezone.now().date()
+#             ).count(),
+#             'expiring_soon': documents.filter(
+#                 expires_at__gte=timezone.now().date(),
+#                 expires_at__lte=(timezone.now() + timedelta(days=30)).date()
+#             ).count()
+#         }
+    
+#     @staticmethod
+#     def get_pending_requests_summary():
+#         """
+#         Get summary of pending document requests
+        
+#         Returns:
+#             Dict with pending requests summary
+#         """
+#         pending_requests = MemberDocumentRequest.objects.filter(status='pending')
+#         overdue_requests = MemberDocumentRequest.objects.filter(status='overdue')
+        
+#         # Group by document type
+#         type_counts = {}
+#         for doc_type, _ in MemberIDDocument.DOCUMENT_TYPE_CHOICES:
+#             type_counts[doc_type] = pending_requests.filter(document_type=doc_type).count()
+        
+#         # Group by urgency
+#         urgency_counts = {}
+#         for urgency, _ in MemberDocumentRequest.URGENCY_CHOICES:
+#             urgency_counts[urgency] = pending_requests.filter(urgency=urgency).count()
+        
+#         return {
+#             'total_pending': pending_requests.count(),
+#             'total_overdue': overdue_requests.count(),
+#             'by_type': type_counts,
+#             'by_urgency': urgency_counts,
+#             'urgent_requests': pending_requests.filter(urgency='urgent').count(),
+#             'expiring_today': pending_requests.filter(
+#                 deadline__date=timezone.now().date()
+#             ).count()
+#         }
+    
+#     @staticmethod
+#     def cleanup_old_history(days=365):
+#         """
+#         Clean up old history records
+        
+#         Args:
+#             days: Number of days to keep
+        
+#         Returns:
+#             Number of records deleted
+#         """
+#         cutoff_date = timezone.now() - timedelta(days=days)
+#         deleted_count = IDDocumentHistory.objects.filter(
+#             timestamp__lt=cutoff_date
+#         ).delete()[0]
+        
+#         return deleted_count
+    
+#     @staticmethod
+#     def export_member_document_data(member):
+#         """
+#         Export all document data for a member
+        
+#         Args:
+#             member: MemberProfile instance
+        
+#         Returns:
+#             Dict with all member document data
+#         """
+#         documents = member.id_documents.all()
+#         history = IDDocumentHistory.objects.filter(member=member)
+#         requests = member.document_requests.all()
+        
+#         return {
+#             'member_info': {
+#                 'id': member.id,
+#                 'name': member.full_name,
+#                 'email': getattr(member.user, 'email', 'N/A')
+#             },
+#             'documents': [
+#                 {
+#                     'id': doc.id,
+#                     'type': doc.document_type,
+#                     'number': doc.document_number,
+#                     'status': doc.verification_status,
+#                     'uploaded_at': doc.uploaded_at.isoformat(),
+#                     'verified_at': doc.verified_at.isoformat() if doc.verified_at else None,
+#                     'expires_at': doc.expires_at.isoformat() if doc.expires_at else None,
+#                     'is_active': doc.is_active
+#                 }
+#                 for doc in documents
+#             ],
+#             'history': [
+#                 {
+#                     'action': hist.action,
+#                     'timestamp': hist.timestamp.isoformat(),
+#                     'performed_by': hist.performed_by_name,
+#                     'notes': hist.notes,
+#                     'field_changes': hist.field_changes
+#                 }
+#                 for hist in history
+#             ],
+#             'requests': [
+#                 {
+#                     'id': req.id,
+#                     'document_type': req.document_type,
+#                     'status': req.status,
+#                     'requested_at': req.requested_at.isoformat(),
+#                     'deadline': req.deadline.isoformat() if req.deadline else None,
+#                     'urgency': req.urgency
+#                 }
+#                 for req in requests
+#             ]
+#         }
+
+
+# # Extension method for MemberProfile
+# def get_document_history_summary(self):
+#     """Get document history summary for member"""
+#     history = IDDocumentHistory.objects.filter(member=self)
+    
+#     return {
+#         'total_actions': history.count(),
+#         'recent_actions': history.order_by('-timestamp')[:5],
+#         'verification_actions': history.filter(
+#             action__in=['verified', 'rejected', 'resubmitted']
+#         ).count(),
+#         'upload_actions': history.filter(action='uploaded').count(),
+#         'last_activity': history.first().timestamp if history.exists() else None,
+#         'documents_count': self.id_documents.count(),
+#         'verified_documents': self.id_documents.filter(verification_status='verified').count(),
+#         'pending_requests': self.document_requests.filter(status='pending').count()
+#     }

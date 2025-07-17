@@ -43,7 +43,21 @@ const ProfilePage = () => {
     );
   }
 
-  const { user, full_name, email, membership_status, member_id, has_paid_shares, has_paid_levy } = memberProfile;
+        const {
+        user,
+        full_name,
+        email,
+        membership_status,
+        member_id,
+        has_paid_shares,
+        has_paid_levy,
+        title,
+        phone_number,
+        address,
+        next_of_kin,
+        next_of_kin_phone,
+        next_of_kin_address
+      } = memberProfile;
 
   return (
     <div className="dashboard-container">
@@ -58,13 +72,20 @@ const ProfilePage = () => {
                 ✏️ Edit Profile
               </button>
         </div>
+          <p><strong>Title:</strong> {title || "N/A"}</p>
           <p><strong>Full Name:</strong> {full_name}</p>
           <p><strong>Username:</strong> {user?.username}</p>
           <p><strong>Email:</strong> {email}</p>
+          <p><strong>Phone Number:</strong> {phone_number || "N/A"}</p>
+          <p><strong>Address:</strong> {address || "N/A"}</p>
           <p><strong>Status:</strong> {membership_status.toUpperCase()}</p>
           <p><strong>Member ID:</strong> {member_id || "Pending"}</p>
           <p><strong>Shares Paid:</strong> {has_paid_shares ? "✅ Yes" : "❌ No"}</p>
           <p><strong>Levy Paid:</strong> {has_paid_levy ? "✅ Yes" : "❌ No"}</p>
+          <hr />
+          <p><strong>Next of Kin:</strong> {next_of_kin || "N/A"}</p>
+          <p><strong>Next of Kin Phone:</strong> {next_of_kin_phone || "N/A"}</p>
+          <p><strong>Next of Kin Address:</strong> {next_of_kin_address || "N/A"}</p>
         </div>
       </main>
     </div>

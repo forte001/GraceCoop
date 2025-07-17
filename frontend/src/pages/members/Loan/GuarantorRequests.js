@@ -127,14 +127,14 @@ const GuarantorRequests = () => {
             className="approve-button"
             disabled={processingId === req.id}
           >
-            {processingId === req.id && 'Processing...' || 'Approve'}
+            {(processingId === req.id && 'Processing...') || 'Approve'}
           </button>
           <button
             onClick={() => handleAction(req.id, 'reject')}
             className="reject-button"
             disabled={processingId === req.id}
           >
-            {processingId === req.id && 'Processing...' || 'Reject'}
+            {(processingId === req.id && 'Processing...') || 'Reject'}
           </button>
         </div>
       );

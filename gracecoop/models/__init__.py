@@ -13,3 +13,4 @@ from .user import User
 from .payment import Payment
 from .announcement import Announcement
 from .expense import Expense
+# from .member_doc import MemberIDDocument, MemberDocumentRequest, IDDocumentHistory

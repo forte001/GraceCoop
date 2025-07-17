@@ -578,7 +578,7 @@ class AdminLoanApplicationViewSet(BaseLoanApplicationViewSet):
     
 
     def list(self, request, *args, **kwargs):
-        print("💡 Incoming query params:", request.query_params)
+        # print("💡 Incoming query params:", request.query_params)
         return super().list(request, *args, **kwargs)
     
     @action(detail=True, methods=['post'], url_path='approve')
@@ -609,7 +609,7 @@ class AdminLoanApplicationViewSet(BaseLoanApplicationViewSet):
             long_pending_guarantors = pending_guarantors.filter(created_at__lt=cutoff_date)
             
             response_data = {
-                'detail': 'Not all guarantors have approved this application.',
+                'detail': 'Not all guarantors have approved of your request to serve as guarantor.',
                 'guarantor_status': {
                     'total': guarantor_count,
                     'approved': application.guarantors.filter(consent_status='approved').count(),

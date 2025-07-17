@@ -10,6 +10,11 @@ const CompleteProfile = () => {
     full_name: "",
     phone_number: "",
     address: "",
+    title: "",
+    next_of_kin: "",
+    next_of_kin_relationship: "",
+    next_of_kin_phone: "",
+    next_of_kin_address: ""
   });
 
   const [loading, setLoading] = useState(true);
@@ -22,8 +27,14 @@ const CompleteProfile = () => {
     const fetchProfile = async () => {
       try {
         const response = await axiosMemberInstance.get("/members/my-profile/");
-        const { full_name, phone_number, address } = response.data;
-        setFormData({ full_name, phone_number, address });
+        const { full_name, phone_number, address, title, next_of_kin, next_of_kin_relationship,
+          next_of_kin_phone, next_of_kin_address } = response.data;
+        setFormData({ full_name, phone_number, address, title,
+          title: title || "",
+        next_of_kin: next_of_kin || "",
+        next_of_kin: next_of_kin_relationship || "",
+        next_of_kin_phone: next_of_kin_phone || "",
+        next_of_kin_address: next_of_kin_address || "" });
       } catch (err) {
         console.error("Error fetching profile:", err);
       } finally {
@@ -74,6 +85,22 @@ const CompleteProfile = () => {
     <div className="complete-profile-container">
       <h2>Complete Your Profile</h2>
       <form onSubmit={handleSubmit} className="complete-profile-form">
+        <select
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          required
+        >
+          <option value="">Select Title</option>
+          <option value="Mr.">Mr.</option>
+          <option value="Mrs.">Mrs.</option>
+          <option value="Miss.">Miss.</option>
+          <option value="Pst.">Pst.</option>
+          <option value="Rev.">Rev.</option>
+          <option value="Dr.">Dr.</option>
+          <option value="Prof.">Prof.</option>
+          <option value="Alh.">Alh.</option>
+        </select>
         <input
           type="text"
           name="full_name"
@@ -97,6 +124,34 @@ const CompleteProfile = () => {
           onChange={handleChange}
           required
         ></textarea>
+        <input
+          type="text"
+          name="next_of_kin"
+          placeholder="Next of Kin Name"
+          value={formData.next_of_kin}
+          onChange={handleChange}
+        />
+        <input
+          type="text"
+          name="next_of_kin_relationship"
+          placeholder="Next of Kin Relationship"
+          value={formData.next_of_kin_relationship}
+          onChange={handleChange}
+        />
+        <input
+          type="text"
+          name="next_of_kin_phone"
+          placeholder="Next of Kin Phone Number"
+          value={formData.next_of_kin_phone}
+          onChange={handleChange}
+        />
+        <textarea
+          name="next_of_kin_address"
+          placeholder="Next of Kin Address"
+          value={formData.next_of_kin_address}
+          onChange={handleChange}
+        />
+
 
         {error && <p className="error-message">{error}</p>}
         {success && <p className="success-message">{success}</p>}

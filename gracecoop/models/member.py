@@ -20,6 +20,12 @@ class MemberProfile(models.Model):
         ('inactive', 'Inactive'),
         ('archived', 'Archived'),
     ]
+    TITLE_CHOICES =[
+        ('Mr.', 'Mr.'), ('Mrs.', 'Mrs.'), ('Miss.', 'Miss.'), ('Pst.', 'Pst.'), ('Rev.', 'Rev.'),
+        ('Dr.', 'Dr.'), ('Prof.', 'Prof.'), ('Alh.', 'Alh.')
+    ]
+    GENDER =[('Male', 'Male'), ('Female', 'Female')]
+
     class Meta:
         permissions = [
             ("can_view_reports", "Can view and generate reports")
@@ -40,6 +46,12 @@ class MemberProfile(models.Model):
      # Approval and membership statuses
     status = models.CharField(max_length=10, choices=APPROVAL_STATUS_CHOICES, default='pending')
     membership_status = models.CharField(max_length=10, choices=MEMBERSHIP_STATUS_CHOICES, default='inactive')
+    title = models.CharField(max_length=10,choices=TITLE_CHOICES, blank=True)
+    gender=models.CharField(max_length=10, choices=GENDER, blank=True)
+    next_of_kin = models.CharField(max_length=50, blank=True)
+    next_of_kin_relationship = models.CharField(max_length=50, blank=True)
+    next_of_kin_phone = models.CharField(max_length=20, blank=True)
+    next_of_kin_address = models.TextField(blank=True)
 
     has_paid_shares = models.BooleanField(default=False)
     has_paid_levy = models.BooleanField(default=False)
@@ -82,3 +94,71 @@ class MemberProfile(models.Model):
 
     def __str__(self):
         return self.full_name or f"Member {self.id}"
+    
+    
+    # ID Document related methods
+    # @property
+    # def primary_id_document(self):
+    #     """Get the primary ID document"""
+    #     return self.id_documents.filter(
+    #         priority='primary', 
+    #         verification_status='verified',
+    #         is_active=True
+    #     ).first()
+    
+    # @property
+    # def verified_id_documents(self):
+    #     """Get all verified ID documents"""
+    #     return self.id_documents.filter(
+    #         verification_status='verified',
+    #         is_active=True
+    #     )
+    
+    # @property
+    # def pending_id_documents(self):
+    #     """Get all pending ID documents"""
+    #     return self.id_documents.filter(verification_status='pending')
+    
+    # @property
+    # def pending_document_requests(self):
+    #     """Get all pending document requests"""
+    #     return self.document_requests.filter(status='pending')
+    
+    # @property
+    # def overdue_document_requests(self):
+    #     """Get all overdue document requests"""
+    #     return self.document_requests.filter(status='overdue')
+    
+    # @property
+    # def has_verified_id(self):
+    #     """Check if member has at least one verified ID document"""
+    #     return self.verified_id_documents.exists()
+    
+    # @property
+    # def can_be_approved(self):
+    #     """Check if member can be approved (has verified primary ID)"""
+    #     return self.has_verified_id and self.primary_id_document is not None
+    
+    # @property
+    # def id_verification_progress(self):
+    #     """Get ID verification progress percentage"""
+    #     total_docs = self.id_documents.count()
+    #     if total_docs == 0:
+    #         return 0
+        
+    #     verified_docs = self.verified_id_documents.count()
+    #     return int((verified_docs / total_docs) * 100)
+    
+    # def get_document_by_type(self, document_type):
+    #     """Get document by type"""
+    #     return self.id_documents.filter(
+    #         document_type=document_type,
+    #         is_active=True
+    #     ).first()
+    
+    # def has_pending_request_for_document(self, document_type):
+    #     """Check if member has pending request for specific document type"""
+    #     return self.document_requests.filter(
+    #         document_type=document_type,
+    #         status='pending'
+    #     ).exists()
