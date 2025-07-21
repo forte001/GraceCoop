@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from ..permissions import IsAdminUser, CanViewReports
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, F
 from django.db.models.functions import TruncMonth
 from decimal import Decimal
 from datetime import date, datetime
@@ -17,7 +17,7 @@ from ..serializers import (
     MemberLedgerSerializer,
     MemberSearchSerializer
 )
-from gracecoop.models import MemberProfile, LoanRepayment, Payment
+from gracecoop.models import MemberProfile, LoanRepayment, Payment, Loan
 from gracecoop.pagination import StandardResultsSetPagination
 
 User = get_user_model()
@@ -83,22 +83,35 @@ class ReportsViewSet(viewsets.ViewSet):
                 date__date__lte=as_of_date
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
-            member_loans = member.loans.filter(
-                status__in=["disbursed", "partially_disbursed", "paid", "grace_applied"]
+            # Only get active loans for current outstanding balance
+            active_loans = member.loans.filter(
+                status__in=["disbursed", "partially_disbursed", "grace_applied"]
             )
 
-            loans_disbursed = member_loans.aggregate(total=Sum("disbursed_amount"))[
+            # Active loans disbursed amount
+            active_disbursed = active_loans.aggregate(total=Sum("disbursed_amount"))[
                 "total"
             ] or Decimal("0.00")
 
-            loan_repayments = LoanRepayment.objects.filter(
-                loan__member=member, payment_date__lte=as_of_date
+            # Repayments for active loans only
+            active_repayments = LoanRepayment.objects.filter(
+                loan__in=active_loans, 
+                payment_date__lte=as_of_date
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
-            # Fix: Ensure outstanding loans cannot be negative
-            outstanding_loans = max(loans_disbursed - loan_repayments, Decimal("0.00"))
+            # Current outstanding balance
+            outstanding_loans = max(active_disbursed - active_repayments, Decimal("0.00"))
+
+            # Lifetime totals (for transparency)
+            lifetime_disbursed = member.loans.aggregate(total=Sum("disbursed_amount"))[
+                "total"
+            ] or Decimal("0.00")
+
+            lifetime_repayments = LoanRepayment.objects.filter(
+                loan__member=member, payment_date__lte=as_of_date
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
             
-            total_assets = contributions_sum + levies_sum
+            total_assets = contributions_sum # levies_sum
             net_position = total_assets - outstanding_loans
 
             member_data = {
@@ -112,10 +125,10 @@ class ReportsViewSet(viewsets.ViewSet):
                 "contributions_balance": contributions_sum,
                 "levies_balance": levies_sum,
                 "total_assets": total_assets,
-                "loans_disbursed": loans_disbursed,
-                "loan_repayments": loan_repayments,
+                "loans_disbursed": lifetime_disbursed,
+                "loan_repayments": lifetime_repayments,
                 "outstanding_loans": outstanding_loans,
-                "active_loans_count": member_loans.exclude(status="paid").count(),
+                "active_loans_count": active_loans.count(),
                 "net_position": net_position,
             }
 
@@ -123,8 +136,8 @@ class ReportsViewSet(viewsets.ViewSet):
 
             totals["contributions"] += contributions_sum
             totals["levies"] += levies_sum
-            totals["loans_disbursed"] += loans_disbursed
-            totals["loan_repayments"] += loan_repayments
+            totals["loans_disbursed"] += lifetime_disbursed
+            totals["loan_repayments"] += lifetime_repayments
             totals["outstanding_loans"] += outstanding_loans
 
         total_members = len(members_data)
@@ -152,6 +165,14 @@ class ReportsViewSet(viewsets.ViewSet):
             ),
             "average_outstanding_loans": (
                 totals["outstanding_loans"] / total_members if total_members else Decimal("0.00")
+            ),
+            "loan_to_asset_ratio": (
+                (totals["outstanding_loans"] / total_assets * 100) 
+                if total_assets > 0 else Decimal("0.00")
+            ),
+            "repayment_rate": (
+                (totals["loan_repayments"] / totals["loans_disbursed"] * 100)
+                if totals["loans_disbursed"] > 0 else Decimal("0.00")
             ),
         }
 
@@ -241,16 +262,13 @@ class ReportsViewSet(viewsets.ViewSet):
         Admin can search by member name or member_ID.
         """
         
-        # Validate search parameters
         search_serializer = MemberSearchSerializer(data=request.query_params)
         search_serializer.is_valid(raise_exception=True)
         
         search_term = search_serializer.validated_data.get("search")
         year = search_serializer.validated_data.get("year", datetime.now().year)
         
-        # Find the member
         try:
-            # Search by member_id first, then by name
             member = MemberProfile.objects.select_related("user").filter(
                 Q(member_id__icontains=search_term) | 
                 Q(user__first_name__icontains=search_term) |
@@ -258,20 +276,13 @@ class ReportsViewSet(viewsets.ViewSet):
                 Q(user__first_name__icontains=search_term.split()[0]) |
                 (Q(user__last_name__icontains=search_term.split()[-1]) if len(search_term.split()) > 1 else Q())
             ).first()
-            
+
             if not member:
-                return Response(
-                    {"error": f"No member found matching '{search_term}'"}, 
-                    status=404
-                )
-                
-        except Exception as e:
-            return Response(
-                {"error": "Invalid search parameters"}, 
-                status=400
-            )
-        
-        # Initialize monthly data structure
+                return Response({"error": f"No member found matching '{search_term}'"}, status=404)
+            
+        except Exception:
+            return Response({"error": "Invalid search parameters"}, status=400)
+
         current_month = datetime.now().month
         current_year = datetime.now().year
         
@@ -279,7 +290,6 @@ class ReportsViewSet(viewsets.ViewSet):
         for month_num in range(1, 13):
             month_label = month_name[month_num]
             if year < current_year or (year == current_year and month_num <= current_month):
-                # Past or current month - default to 0
                 monthly_data[month_label] = {
                     "shares": Decimal("0.00"),
                     "levy": Decimal("0.00"),
@@ -287,15 +297,13 @@ class ReportsViewSet(viewsets.ViewSet):
                     "total": Decimal("0.00")
                 }
             else:
-                # Future month - show dashes
                 monthly_data[month_label] = {
                     "shares": "-",
                     "levy": "-",
                     "loan_repayment": "-",
                     "total": "-"
                 }
-        
-        # Get member's payments for the specified year
+
         member_payments = (
             Payment.objects.filter(
                 member=member,
@@ -307,26 +315,56 @@ class ReportsViewSet(viewsets.ViewSet):
             .order_by("month")
             .annotate(total=Sum("amount"))
         )
-        
-        grand_total = Decimal("0.00")
-        
-        # Process payments and populate monthly data
+
         for record in member_payments:
             month_str = record["month"].strftime("%B")
             ptype = record["payment_type"]
             amt = record["total"]
-            
-            # Make loan repayments negative to show money going out
-            if ptype == "loan_repayment":
-                amt = -amt
-            
-            # Only update if month was numeric before (skip dash months)
             if isinstance(monthly_data[month_str][ptype], Decimal):
                 monthly_data[month_str][ptype] += amt
                 monthly_data[month_str]["total"] += amt
-                grand_total += amt
-        
-        # Prepare response data
+
+        year_totals = {
+            "shares": sum(
+                v["shares"] for v in monthly_data.values() 
+                if isinstance(v["shares"], Decimal)
+            ),
+            "levy": sum(
+                v["levy"] for v in monthly_data.values() 
+                if isinstance(v["levy"], Decimal)
+            ),
+            "loan_repayment": sum(
+                v["loan_repayment"] for v in monthly_data.values() 
+                if isinstance(v["loan_repayment"], Decimal)
+            )
+        }
+
+        grand_total = sum(year_totals.values())
+
+        # Compute outstanding balance
+        active_loans = member.loans.filter(
+            status__in=["disbursed", "partially_disbursed", "grace_applied"]
+        )
+        disbursed = active_loans.aggregate(total=Sum("disbursed_amount"))["total"] or Decimal("0.00")
+        repaid = LoanRepayment.objects.filter(
+            loan__in=active_loans
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+
+        # Calculate outstanding loan balance
+        outstanding_loan_balance = (
+            Loan.objects.filter(member=member)
+            .exclude(status__in=["paid", "rejected"])
+            .aggregate(total_outstanding=Sum(F("amount") - F("disbursed_amount")))
+            .get("total_outstanding") or Decimal("0.00")
+        )
+        outstanding_loan_balance = max(disbursed - repaid, Decimal("0.00"))
+
+        # Final member balance = total_shares - outstanding loans
+        member_balance = year_totals["shares"] - outstanding_loan_balance
+
+        grand_total = member_balance
+
+
         ledger_data = {
             "member_id": member.member_id,
             "full_name": member.full_name,
@@ -335,13 +373,18 @@ class ReportsViewSet(viewsets.ViewSet):
             "membership_status": member.membership_status,
             "year": year,
             "monthly_breakdown": monthly_data,
+            "total_shares": year_totals["shares"],
+            "total_levy_paid": year_totals["levy"],
+            "total_loan_repayments": year_totals["loan_repayment"],
+            "member_balance": member_balance,
+            "outstanding_loan_balance": outstanding_loan_balance,
             "grand_total": grand_total,
         }
-        
-        # Serialize the data
+
+
         serializer = MemberLedgerSerializer(ledger_data)
-        
         return Response(serializer.data)
+
     
     @action(detail=False, methods=["get"], url_path="search-members")
     def search_members(self, request):

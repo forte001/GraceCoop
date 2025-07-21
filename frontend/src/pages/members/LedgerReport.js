@@ -6,14 +6,18 @@ import Spinner from "../../components/Spinner";
 import { toast } from "react-toastify";
 import { formatNaira } from "../../utils/formatCurrency";
 import "../../styles/admin/loan/LoanManagement.css";
-// import "../../styles/member/LedgerReport.css";
 
 const LedgerReport = () => {
   const currentYear = new Date().getFullYear();
   const [filters, setFilters] = useState({ year: currentYear });
   const [data, setData] = useState([]);
   const [memberInfo, setMemberInfo] = useState({ full_name: "", member_id: "" });
-  const [grandTotal, setGrandTotal] = useState(0);
+  const [totals, setTotals] = useState({
+    member_balance: 0,
+    total_loan_repayments: 0,
+    total_levy_paid: 0,
+    total_shares: 0
+  });
   const [loading, setLoading] = useState(false);
   const printRef = useRef();
 
@@ -23,7 +27,16 @@ const LedgerReport = () => {
         setLoading(true);
         const params = new URLSearchParams(filters).toString();
         const res = await axios().get(`/members/profiles/my-ledger/?${params}`);
-        const { monthly_breakdown, grand_total, full_name, member_id } = res.data;
+        const { 
+          monthly_breakdown, 
+          member_balance,
+          total_loan_repayments,
+          outstanding_loan_balance,
+          total_levy_paid,
+          total_shares,
+          full_name, 
+          member_id 
+        } = res.data;
 
         const arr = Object.entries(monthly_breakdown).map(([month, values]) => ({
           month,
@@ -31,7 +44,13 @@ const LedgerReport = () => {
         }));
 
         setData(arr);
-        setGrandTotal(grand_total);
+        setTotals({
+          member_balance: member_balance || 0,
+          total_loan_repayments: total_loan_repayments || 0,
+          outstanding_loan_balance: outstanding_loan_balance || 0,
+          total_levy_paid: total_levy_paid || 0,
+          total_shares: total_shares || 0
+        });
         setMemberInfo({ full_name, member_id });
       } catch (err) {
         console.error(err);
@@ -65,6 +84,18 @@ const LedgerReport = () => {
     try {
       const XLSX = await import("xlsx");
       const transformedData = data.map(transformExport);
+      
+      // Add summary data at the end
+      transformedData.push(
+        { Month: "", Shares: "", Levy: "", "Loan Repayment": "", Total: "" }, // Empty row
+        { Month: "SUMMARY", Shares: "", Levy: "", "Loan Repayment": "", Total: "" },
+        { Month: "Total Shares", Shares: `NGN ${Number(totals.total_shares).toLocaleString()}`, Levy: "", "Loan Repayment": "", Total: "" },
+        { Month: "Total Levy Paid", Shares: "", Levy: `NGN ${Number(totals.total_levy_paid).toLocaleString()}`, "Loan Repayment": "", Total: "" },
+        { Month: "Total Loan Repayments", Shares: "", Levy: "", "Loan Repayment": `NGN ${Number(totals.total_loan_repayments).toLocaleString()}`, Total: "" },
+        { Month: "Outstanding Loan Balance", Shares: "", Levy: "", "Outstanding Loan Balance": `NGN ${Number(totals.outstanding_loan_balance).toLocaleString()}`, Total: "" },
+        { Month: "Member Balance", Shares: "", Levy: "", "Loan Repayment": "", Total: `NGN ${Number(totals.member_balance).toLocaleString()}` }
+      );
+      
       const worksheet = XLSX.utils.json_to_sheet(transformedData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, worksheet, "MemberLedger");
@@ -98,6 +129,18 @@ const LedgerReport = () => {
     try {
       const XLSX = await import("xlsx");
       const transformedData = data.map(transformExport);
+      
+      // Add summary data at the end
+      transformedData.push(
+        { Month: "", Shares: "", Levy: "", "Loan Repayment": "", Total: "" }, // Empty row
+        { Month: "SUMMARY", Shares: "", Levy: "", "Loan Repayment": "", Total: "" },
+        { Month: "Total Shares", Shares: `NGN ${Number(totals.total_shares).toLocaleString()}`, Levy: "", "Loan Repayment": "", Total: "" },
+        { Month: "Total Levy Paid", Shares: "", Levy: `NGN ${Number(totals.total_levy_paid).toLocaleString()}`, "Loan Repayment": "", Total: "" },
+        { Month: "Total Loan Repayments", Shares: "", Levy: "", "Loan Repayment": `NGN ${Number(totals.total_loan_repayments).toLocaleString()}`, Total: "" },
+        { Month: "Outstanding Loan Balance", Shares: "", Levy: "", "Outstanding Loan Balance": `NGN ${Number(totals.outstanding_loan_balance).toLocaleString()}`, Total: "" },
+        { Month: "Member Balance", Shares: "", Levy: "", "Loan Repayment": "", Total: `NGN ${Number(totals.member_balance).toLocaleString()}` }
+      );
+      
       const worksheet = XLSX.utils.json_to_sheet(transformedData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, worksheet, "MemberLedger");
@@ -184,6 +227,28 @@ const LedgerReport = () => {
         },
       });
 
+      // Add summary section to PDF
+      const finalY = doc.lastAutoTable.finalY || 60;
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text("Summary", 14, finalY + 20);
+      
+      const summaryData = [
+        ["Total Shares", `NGN ${Number(totals.total_shares).toLocaleString()}`],
+        ["Total Levy Paid", `NGN ${Number(totals.total_levy_paid).toLocaleString()}`],
+        ["Total Loan Repayments", `NGN ${Number(totals.total_loan_repayments).toLocaleString()}`],
+        ["Outstanding Loan Balance", `NGN ${Number(totals.outstanding_loan_balance).toLocaleString()}`],
+        ["Member Balance", `NGN ${Number(totals.member_balance).toLocaleString()}`]
+      ];
+
+      autoTable(doc, {
+        startY: finalY + 25,
+        head: [["Description", "Amount"]],
+        body: summaryData,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [63, 81, 181] },
+      });
+
       doc.save(`${memberInfo.full_name}_ledger_${filters.year}.pdf`);
 
       toast.update("export-toast", {
@@ -228,12 +293,36 @@ const LedgerReport = () => {
       {loading && <Spinner />}
 
       <div className="summary-section">
-        <h2>Grand Total</h2>
+        <h2>Financial Summary for {filters.year}</h2>
         <div className="summary-grid">
           <div>
-            <strong>Total for {filters.year}</strong>
-            <div className={`grand-total-amount ${grandTotal >= 0 ? "positive" : "negative"}`}>
-              {formatNaira(grandTotal)}
+            <strong>Total Shares</strong>
+            <div className="summary-amount positive">
+              {formatNaira(totals.total_shares)}
+            </div>
+          </div>
+          <div>
+            <strong>Total Levy Paid</strong>
+            <div className="summary-amount">
+              {formatNaira(totals.total_levy_paid)}
+            </div>
+          </div>
+          <div>
+            <strong>Total Loan Repayments</strong>
+            <div className="summary-amount">
+              {formatNaira(totals.total_loan_repayments)}
+            </div>
+          </div>
+          <div>
+            <strong>Outstanding Loan Balance</strong>
+            <div className="summary-amount">
+              {formatNaira(totals.outstanding_loan_balance)}
+            </div>
+          </div>
+          <div>
+            <strong>Member Balance</strong>
+            <div className={`summary-amount ${totals.member_balance >= 0 ? "positive" : "negative"}`}>
+              {formatNaira(totals.member_balance)}
             </div>
           </div>
         </div>

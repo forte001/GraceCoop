@@ -17,7 +17,8 @@ from ..models import (MemberProfile,
                       LoanRepayment,
                       LoanRepaymentSchedule,
                       Contribution, User,
-                      Payment
+                      Payment,
+                      Loan
                       )
 from ..serializers import (
     UserSerializer,
@@ -247,13 +248,14 @@ class MemberViewSet(viewsets.ModelViewSet):
                 {"error": "Unable to retrieve or create your profile."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    ### Generate Member ledger report   
+        
+    # Generate Member ledger report
     @action(detail=False, methods=["get"], url_path="my-ledger")
     def my_ledger(self, request):
         """
         Generate ledger for the authenticated member.
         """
-        
+
         # Get the authenticated member
         try:
             member = MemberProfile.objects.select_related("user").get(user=request.user)
@@ -262,7 +264,7 @@ class MemberViewSet(viewsets.ModelViewSet):
                 {"error": "Member profile not found"}, 
                 status=404
             )
-        
+
         # Get year parameter
         year = request.query_params.get("year", datetime.now().year)
         try:
@@ -272,16 +274,15 @@ class MemberViewSet(viewsets.ModelViewSet):
                 {"error": "Invalid year parameter"}, 
                 status=400
             )
-        
+
         # Initialize monthly data structure
         current_month = datetime.now().month
         current_year = datetime.now().year
-        
+
         monthly_data = OrderedDict()
         for month_num in range(1, 13):
             month_label = month_name[month_num]
             if year < current_year or (year == current_year and month_num <= current_month):
-                # Past or current month - default to 0
                 monthly_data[month_label] = {
                     "shares": Decimal("0.00"),
                     "levy": Decimal("0.00"),
@@ -289,14 +290,13 @@ class MemberViewSet(viewsets.ModelViewSet):
                     "total": Decimal("0.00")
                 }
             else:
-                # Future month - show dashes
                 monthly_data[month_label] = {
                     "shares": "-",
                     "levy": "-",
                     "loan_repayment": "-",
                     "total": "-"
                 }
-        
+
         # Get member's payments for the specified year
         member_payments = (
             Payment.objects.filter(
@@ -309,25 +309,44 @@ class MemberViewSet(viewsets.ModelViewSet):
             .order_by("month")
             .annotate(total=Sum("amount"))
         )
-        
-        grand_total = Decimal("0.00")
-        
+
+        # Initialize totals
+        total_loan_repayments = Decimal("0.00")
+        total_levy_paid = Decimal("0.00")
+        total_shares = Decimal("0.00")
+
         # Process payments and populate monthly data
         for record in member_payments:
             month_str = record["month"].strftime("%B")
             ptype = record["payment_type"]
             amt = record["total"]
-            
-            # Make loan repayments negative to show money going out
-            if ptype == "loan_repayment":
-                amt = -amt
-            
-            # Only update if month was numeric before (skip dash months)
+
             if isinstance(monthly_data[month_str][ptype], Decimal):
                 monthly_data[month_str][ptype] += amt
                 monthly_data[month_str]["total"] += amt
-                grand_total += amt
-        
+
+                if ptype == "loan_repayment":
+                    total_loan_repayments += amt
+                elif ptype == "levy":
+                    total_levy_paid += amt
+                elif ptype == "shares":
+                    total_shares += amt
+
+        # Get outstanding loan balance
+        active_loans = Loan.objects.filter(
+            member=member,
+            status__in=["approved", "disbursed", "partially_disbursed", "grace_applied"]
+        )
+        total_disbursed = active_loans.aggregate(total=Sum("disbursed_amount"))["total"] or Decimal("0.00")
+        total_repaid = LoanRepayment.objects.filter(
+            loan__in=active_loans
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        outstanding_loan_balance = total_disbursed - total_repaid
+
+        # Calculate member balance (assets - liabilities)
+        member_balance = total_shares - outstanding_loan_balance
+        grand_total = member_balance
+
         # Prepare response data
         ledger_data = {
             "member_id": member.member_id,
@@ -337,12 +356,16 @@ class MemberViewSet(viewsets.ModelViewSet):
             "membership_status": member.membership_status,
             "year": year,
             "monthly_breakdown": monthly_data,
-            "grand_total": grand_total,
+            "total_shares": total_shares,
+            "total_levy_paid": total_levy_paid,
+            "total_loan_repayments": total_loan_repayments,
+            "outstanding_loan_balance": outstanding_loan_balance,
+            "member_balance": member_balance,
+            "grand_total": grand_total
         }
-        
+
         # Serialize the data
         serializer = MemberLedgerSerializer(ledger_data)
-        
         return Response(serializer.data)
 
 

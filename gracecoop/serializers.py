@@ -1286,6 +1286,11 @@ class MemberLedgerSerializer(serializers.Serializer):
     membership_status = serializers.CharField()
     year = serializers.IntegerField()
     monthly_breakdown = serializers.DictField()
+    member_balance = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_loan_repayments = serializers.DecimalField(max_digits=12, decimal_places=2)
+    outstanding_loan_balance = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_levy_paid = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_shares = serializers.DecimalField(max_digits=12, decimal_places=2)
     grand_total = serializers.DecimalField(max_digits=12, decimal_places=2)
     
 class MemberSearchSerializer(serializers.Serializer):
