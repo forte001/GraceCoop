@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MemberContext } from '../components/MemberContext';
 import { ThemeContext } from '../components/ThemeContext';
@@ -15,6 +15,9 @@ const MemberLayout = () => {
   const location = useLocation();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
   const [isLoanOpen, setIsLoanOpen] = useState(location.pathname.startsWith('/member/loans'));
   const [isOtherPaymentsOpen, setIsOtherPaymentsOpen] = useState(
     location.pathname.startsWith('/member/pay-contribution') || location.pathname.startsWith('/member/pay-development-levy')
@@ -29,6 +32,29 @@ const MemberLayout = () => {
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState(location.pathname.startsWith('/member/settings'));
 
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      
+      // Auto-collapse sidebar on mobile
+      if (mobile) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    if (isMobile) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [location.pathname, isMobile]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
@@ -38,7 +64,20 @@ const MemberLayout = () => {
     navigate('/login');
   };
 
-  const toggleSidebar = () => setIsSidebarCollapsed(prev => !prev);
+  const toggleSidebar = () => {
+    if (isMobile) {
+      setIsMobileMenuOpen(prev => !prev);
+    } else {
+      setIsSidebarCollapsed(prev => !prev);
+    }
+  };
+
+  const closeMobileMenu = () => {
+    if (isMobile) {
+      setIsMobileMenuOpen(false);
+    }
+  };
+
   const toggleLoanMenu = () => setIsLoanOpen(prev => !prev);
   const toggleOtherPaymentsMenu = () => setIsOtherPaymentsOpen(prev => !prev);
   const togglePaymentsMenu = () => setIsPaymentsOpen(prev => !prev);
@@ -65,36 +104,51 @@ const MemberLayout = () => {
 
   if (loading) {
     return (
-      <div className="member-layout" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="member-layout" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '2rem' }}>
         <Spinner size={24} />
         <span>Loading member data...</span>
       </div>
     );
   }
 
+  const layoutClasses = `member-layout ${isSidebarCollapsed ? 'collapsed' : ''} ${isMobileMenuOpen ? 'sidebar-open' : ''}`;
+
   return (
-    <div className={`member-layout ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+    <div className={layoutClasses}>
+      {/* Mobile menu button */}
+      {isMobile && (
+        <button onClick={toggleSidebar} className="mobile-menu-btn">
+          <FaBars />
+        </button>
+      )}
+
+      {/* Sidebar overlay for mobile */}
+      {isMobileMenuOpen && <div className="sidebar-overlay" onClick={closeMobileMenu} />}
+
       <aside className="member-sidebar">
         <div className="sidebar-header">
           <img src="/logo.png" alt="GraceCoop" className="sidebar-logo" />
           {!isSidebarCollapsed && <span className="sidebar-subtitle">GraceCoop</span>}
           {!isSidebarCollapsed && <h3 className="panel-title">Member Panel</h3>}
-          <button onClick={toggleSidebar} className="sidebar-toggle-btn">
-            <FaBars />
-          </button>
+          {!isMobile && (
+            <button onClick={toggleSidebar} className="sidebar-toggle-btn">
+              <FaBars />
+            </button>
+          )}
         </div>
 
         <ul className="sidebar-nav">
           <li>
-            <Link to="/member/dashboard">
+            <Link to="/member/dashboard" onClick={closeMobileMenu}>
               <FaTachometerAlt />
-              {!isSidebarCollapsed && ' Dashboard'}
+              {(!isSidebarCollapsed || isMobile) && <span>Dashboard</span>}
             </Link>
           </li>
+          
           <li>
-            <Link to="/member/profile">
+            <Link to="/member/profile" onClick={closeMobileMenu}>
               <FaUser />
-              {!isSidebarCollapsed && ' Profile'}
+              {(!isSidebarCollapsed || isMobile) && <span>Profile</span>}
             </Link>
           </li>
 
@@ -102,71 +156,82 @@ const MemberLayout = () => {
             <>
               <li>
                 <button onClick={toggleLoanMenu} className="sidebar-link collapsible">
-                  <FaHandshake />
-                  {!isSidebarCollapsed && ` Loans ${isLoanOpen ? '▾' : '▸'}`}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaHandshake />
+                    {(!isSidebarCollapsed || isMobile) && <span>Loans</span>}
+                  </div>
+                  {(!isSidebarCollapsed || isMobile) && <span>{isLoanOpen ? '▾' : '▸'}</span>}
                 </button>
-                {isLoanOpen && (
+                {isLoanOpen && (!isSidebarCollapsed || isMobile) && (
                   <ul className="submenu">
-                    <li><Link to="/member/loan-application">Apply for Loan</Link></li>
-                    <li><Link to="/member/loan-application-list">Loan Application History</Link></li>
-                    <li><Link to="/member/loans">Loans</Link></li>
-                    <li><Link to="/member/guarantor-requests">Guarantor Requests</Link></li>
+                    <li><Link to="/member/loan-application" onClick={closeMobileMenu}>Apply for Loan</Link></li>
+                    <li><Link to="/member/loan-application-list" onClick={closeMobileMenu}>Loan Application History</Link></li>
+                    <li><Link to="/member/loans" onClick={closeMobileMenu}>Loans</Link></li>
+                    <li><Link to="/member/guarantor-requests" onClick={closeMobileMenu}>Guarantor Requests</Link></li>
                   </ul>
                 )}
               </li>
+              
               <li>
                 <button onClick={toggleOtherPaymentsMenu} className="sidebar-link collapsible">
-                  <FaMoneyBill />
-                  {!isSidebarCollapsed && ` Other Payments ${isOtherPaymentsOpen ? '▾' : '▸'}`}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaMoneyBill />
+                    {(!isSidebarCollapsed || isMobile) && <span>Other Payments</span>}
+                  </div>
+                  {(!isSidebarCollapsed || isMobile) && <span>{isOtherPaymentsOpen ? '▾' : '▸'}</span>}
                 </button>
-                {isOtherPaymentsOpen && (
+                {isOtherPaymentsOpen && (!isSidebarCollapsed || isMobile) && (
                   <ul className="submenu">
-                    <li><Link to="/member/pay/contribution">Pay Contribution</Link></li>
-                    <li><Link to="/member/pay/levy">Pay Development Levy</Link></li>
+                    <li><Link to="/member/pay/contribution" onClick={closeMobileMenu}>Pay Contribution</Link></li>
+                    <li><Link to="/member/pay/levy" onClick={closeMobileMenu}>Pay Development Levy</Link></li>
                   </ul>
                 )}
               </li>
+              
               <li>
                 <button onClick={togglePaymentsMenu} className="sidebar-link collapsible">
-                  <FaMoneyBill />
-                  {!isSidebarCollapsed && ` Payments ${isPaymentsOpen ? '▾' : '▸'}`}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaMoneyBill />
+                    {(!isSidebarCollapsed || isMobile) && <span>Payments</span>}
+                  </div>
+                  {(!isSidebarCollapsed || isMobile) && <span>{isPaymentsOpen ? '▾' : '▸'}</span>}
                 </button>
-                {isPaymentsOpen && (
+                {isPaymentsOpen && (!isSidebarCollapsed || isMobile) && (
                   <ul className="submenu">
-                    <li><Link to="/member/all-payments">All Payments</Link></li>
-                    <li><Link to="/member/loan-repayments">Loan Repayments</Link></li>
-                    <li><Link to="/member/contribution-list">Contribution</Link></li>
-                    <li><Link to="/member/levy-list">Development Levy</Link></li>
+                    <li><Link to="/member/all-payments" onClick={closeMobileMenu}>All Payments</Link></li>
+                    <li><Link to="/member/loan-repayments" onClick={closeMobileMenu}>Loan Repayments</Link></li>
+                    <li><Link to="/member/contribution-list" onClick={closeMobileMenu}>Contribution</Link></li>
+                    <li><Link to="/member/levy-list" onClick={closeMobileMenu}>Development Levy</Link></li>
                   </ul>
                 )}
               </li>
 
               <li>
                 <button onClick={toggleReportsMenu} className="sidebar-link collapsible">
-                  <FaFileAlt />
-                  {!isSidebarCollapsed && ` Reports ${isReportsOpen ? '▾' : '▸'}`}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaFileAlt />
+                    {(!isSidebarCollapsed || isMobile) && <span>Reports</span>}
+                  </div>
+                  {(!isSidebarCollapsed || isMobile) && <span>{isReportsOpen ? '▾' : '▸'}</span>}
                 </button>
-                {isReportsOpen && (
+                {isReportsOpen && (!isSidebarCollapsed || isMobile) && (
                   <ul className="submenu">
-                    <li><Link to="/member/report/my-ledger">Member Ledger</Link></li>
-                    
+                    <li><Link to="/member/report/my-ledger" onClick={closeMobileMenu}>Member Ledger</Link></li>
                   </ul>
                 )}
               </li>
-              {/* <li>
-                <Link to="/member/reports">
-                  <FaFileAlt />
-                  {!isSidebarCollapsed && ' Reports'}
-                </Link>
-              </li> */}
+              
               <li>
                 <button onClick={toggleSettingsMenu} className="sidebar-link collapsible">
-                  <FaCog />
-                  {!isSidebarCollapsed && ` Settings ${isSettingsOpen ? '▾' : '▸'}`}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaCog />
+                    {(!isSidebarCollapsed || isMobile) && <span>Settings</span>}
+                  </div>
+                  {(!isSidebarCollapsed || isMobile) && <span>{isSettingsOpen ? '▾' : '▸'}</span>}
                 </button>
-                {isSettingsOpen && (
+                {isSettingsOpen && (!isSidebarCollapsed || isMobile) && (
                   <ul className="submenu">
-                    <li><Link to="/member/settings/2fa">Two-Factor Auth</Link></li>
+                    <li><Link to="/member/settings/2fa" onClick={closeMobileMenu}>Two-Factor Auth</Link></li>
                   </ul>
                 )}
               </li>
@@ -174,14 +239,15 @@ const MemberLayout = () => {
           )}
         </ul>
 
-        {!isSidebarCollapsed && (
+        {(!isSidebarCollapsed || isMobile) && (
           <p className="logged-in-text">
             Logged in as: <strong>{fullName}</strong>
           </p>
         )}
+        
         <button onClick={handleLogout} className="logout-button">
           <FaSignOutAlt />
-          {!isSidebarCollapsed && ' Logout'}
+          {(!isSidebarCollapsed || isMobile) && <span>Logout</span>}
         </button>
       </aside>
 
