@@ -1108,6 +1108,14 @@ class PaymentSerializer(serializers.ModelSerializer):
             'verified_at',
             'payoff',
         ]
+
+class PaymentRecheckSerializer(serializers.Serializer):
+    payment_id = serializers.IntegerField()
+    
+    def validate_payment_id(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Invalid payment ID.")
+        return value
 # =======================
 # USER PERMISSIONS
 # =======================

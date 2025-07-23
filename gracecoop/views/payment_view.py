@@ -16,7 +16,8 @@ from ..serializers import (LoanPaymentInitiateSerializer,
                            ContributionPaymentInitiateSerializer,
                            LevyPaymentInitiateSerializer,
                            EntryPaymentInitiateSerializer,
-                           PaymentSerializer)
+                           PaymentSerializer,
+                           PaymentRecheckSerializer)
 from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from ..utils import apply_loan_repayment, generate_payment_reference, generate_payment_receipt
@@ -27,6 +28,7 @@ from ..filters import PaymentFilter
 from ..permissions import IsAdminUser
 from gracecoop.pagination import StandardResultsSetPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
+import logging
 
 
 ####################################################
@@ -439,6 +441,190 @@ class PaystackWebhookView(views.APIView):
                 print(f"⚠️ Unknown payment type: {payment_type}")
 
         return JsonResponse({'status': 'success'})
+    
+logger = logging.getLogger(__name__)
+
+class PaymentRecheckView(views.APIView):
+    """
+    Manually recheck a payment status with PayStack API
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        serializer = PaymentRecheckSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        payment_id = serializer.validated_data['payment_id']
+        
+        try:
+            # Get the payment record
+            payment = Payment.objects.select_related('member', 'loan').get(
+                id=payment_id,
+                member__user=request.user  # Ensure user can only recheck their own payments
+            )
+        except Payment.DoesNotExist:
+            return Response(
+                {'error': 'Payment not found or you do not have permission to recheck this payment.'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if payment is already verified
+        if payment.verified:
+            return Response(
+                {'error': 'Payment is already verified.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check payment age (prevent rechecking very old payments)
+        payment_age_days = (timezone.now() - payment.created_at).days
+        if payment_age_days > 30:  # 30 days limit
+            return Response(
+                {'error': 'Payment is too old to recheck. Please contact support.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Perform the recheck
+        recheck_result = self._perform_paystack_recheck(payment)
+        
+        if recheck_result['success']:
+            return Response({
+                'message': '✅ Payment verification successful!',
+                'payment_verified': True,
+                'payment_type': payment.payment_type
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'message': recheck_result['message'],
+                'payment_verified': False,
+                'can_retry': recheck_result.get('can_retry', True)
+            }, status=status.HTTP_200_OK)
+    
+    def _perform_paystack_recheck(self, payment):
+        """
+        Perform the actual PayStack API verification
+        """
+        try:
+            # Call PayStack API to verify payment
+            url = f"https://api.paystack.co/transaction/verify/{payment.reference}"
+            headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            result = response.json()
+            
+            # Log the API response for debugging
+            logger.info(f"PayStack recheck for {payment.reference}: {result}")
+            
+            if response.status_code != 200:
+                return {
+                    'success': False,
+                    'message': 'PayStack API error. Please try again later.',
+                    'can_retry': True
+                }
+            
+            # Check if payment was successful
+            if not result.get('data') or result['data'].get('status') != 'success':
+                payment_status = result.get('data', {}).get('status', 'unknown')
+                
+                if payment_status in ['failed', 'cancelled']:
+                    return {
+                        'success': False,
+                        'message': f'Payment was {payment_status} on PayStack. Please make a new payment.',
+                        'can_retry': False
+                    }
+                elif payment_status == 'pending':
+                    return {
+                        'success': False,
+                        'message': 'Payment is still pending on PayStack. Please try again in a few minutes.',
+                        'can_retry': True
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'message': f'Payment status: {payment_status}. Please try again or contact support.',
+                        'can_retry': True
+                    }
+            
+            # Payment is successful, process it
+            with transaction.atomic():
+                # Update payment record
+                payment.verified = True
+                payment.verified_at = timezone.now()
+                payment.source_reference = result['data']['reference']
+                payment.save()
+                
+                # Process payment based on type
+                self._process_verified_payment(payment)
+                
+                logger.info(f"Payment {payment.reference} verified successfully via recheck")
+                
+                return {
+                    'success': True,
+                    'message': 'Payment verified successfully!'
+                }
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error during payment recheck: {e}")
+            return {
+                'success': False,
+                'message': 'Network error. Please check your connection and try again.',
+                'can_retry': True
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error during payment recheck: {e}")
+            return {
+                'success': False,
+                'message': 'An unexpected error occurred. Please try again or contact support.',
+                'can_retry': True
+            }
+    
+    def _process_verified_payment(self, payment):
+        """
+        Process the verified payment based on its type
+        """
+        member = payment.member
+        payment_type = payment.payment_type
+        
+        if payment_type in ['shares', 'contribution']:
+            Contribution.objects.get_or_create(
+                member=member,
+                amount=payment.amount,
+                source_reference=payment.reference,
+                defaults={'date': timezone.now()}
+            )
+            if not member.has_paid_shares:
+                member.has_paid_shares = True
+                member.save()
+                logger.info(f"Shares entry payment flagged for member {member.id}")
+        
+        elif payment_type == 'levy':
+            Levy.objects.get_or_create(
+                member=member,
+                amount=payment.amount,
+                source_reference=payment.reference,
+                defaults={'date': timezone.now()}
+            )
+            if not member.has_paid_levy:
+                member.has_paid_levy = True
+                member.save()
+                logger.info(f"Levy entry payment flagged for member {member.id}")
+        
+        elif payment_type == 'loan_repayment':
+            loan = payment.loan
+            if loan and not payment.repayment_applied:
+                try:
+                    apply_loan_repayment(
+                        loan=loan,
+                        amount=payment.amount,
+                        paid_by_user=member.user,
+                        payoff=payment.payoff,
+                        source_reference=payment.reference
+                    )
+                    payment.repayment_applied = True
+                    payment.save()
+                    logger.info(f"Loan repayment applied via recheck: {payment.reference}")
+                except Exception as e:
+                    logger.error(f"Loan repayment error during recheck: {e}")
+                    raise
 
 
 class AdminPaymentViewSet(viewsets.ReadOnlyModelViewSet):

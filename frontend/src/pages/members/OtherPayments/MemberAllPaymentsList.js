@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import usePaginatedData from '../../../utils/usePaginatedData';
 import { formatNaira } from '../../../utils/formatCurrency';
 import ExportPrintGroup from '../../../utils/ExportPrintGroup';
@@ -8,6 +8,86 @@ import { toast } from 'react-toastify';
 import getAllPaginatedDataForExport from '../../../utils/getAllPaginatedDataForExport';
 import exportHelper from '../../../utils/exportHelper';
 import Spinner from '../../../components/Spinner';
+
+// Payment Recheck Component
+const PaymentRecheckButton = ({ payment, onPaymentUpdated }) => {
+  const [isRechecking, setIsRechecking] = useState(false);
+
+  const handleRecheck = async () => {
+    setIsRechecking(true);
+
+    try {
+      const response = await axiosMemberInstance.post('/members/payment/recheck/', {
+        payment_id: payment.id
+      });
+
+      if (response.data.payment_verified) {
+        toast.success(response.data.message);
+        // Update the payment in the list
+        onPaymentUpdated(payment.id);
+      } else {
+        toast.warning(response.data.message);
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'An error occurred during recheck';
+      toast.error(errorMessage);
+    } finally {
+      setIsRechecking(false);
+    }
+  };
+
+  // Don't show recheck button for already verified payments
+  if (payment.verified) {
+    return null;
+  }
+
+  // Check if payment is too old (30 days)
+  const paymentDate = new Date(payment.created_at);
+  const daysDiff = Math.floor((new Date() - paymentDate) / (1000 * 60 * 60 * 24));
+  
+  if (daysDiff > 30) {
+    return (
+      <span className="text-muted" style={{ fontSize: '12px' }}>
+        Too old to recheck
+      </span>
+    );
+  }
+
+  return (
+    <button 
+      onClick={handleRecheck}
+      disabled={isRechecking}
+      className="btn-recheck"
+      style={{
+        padding: '4px 8px',
+        fontSize: '12px',
+        backgroundColor: isRechecking ? '#ccc' : '#007bff',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: isRechecking ? 'not-allowed' : 'pointer'
+      }}
+    >
+      {isRechecking ? (
+        <>
+          <span style={{ 
+            display: 'inline-block', 
+            width: '12px', 
+            height: '12px', 
+            border: '2px solid #fff',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            marginRight: '4px'
+          }}></span>
+          Checking...
+        </>
+      ) : (
+        'Recheck'
+      )}
+    </button>
+  );
+};
 
 const MemberAllPaymentsList = () => {
   const {
@@ -20,6 +100,7 @@ const MemberAllPaymentsList = () => {
     setPageSize,
     filters,
     setFilters,
+    refreshData, // Make sure your usePaginatedData hook provides this
   } = usePaginatedData('/members/payment/all-payments/', {
     payment_type: '',
     verified: '',
@@ -74,8 +155,27 @@ const MemberAllPaymentsList = () => {
     }
   };
 
+  // Handle payment update after successful recheck
+  const handlePaymentUpdated = (paymentId) => {
+    // If your usePaginatedData hook has a refreshData function, use it
+    if (refreshData) {
+      refreshData();
+    } else {
+      // Alternative: Force a page reload or manual state update
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="loan-management">
+      {/* Add CSS for spinner animation */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+
       <h2>All Your Payments</h2>
 
       <div className="filter-section">
@@ -135,6 +235,7 @@ const MemberAllPaymentsList = () => {
               <th>Amount</th>
               <th>Created At</th>
               <th>Verified</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -145,12 +246,50 @@ const MemberAllPaymentsList = () => {
                   <td>{p.reference}</td>
                   <td>{formatNaira(p.amount)}</td>
                   <td>{p.created_at?.split('T')[0]}</td>
-                  <td>{p.verified ? 'Yes' : 'No'}</td>
+                  <td>
+                    {p.verified ? (
+                      <span style={{ color: 'green', fontWeight: 'bold' }}>
+                        ✅ Yes
+                      </span>
+                    ) : (
+                      <span style={{ color: 'orange', fontWeight: 'bold' }}>
+                        ⏳ No
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {/* Receipt download button for verified payments */}
+                      {p.verified && p.source_reference && (
+                        <button 
+                          onClick={() => downloadReceipt(p.source_reference)}
+                          className="btn-receipt"
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            backgroundColor: '#28a745',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Receipt
+                        </button>
+                      )}
+                      
+                      {/* Recheck button for unverified payments */}
+                      <PaymentRecheckButton 
+                        payment={p}
+                        onPaymentUpdated={handlePaymentUpdated}
+                      />
+                    </div>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center' }}>No payments found.</td>
+                <td colSpan="6" style={{ textAlign: 'center' }}>No payments found.</td>
               </tr>
             )}
           </tbody>
