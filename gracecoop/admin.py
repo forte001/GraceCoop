@@ -15,7 +15,9 @@ Payment,
 Levy,
 Announcement,
 Expense,
-LoanGuarantor
+LoanGuarantor,
+MemberDocument,
+DocumentRequest
 )
 class UserAdmin(admin.ModelAdmin):
     list_display = (
@@ -195,7 +197,41 @@ class ExpenseAdmin(admin.ModelAdmin):
     list_filter = ('category', 'date_incurred')
     search_fields = ('recorded_by','vendor_name', 'narration')
 
+class MemberDocumentAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'member', 'document_type', 'status', 'uploaded_at',
+        'reviewed_at', 'reviewed_by', 'is_required'
+    )
+    list_filter = ('status', 'document_type', 'is_required', 'uploaded_at')
+    search_fields = ('member__user__username', 'member__user__email', 'member__member_id')
+    readonly_fields = ('uploaded_at', 'reviewed_at', 'reviewed_by', 'original_filename', 'file_size')
+    autocomplete_fields = ['member', 'reviewed_by']
+    ordering = ('-uploaded_at',)
+    fieldsets = (
+        (None, {
+            'fields': (
+                'member', 'document_type', 'document_file', 'document_url',
+                'original_filename', 'file_size', 'status', 'rejection_reason',
+                'uploaded_at', 'reviewed_at', 'reviewed_by', 'notes', 'is_required'
+            )
+        }),
+    )
+
+
+class DocumentRequestAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'member', 'document_type', 'status', 'requested_by',
+        'requested_at', 'deadline', 'fulfilled_at'
+    )
+    list_filter = ('status', 'document_type', 'requested_at')
+    search_fields = ('member__user__username', 'member__user__email', 'member__member_id')
+    autocomplete_fields = ['member', 'requested_by']
+    readonly_fields = ('requested_at', 'fulfilled_at')
+    ordering = ('-requested_at',)
+
 # Register your models
+admin.site.register(DocumentRequest, DocumentRequestAdmin),
+admin.site.register(MemberDocument, MemberDocumentAdmin),
 admin.site.register(LoanGuarantor, LoanGuarantorAdmin),
 admin.site.register(Expense, ExpenseAdmin),
 admin.site.register(Announcement, AnnouncementAdmin),
