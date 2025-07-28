@@ -83,6 +83,9 @@ urlpatterns = [
 
    ### Report-related endpoints
    path('report/', include('gracecoop.urls.report_urls')),
+
+   ### Admin Document-related endpoints
+   path('', include('gracecoop.urls.document_urls')),
   
 
     

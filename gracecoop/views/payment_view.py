@@ -82,8 +82,8 @@ class LoanPaymentInitiateView(views.APIView):
 
 
 class LoanPaymentVerifyView(views.APIView):
-    
     permission_classes = [IsAuthenticated]
+    
     def post(self, request):
         serializer = LoanPaymentVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -118,7 +118,27 @@ class LoanPaymentVerifyView(views.APIView):
             else:
                 print(f"⏩ Payment already verified for ref: {reference}")
 
-            print(f"⏩ Skipping repayment application in verify view for ref: {reference} — handled by webhook")
+            # Apply loan repayment if not already applied
+            # This serves as a fallback in case webhook doesn't process
+            if payment.payment_type == 'loan_repayment' and not payment.repayment_applied:
+                loan = payment.loan
+                try:
+                    print(f"🔄 Applying loan repayment in verify view for ref: {reference}")
+                    apply_loan_repayment(
+                        loan=loan,
+                        amount=payment.amount,
+                        paid_by_user=payment.member.user,
+                        payoff=payment.payoff,
+                        source_reference=payment.source_reference  # Use the Paystack reference
+                    )
+                    payment.repayment_applied = True
+                    payment.save()
+                    print(f"✅ Loan repayment applied successfully in verify view for ref: {reference}")
+                except Exception as e:
+                    print(f"❌ Repayment application failed in verify view: {e}")
+                    return Response({'error': 'Payment verified but repayment application failed.'}, status=500)
+            else:
+                print(f"⏩ Loan repayment already applied for ref: {reference}")
 
         return Response({'message': '✅ Loan payment verified successfully.'}, status=200)
 

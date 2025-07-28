@@ -4,6 +4,7 @@
   --hover-bg: rgba(59, 130, 246, 0.1);
   --text-dark: #111827;
   --text-light: #f9fafb;
+  --text-color: var(--text-dark); 
 }
 
 [data-theme='dark'] {
@@ -31,16 +32,18 @@
   padding: 12px 15px;
   text-align: left;
   font-size: 0.95rem;
+  color: var(--text-color);
 }
 
 .members-table th {
   font-weight: 600;
   background-color: #007bff;
-  color: #ffffff;
+  color: var(--text-color);
 }
 
 .members-table tbody tr {
   border-bottom: 1px solid #ddd;
+  color: var(--text-color);
 }
 
 .members-table tbody tr:hover {
@@ -54,6 +57,7 @@
 
 .members-table.approved tbody tr {
   background-color: var(--table-bg-approved);
+  color: var(--text-color);
 }
 
 /* Pending Members */
@@ -63,6 +67,12 @@
 
 .members-table.pending tbody tr {
   background-color: var(--table-bg-pending);
+  color: var(--text-color);
+}
+
+.members-table.pending td {
+  background-color: var(--table-bg-pending);
+  color: var(--text-color);
 }
 
 /* Inputs in table */

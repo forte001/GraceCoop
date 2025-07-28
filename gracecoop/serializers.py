@@ -14,7 +14,9 @@ from gracecoop.models import (
     CooperativeConfig,
     Announcement,
     Expense,
-    LoanGuarantor)
+    LoanGuarantor,
+    MemberDocument,
+    DocumentRequest)
 from datetime import datetime, timedelta
 from django.utils import timezone
 from .utils import create_member_profile_if_not_exists, generate_payment_reference
@@ -1305,3 +1307,103 @@ class MemberSearchSerializer(serializers.Serializer):
     """Serializer for member search parameters"""
     search = serializers.CharField(required=True, help_text="Member name or member ID")
     year = serializers.IntegerField(required=False, help_text="Year for ledger (default: current year)")
+
+
+#################################################
+## DOCUMENT OPERATIONs SERIALIZERS
+#################################################
+
+class MemberDocumentSerializer(serializers.ModelSerializer):
+    document_type_display = serializers.CharField(source='get_document_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    document_owner = serializers.CharField(source='member.full_name', read_only=True)
+    reviewer_name = serializers.CharField(source='reviewed_by.get_full_name', read_only=True)
+    file_size_mb = serializers.ReadOnlyField()
+    file_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = MemberDocument
+        fields = [
+            'id', 'document_type', 'document_type_display', 'document_file', 
+            'file_url', 'status', 'status_display', 'rejection_reason',
+            'uploaded_at','document_owner', 'reviewed_at', 'reviewer_name', 'notes',
+            'file_size_mb', 'is_required'
+        ]
+        read_only_fields = [
+            'status', 'reviewed_at', 'reviewed_by', 'rejection_reason'
+        ]
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        
+        # Get member profile using correct relationship name
+        try:
+            member = request.user.memberprofile
+        except AttributeError:
+            raise serializers.ValidationError("User must have a member profile to upload documents")
+        
+        # Inject member *before* file field is processed
+        validated_data['member'] = member
+        
+        instance = MemberDocument(**validated_data)
+        instance.full_clean()  
+        instance.save()
+        
+        return instance
+
+    def get_file_url(self, obj):
+        if obj.document_file:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.document_file.url)
+        return None
+
+class DocumentUploadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MemberDocument
+        fields = ['document_type', 'document_file', 'notes']
+
+class DocumentReviewSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=['approve', 'reject'])
+    reason = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, data):
+        if data['action'] == 'reject' and not data.get('reason'):
+            raise serializers.ValidationError("Reason is required when rejecting a document.")
+        return data
+
+class DocumentRequestSerializer(serializers.ModelSerializer):
+    document_type_display = serializers.CharField(source='get_document_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    document_owner = serializers.CharField(source='member.full_name', read_only=True)
+    requester_name = serializers.CharField(source='requested_by.get_full_name', read_only=True)
+    is_overdue = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = DocumentRequest
+        fields = [
+            'id', 'document_type', 'document_type_display', 'status', 
+            'status_display', 'message', 'requested_at', 'deadline',
+            'fulfilled_at', 'requester_name','document_owner', 'is_overdue'
+        ]
+        read_only_fields = ['status', 'fulfilled_at']
+
+class CreateDocumentRequestSerializer(serializers.ModelSerializer):
+    deadline = serializers.DateTimeField(required=False, allow_null=True)
+    
+    class Meta:
+        model = DocumentRequest
+        fields = ['member', 'document_type', 'message', 'deadline']
+    
+    def to_internal_value(self, data):
+        # Convert empty string to None for deadline
+        if 'deadline' in data and data['deadline'] == '':
+            data = data.copy()  # Make a copy to avoid mutating the original
+            data['deadline'] = None
+        return super().to_internal_value(data)
+        
+    def create(self, validated_data):
+        request = self.context.get('request')
+        validated_data['requested_by'] = request.user
+        return super().create(validated_data)

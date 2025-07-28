@@ -21,7 +21,7 @@ from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 from gracecoop.views.admin_views import CustomTokenObtainPairView, CustomTokenRefreshView
-from gracecoop.urls import member_urls, loan_urls, contribution_urls,  admin_urls
+from gracecoop.urls import member_urls, loan_urls, contribution_urls,  admin_urls, document_urls
 from gracecoop.views.admin_views import get_csrf_token
 
 

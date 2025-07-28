@@ -6,9 +6,7 @@ const baseURL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api
 const axiosMemberInstance = axios.create({
   baseURL,
   withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  
 });
 
 axiosMemberInstance.interceptors.request.use((config) => {
@@ -26,10 +24,26 @@ axiosMemberInstance.interceptors.request.use((config) => {
     config.headers['X-CSRFToken'] = csrfToken;
   }
 
+  //  Dynamically set JSON Content-Type only when data is plain JS object
+  if (
+    config.data &&
+    !(config.data instanceof FormData) &&
+    typeof config.data === 'object'
+  ) {
+    config.headers['Content-Type'] = 'application/json';
+   
+  } else if (config.data instanceof FormData) {
+    
+    delete config.headers['Content-Type'];
+    
+  }
+
+  console.log('DEBUG: Final headers:', config.headers);
   return config;
 });
 
-// Auto-refresh tokens
+
+// Auto-refresh token logic 
 axiosMemberInstance.interceptors.response.use(
   response => response,
   async error => {

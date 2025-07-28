@@ -138,6 +138,7 @@ const AdminLayout = () => {
               <ul className="submenu">
                 <li><Link to="/admin/members/pending" onClick={closeMobileMenu}>Pending Members</Link></li>
                 <li><Link to="/admin/members/approved" onClick={closeMobileMenu}>Members</Link></li>
+                <li><Link to="/admin/document-management" onClick={closeMobileMenu}>Document Management</Link></li>
               </ul>
             )}
           </li>

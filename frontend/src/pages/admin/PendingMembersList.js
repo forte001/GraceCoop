@@ -145,7 +145,7 @@ const PendingMemberList = () => {
               members.map((member) => {
                 const canApprove = member.has_paid_shares && member.has_paid_levy;
                 return (
-                  <tr key={member.id} style={{ opacity: canApprove ? 1 : 0.5 }}>
+                  <tr key={member.id} >
                     <td>{member.user?.username}</td>
                     <td>{member.email}</td>
                     <td>{member.full_name}</td>

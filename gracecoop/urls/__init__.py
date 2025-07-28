@@ -6,3 +6,4 @@ from .admin_urls import urlpatterns as admin_urls
 from .payment_urls import urlpatterns as payment_urls
 from .announcement_urls import urlpatterns as announcement_urls
 from .report_urls import urlpatterns as report_urls
+from .document_urls import urlpatterns as document_urls

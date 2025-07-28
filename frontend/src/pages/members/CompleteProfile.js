@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axiosMemberInstance from "../../utils/axiosMemberInstance";
 import "../../styles/members/CompleteProfile.css";
 import Spinner from "../../components/Spinner";
+import MemberDocuments from "./MemberDocuments";
 
 const CompleteProfile = () => {
   const navigate = useNavigate();
@@ -160,6 +161,11 @@ const CompleteProfile = () => {
           {saving ? "Saving..." : "Update Profile"}
         </button>
       </form>
+      
+      {/* ✅ Member Document Upload Section */}
+            <div className="member-documents-section" style={{ marginTop: "2rem" }}>
+              <MemberDocuments />
+            </div>
     </div>
   );
 };

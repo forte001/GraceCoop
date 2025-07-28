@@ -91,6 +91,9 @@ urlpatterns = [
     ### Announcement 
     path('notice/', include('gracecoop.urls.announcement_urls')),
 
+    ### Member Document-related operations endpoint
+    path('', include('gracecoop.urls.document_urls')),
+
 
 
 

@@ -53,6 +53,7 @@ import LedgerReport from './pages/members/LedgerReport';
 import AdminExpenses from './pages/admin/AdminExpenses';
 import LoanApplicationDetails from './pages/members/Loan/LoanApplicationDetails';
 import GuarantorRequests from './pages/members/Loan/GuarantorRequests';
+import AdminDocumentInterface from './pages/admin/AdminDocumentInterface';
 
 
 const MainPage = () => {
@@ -179,6 +180,7 @@ const App = () => {
         <Route path="report/analysis-of-receipts" element={<MonthlyReceiptsReport/>} />
         <Route path="report/member-ledger" element={<MemberLedgerReport/>} />
         <Route path="expenses" element={<AdminExpenses/>} />
+        <Route path="document-management" element={<AdminDocumentInterface/>} />
         <Route path="settings/theme" element={<ThemeSwitcher />} />
         <Route path="permissions" element={<Permissions />} />
         <Route path="2fa/setup" element={<TwoFASetup />} />

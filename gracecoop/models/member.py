@@ -6,6 +6,9 @@ from datetime import datetime
 from django.db.models import Sum
 from django.utils.text import capfirst
 import uuid
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+import os
 
 
 class MemberProfile(models.Model):
@@ -63,7 +66,15 @@ class MemberProfile(models.Model):
         blank=True,
         related_name='applied_members'
     )
+    
+    @property
+    def total_shares(self):
+        return self.contributions.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
+    def __str__(self):
+        return self.full_name or f"Member {self.id}"
+    
+    
     def save(self, *args, **kwargs):
         if self.status == 'approved' and not self.member_id:
             year = datetime.now().year
@@ -86,79 +97,5 @@ class MemberProfile(models.Model):
                 self.user.first_name = capfirst(parts[0])
                 self.user.last_name = capfirst(" ".join(parts[1:]))
             self.user.save()
-        super().save(*args, **kwargs)
-
-    @property
-    def total_shares(self):
-        return self.contributions.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
-    def __str__(self):
-        return self.full_name or f"Member {self.id}"
-    
-    
-    # ID Document related methods
-    # @property
-    # def primary_id_document(self):
-    #     """Get the primary ID document"""
-    #     return self.id_documents.filter(
-    #         priority='primary', 
-    #         verification_status='verified',
-    #         is_active=True
-    #     ).first()
-    
-    # @property
-    # def verified_id_documents(self):
-    #     """Get all verified ID documents"""
-    #     return self.id_documents.filter(
-    #         verification_status='verified',
-    #         is_active=True
-    #     )
-    
-    # @property
-    # def pending_id_documents(self):
-    #     """Get all pending ID documents"""
-    #     return self.id_documents.filter(verification_status='pending')
-    
-    # @property
-    # def pending_document_requests(self):
-    #     """Get all pending document requests"""
-    #     return self.document_requests.filter(status='pending')
-    
-    # @property
-    # def overdue_document_requests(self):
-    #     """Get all overdue document requests"""
-    #     return self.document_requests.filter(status='overdue')
-    
-    # @property
-    # def has_verified_id(self):
-    #     """Check if member has at least one verified ID document"""
-    #     return self.verified_id_documents.exists()
-    
-    # @property
-    # def can_be_approved(self):
-    #     """Check if member can be approved (has verified primary ID)"""
-    #     return self.has_verified_id and self.primary_id_document is not None
-    
-    # @property
-    # def id_verification_progress(self):
-    #     """Get ID verification progress percentage"""
-    #     total_docs = self.id_documents.count()
-    #     if total_docs == 0:
-    #         return 0
         
-    #     verified_docs = self.verified_id_documents.count()
-    #     return int((verified_docs / total_docs) * 100)
-    
-    # def get_document_by_type(self, document_type):
-    #     """Get document by type"""
-    #     return self.id_documents.filter(
-    #         document_type=document_type,
-    #         is_active=True
-    #     ).first()
-    
-    # def has_pending_request_for_document(self, document_type):
-    #     """Check if member has pending request for specific document type"""
-    #     return self.document_requests.filter(
-    #         document_type=document_type,
-    #         status='pending'
-    #     ).exists()
+        super().save(*args, **kwargs)

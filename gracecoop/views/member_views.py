@@ -1,9 +1,11 @@
-from rest_framework import viewsets, generics, status
+from rest_framework import viewsets, generics, status, permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from rest_framework.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.db.models import Sum
@@ -11,6 +13,9 @@ from django.db.models.functions import TruncMonth
 from collections import OrderedDict
 from calendar import month_name
 from decimal import Decimal
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+from gracecoop.pagination import StandardResultsSetPagination
 from ..models import (MemberProfile, 
                       CooperativeConfig,
                       Levy,
@@ -18,7 +23,8 @@ from ..models import (MemberProfile,
                       LoanRepaymentSchedule,
                       Contribution, User,
                       Payment,
-                      Loan
+                      Loan,
+                      MemberDocument, DocumentRequest
                       )
 from ..serializers import (
     UserSerializer,
@@ -29,12 +35,17 @@ from ..serializers import (
     TwoFASetupSerializer,
     CooperativeConfigSerializer,
     MemberLedgerSerializer,
+    CreateDocumentRequestSerializer,
+    MemberDocumentSerializer, DocumentRequestSerializer,
+    DocumentReviewSerializer, DocumentUploadSerializer
 )
 from datetime import datetime
 from gracecoop.utils import send_verification_email, send_password_reset_email
 import uuid
 from django.utils import timezone
-from django.core.mail import send_mail
+from ..permissions import IsAdminUser
+from django.conf import settings
+import logging
 
 # =======================
 # USER REGISTRATION & LOGIN
@@ -485,3 +496,252 @@ class MemberDashboardSummaryView(APIView):
             "recent_payments": recent_payments,
             "upcoming_loan_payment": upcoming
         })
+    
+
+####################################################
+### DOCUMENT OPERATIONS VIEWS
+####################################################
+
+class MemberDocumentViewSet(viewsets.ModelViewSet):
+    serializer_class = MemberDocumentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    pagination_class = StandardResultsSetPagination
+    ordering = ['-uploaded_at']
+    
+    def get_queryset(self):
+        # Members see only their documents, staff see all
+        if self.request.user.is_staff:
+            return MemberDocument.objects.all().order_by('-uploaded_at')  # Latest first
+        elif hasattr(self.request.user, 'memberprofile'):
+            return MemberDocument.objects.filter(member=self.request.user.memberprofile).order_by('-uploaded_at')
+        return MemberDocument.objects.none()
+    
+    def perform_create(self, serializer):
+       
+        try:
+            member = self.request.user.memberprofile
+            serializer.save(member=member)
+        except AttributeError:
+            # Handle case where user doesn't have a member profile
+            raise ValidationError("User must have a member profile to upload documents")
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return DocumentUploadSerializer
+        elif self.action == 'review':
+            return DocumentReviewSerializer
+        return MemberDocumentSerializer
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def review(self, request, pk=None):
+        """Review (approve/reject) a document"""
+        document = self.get_object()
+        serializer = DocumentReviewSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            action = serializer.validated_data['action']
+            
+            if action == 'approve':
+                document.approve(
+                    reviewed_by=request.user,
+                    notes=serializer.validated_data.get('notes', '')
+                )
+                message = "Document approved successfully"
+            else:
+                document.reject(
+                    reviewed_by=request.user,
+                    reason=serializer.validated_data['reason'],
+                    notes=serializer.validated_data.get('notes', '')
+                )
+                message = "Document rejected"
+            
+            return Response({
+                'message': message,
+                'document': MemberDocumentSerializer(document, context={'request': request}).data
+            })
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'])
+    def pending(self, request):
+        """Get pending documents for review (admin only)"""
+        if not request.user.is_staff:
+            return Response({'error': 'Admin access required'}, status=403)
+        
+        pending_docs = MemberDocument.objects.filter(status='pending')
+        serializer = MemberDocumentSerializer(pending_docs, many=True, context={'request': request})
+        return Response(serializer.data)
+
+
+logger = logging.getLogger(__name__)
+
+class DocumentRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = DocumentRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+    ordering = ['-requested_at']
+    
+    def get_queryset(self):
+        # Members see only their requests, staff see all
+        if self.request.user.is_staff:
+            return DocumentRequest.objects.all().order_by('-requested_at')  # Latest first
+        elif hasattr(self.request.user, 'memberprofile'):
+            return DocumentRequest.objects.filter(member=self.request.user.memberprofile).order_by('-requested_at')
+        return DocumentRequest.objects.none()
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CreateDocumentRequestSerializer
+        return DocumentRequestSerializer
+    
+    def create(self, request, *args, **kwargs):
+        """Create new document request (admin only)"""
+        if not request.user.is_staff:
+            return Response({'error': 'Admin access required'}, status=403)
+        return super().create(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancel a document request"""
+        doc_request = self.get_object()
+        
+        # Only admin or the member can cancel
+        if not (request.user.is_staff or 
+                (hasattr(request.user, 'memberprofile') and request.user.memberprofile == doc_request.member)):
+            return Response({'error': 'Permission denied'}, status=403)
+        
+        doc_request.cancel()
+        return Response({'message': 'Request cancelled successfully'})
+    
+    @action(detail=True, methods=['get'], url_path='signed-url')
+    def get_signed_url(self, request, pk=None):
+        """Get signed URL for document file access"""
+        try:
+            doc_request = self.get_object()
+            
+            # Check if document file exists
+            if not doc_request.document_file:
+                return Response({'error': 'No document file available'}, status=404)
+            
+            # Permission check: admin or the member who owns the request
+            if not (request.user.is_staff or 
+                    (hasattr(request.user, 'memberprofile') and request.user.memberprofile == doc_request.member)):
+                return Response({'error': 'Permission denied'}, status=403)
+            
+            # If using Supabase storage
+            if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY:
+                try:
+                    import requests
+                    import json
+                    
+                    # Extract file path from the document_file field
+                    file_path = str(doc_request.document_file)
+                    
+                    # Remove any leading bucket name or URL parts if they exist
+                    if file_path.startswith('http'):
+                        # Extract path from full URL
+                        from urllib.parse import urlparse
+                        parsed_url = urlparse(file_path)
+                        file_path = parsed_url.path.lstrip('/')
+                        # Remove bucket name from path if it's included
+                        if '/' in file_path:
+                            parts = file_path.split('/')
+                            if parts[0] == settings.SUPABASE_BUCKET:
+                                file_path = '/'.join(parts[1:])
+                    
+                    # Generate signed URL using Supabase REST API
+                    supabase_url = f"{settings.SUPABASE_URL}/storage/v1/object/sign/{settings.SUPABASE_BUCKET}/{file_path}"
+                    
+                    headers = {
+                        'Authorization': f'Bearer {settings.SUPABASE_SERVICE_KEY}',
+                        'Content-Type': 'application/json',
+                        'apikey': settings.SUPABASE_SERVICE_KEY
+                    }
+                    
+                    payload = {
+                        'expiresIn': 3600  # 1 hour
+                    }
+                    
+                    response = requests.post(supabase_url, headers=headers, json=payload)
+                    
+                    if response.status_code == 200:
+                        response_data = response.json()
+                        if 'signedURL' in response_data:
+                            return Response({
+                                'signed_url': response_data['signedURL'],
+                                'expires_in': 3600
+                            })
+                    
+                    logger.warning(f"Failed to generate signed URL for {file_path}. Status: {response.status_code}, Response: {response.text}")
+                    # Fallback to direct URL
+                    return Response({
+                        'signed_url': doc_request.document_file.url if hasattr(doc_request.document_file, 'url') else str(doc_request.document_file),
+                        'expires_in': None,
+                        'fallback': True
+                    })
+                        
+                except Exception as supabase_error:
+                    logger.error(f"Supabase signed URL generation failed: {str(supabase_error)}")
+                    # Fallback to direct URL
+                    return Response({
+                        'signed_url': doc_request.document_file.url if hasattr(doc_request.document_file, 'url') else str(doc_request.document_file),
+                        'expires_in': None,
+                        'fallback': True
+                    })
+            
+            # Fallback for non-Supabase storage or when Supabase is not configured
+            else:
+                return Response({
+                    'signed_url': doc_request.document_file.url if hasattr(doc_request.document_file, 'url') else str(doc_request.document_file),
+                    'expires_in': None,
+                    'direct_url': True
+                })
+                
+        except DocumentRequest.DoesNotExist:
+            return Response({'error': 'Document request not found'}, status=404)
+        except Exception as e:
+            logger.error(f"Error generating signed URL: {str(e)}")
+            return Response({'error': 'Failed to generate signed URL'}, status=500)
+    
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        """Download document file with proper authentication"""
+        try:
+            doc_request = self.get_object()
+            
+            # Check if document file exists
+            if not doc_request.document_file:
+                return Response({'error': 'No document file available'}, status=404)
+            
+            # Permission check: admin or the member who owns the request
+            if not (request.user.is_staff or 
+                    (hasattr(request.user, 'memberprofile') and request.user.memberprofile == doc_request.member)):
+                return Response({'error': 'Permission denied'}, status=403)
+            
+            # For Supabase or other cloud storage, redirect to signed URL
+            if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY:
+                # Get signed URL and redirect
+                signed_url_response = self.get_signed_url(request, pk)
+                if signed_url_response.status_code == 200:
+                    signed_url = signed_url_response.data.get('signed_url')
+                    from django.http import HttpResponseRedirect
+                    return HttpResponseRedirect(signed_url)
+            
+            # For local file storage
+            from django.http import FileResponse, Http404
+            try:
+                response = FileResponse(
+                    doc_request.document_file.open('rb'),
+                    as_attachment=True,
+                    filename=doc_request.document_file.name.split('/')[-1]
+                )
+                return response
+            except FileNotFoundError:
+                raise Http404("Document file not found")
+                
+        except DocumentRequest.DoesNotExist:
+            return Response({'error': 'Document request not found'}, status=404)
+        except Exception as e:
+            logger.error(f"Error downloading document: {str(e)}")
+            return Response({'error': 'Download failed'}, status=500)

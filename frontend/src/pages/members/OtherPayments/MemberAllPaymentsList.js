@@ -157,11 +157,11 @@ const MemberAllPaymentsList = () => {
 
   // Handle payment update after successful recheck
   const handlePaymentUpdated = (paymentId) => {
-    // If your usePaginatedData hook has a refreshData function, use it
+    // Use usePaginatedData hook refreshData function
     if (refreshData) {
       refreshData();
     } else {
-      // Alternative: Force a page reload or manual state update
+      // Or Force a page reload or manual state update
       window.location.reload();
     }
   };

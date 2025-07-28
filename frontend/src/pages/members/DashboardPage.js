@@ -5,6 +5,7 @@ import PayButtons from "../../components/PayButton";
 import Spinner from '../../components/Spinner';
 import DashboardSummary from './DashboardSummary';
 import MemberAnnouncements from './MemberAnnouncements';
+import DocumentRequestsBanner from './DocumentRequestsBanner'; 
 
 const DashboardPage = () => {
   const { memberProfile, loading } = useContext(MemberContext);
@@ -34,6 +35,9 @@ const DashboardPage = () => {
     <div className="dashboard-container">
       <h1>Welcome, {user?.username || "Member"}!</h1>
 
+      {/* Document Requests Banner */}
+      <DocumentRequestsBanner />
+
       {(notApproved || unpaidFees) && (
         <div className="alert-banner">
           <h3>🚨 Membership Notice</h3>
@@ -47,14 +51,15 @@ const DashboardPage = () => {
           <PayButtons hasPaidShares={has_paid_shares} hasPaidLevy={has_paid_levy} />
         </div>
       )}
+      
       <div className="dashboard-split-container">
-      <div className="dashboard-left">
-        <DashboardSummary />
+        <div className="dashboard-left">
+          <DashboardSummary />
+        </div>
+        <div className="dashboard-right">
+          <MemberAnnouncements />
+        </div>
       </div>
-      <div className="dashboard-right">
-        <MemberAnnouncements />
-      </div>
-    </div>
     </div>
   );
 };
