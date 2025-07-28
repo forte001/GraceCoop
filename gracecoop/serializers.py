@@ -1324,96 +1324,82 @@ class MemberDocumentSerializer(serializers.ModelSerializer):
     reviewer_name = serializers.CharField(source='reviewed_by.get_full_name', read_only=True)
     file_size_mb = serializers.ReadOnlyField()
     file_url = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = MemberDocument
         fields = [
-            'id', 'document_type', 'document_type_display', 'document_file', 
+            'id', 'document_type', 'document_type_display', 'document_file',
             'file_url', 'status', 'status_display', 'rejection_reason',
-            'uploaded_at','document_owner', 'reviewed_at', 'reviewer_name', 'notes',
+            'uploaded_at', 'document_owner', 'reviewed_at', 'reviewer_name', 'notes',
             'file_size_mb', 'is_required', 'original_filename'
         ]
         read_only_fields = [
             'status', 'reviewed_at', 'reviewed_by', 'rejection_reason', 'original_filename'
         ]
 
-    def create(self, validated_data):
-        request = self.context.get('request')
-        
-        # Get member profile using correct relationship name
-        try:
-            member = request.user.memberprofile
-        except AttributeError:
-            raise serializers.ValidationError("User must have a member profile to upload documents")
-        
-        # Handle file upload based on environment
-        document_file = validated_data.get('document_file')
-        if not document_file:
-            raise serializers.ValidationError("Document file is required")
-        
-        # Inject member and file metadata
-        validated_data['member'] = member
-        validated_data['original_filename'] = document_file.name
-        validated_data['file_size'] = document_file.size
-        
-        try:
-            if settings.DEBUG:
-                # Store using FileField locally
-                instance = MemberDocument(**validated_data)
-                instance.full_clean()  
-                instance.save()
-            else:
-                # Handle Supabase storage in production
-                try:
-                    # Generate unique filename
-                    member_identifier = getattr(member, 'member_id', f"user_{member.user.id}")
-                    doc_type = validated_data.get('document_type', 'misc')
-                    file_ext = document_file.name.split(".")[-1]
-                    unique_name = f"documents/{member_identifier}/{doc_type}/doc_{uuid.uuid4()}.{file_ext}"
-                    
-                    # Upload to Supabase
-                    public_url = upload_document_to_supabase(document_file, unique_name)
-                    
-                    # Create instance without document_file, add document_url
-                    validated_data.pop('document_file', None)  # Remove from validated_data
-                    validated_data['document_url'] = public_url
-                    
-                    instance = MemberDocument(**validated_data)
-                    instance.full_clean()
-                    instance.save()
-                    
-                except Exception as e:
-                    logger.error(f"Supabase document upload failed: {str(e)}")
-                    raise serializers.ValidationError({
-                        'error': str(e),
-                        'hint': 'Check server logs for full stacktrace'
-                    })
-                    
-        except Exception as e:
-            logger.error(f"Error saving MemberDocument: {str(e)}")
-            raise serializers.ValidationError({
-                'error': f'Error saving document: {str(e)}',
-                'hint': 'See server logs for details'
-            })
-        
-        return instance
-
     def get_file_url(self, obj):
-        """Get file URL with request context"""
+        request = self.context.get('request')
         if settings.DEBUG and obj.document_file:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.document_file.url)
-            return obj.document_file.url
+            return request.build_absolute_uri(obj.document_file.url) if request else obj.document_file.url
         elif obj.document_url:
             return obj.document_url
         return None
+
 
 class DocumentUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = MemberDocument
         fields = ['document_type', 'document_file', 'notes']
 
+    def create(self, validated_data):
+        request = self.context.get('request')
+
+        try:
+            member = request.user.memberprofile
+        except AttributeError:
+            raise serializers.ValidationError("User must have a member profile to upload documents")
+
+        document_file = validated_data.get('document_file')
+        if not document_file:
+            raise serializers.ValidationError("Document file is required")
+
+        document_type = validated_data.get('document_type', 'misc')
+        validated_data['member'] = member
+        validated_data['original_filename'] = document_file.name
+
+        try:
+            if settings.DEBUG:
+                # Store using FileField locally
+                validated_data['file_size'] = document_file.size
+                instance = MemberDocument.objects.create(**validated_data)
+            else:
+                # Handle Supabase storage
+                try:
+                    member_identifier = getattr(member, 'member_id', f"user_{member.user.id}")
+                    ext = document_file.name.split('.')[-1]
+                    unique_filename = f"documents/{member_identifier}/{document_type}/doc_{uuid.uuid4()}.{ext}"
+
+                    public_url = upload_document_to_supabase(document_file, unique_filename)
+
+                    # Remove local file, add URL and original name
+                    validated_data.pop('document_file', None)
+                    validated_data['document_url'] = public_url
+
+                    instance = MemberDocument.objects.create(**validated_data)
+
+                except Exception as e:
+                    logger.error(f"Supabase upload error: {str(e)}")
+                    raise serializers.ValidationError({
+                        'error': 'Failed to upload document to cloud storage.',
+                        'details': str(e)
+                    })
+
+        except Exception as e:
+            logger.error(f"Error creating MemberDocument: {str(e)}")
+            raise serializers.ValidationError({'error': str(e)})
+
+        return instance
+    
 class DocumentReviewSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=['approve', 'reject'])
     reason = serializers.CharField(required=False, allow_blank=True)

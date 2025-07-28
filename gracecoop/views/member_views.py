@@ -503,71 +503,62 @@ class MemberDashboardSummaryView(APIView):
 ####################################################
 logger = logging.getLogger(__name__)
 class MemberDocumentViewSet(viewsets.ModelViewSet):
-    serializer_class = MemberDocumentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = StandardResultsSetPagination
     ordering = ['-uploaded_at']
-    
+
     def get_queryset(self):
-        # Members see only their documents, staff see all
-        if self.request.user.is_staff:
-            return MemberDocument.objects.all().order_by('-uploaded_at')  # Latest first
-        elif hasattr(self.request.user, 'memberprofile'):
-            return MemberDocument.objects.filter(member=self.request.user.memberprofile).order_by('-uploaded_at')
+        user = self.request.user
+        if user.is_staff:
+            return MemberDocument.objects.all().order_by('-uploaded_at')
+        elif hasattr(user, 'memberprofile'):
+            return MemberDocument.objects.filter(member=user.memberprofile).order_by('-uploaded_at')
         return MemberDocument.objects.none()
-    
-    def perform_create(self, serializer):
-        try:
-            member = self.request.user.memberprofile
-            serializer.save(member=member)
-        except AttributeError:
-            # Handle case where user doesn't have a member profile
-            raise ValidationError("User must have a member profile to upload documents")
-    
+
     def get_serializer_class(self):
         if self.action == 'create':
             return DocumentUploadSerializer
         elif self.action == 'review':
             return DocumentReviewSerializer
         return MemberDocumentSerializer
-    
+
+    def perform_create(self, serializer):
+        try:
+            member = self.request.user.memberprofile
+            serializer.save(member=member)
+        except AttributeError:
+            raise ValidationError("User must have a member profile to upload documents")
+
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def review(self, request, pk=None):
-        """Review (approve/reject) a document"""
         document = self.get_object()
         serializer = DocumentReviewSerializer(data=request.data)
-        
+
         if serializer.is_valid():
             action = serializer.validated_data['action']
-            
+            notes = serializer.validated_data.get('notes', '')
+
             if action == 'approve':
-                document.approve(
-                    reviewed_by=request.user,
-                    notes=serializer.validated_data.get('notes', '')
-                )
+                document.approve(reviewed_by=request.user, notes=notes)
                 message = "Document approved successfully"
             else:
-                document.reject(
-                    reviewed_by=request.user,
-                    reason=serializer.validated_data['reason'],
-                    notes=serializer.validated_data.get('notes', '')
-                )
+                reason = serializer.validated_data.get('reason', 'Not specified')
+                document.reject(reviewed_by=request.user, reason=reason, notes=notes)
                 message = "Document rejected"
-            
+
             return Response({
                 'message': message,
                 'document': MemberDocumentSerializer(document, context={'request': request}).data
             })
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     @action(detail=False, methods=['get'])
     def pending(self, request):
-        """Get pending documents for review (admin only)"""
         if not request.user.is_staff:
             return Response({'error': 'Admin access required'}, status=403)
-        
+
         pending_docs = MemberDocument.objects.filter(status='pending')
         serializer = MemberDocumentSerializer(pending_docs, many=True, context={'request': request})
         return Response(serializer.data)

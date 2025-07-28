@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   FaEye, FaCheck, FaTimes, FaDownload, FaPlus, 
   FaClock, FaExclamationTriangle, FaSearch, FaFilter,
-  FaUser, FaCalendarAlt, FaFileAlt, FaPaperPlane
+  FaUser, FaFileAlt, FaPaperPlane
 } from 'react-icons/fa';
 import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import DocumentPreviewModal from './DocumentPreviewModal';
@@ -91,6 +91,31 @@ const AdminDocumentInterface = () => {
     }
   };
 
+  const handleDocumentDownload = async (document) => {
+    try {
+      if (document.file_url) {
+        // For direct URLs (both local and Supabase), open in new tab
+        window.open(document.file_url, '_blank');
+      } else {
+        // Fallback: try to get signed URL if available
+        try {
+          const response = await axiosAdminInstance.get(`/admin/documents/${document.id}/signed-url/`);
+          if (response.data.signed_url) {
+            window.open(response.data.signed_url, '_blank');
+          } else {
+            throw new Error('No download URL available');
+          }
+        } catch (signedUrlError) {
+          console.error('Signed URL error:', signedUrlError);
+          setError('Unable to access document file');
+        }
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      setError('Failed to download document');
+    }
+  };
+
   const submitReview = async () => {
     if (!selectedDocument) return;
     
@@ -114,7 +139,10 @@ const AdminDocumentInterface = () => {
       setError(null);
     } catch (error) {
       console.error('Error submitting review:', error);
-      setError(error.response?.data?.message || 'Failed to submit review. Please try again.');
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to submit review. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -133,7 +161,10 @@ const AdminDocumentInterface = () => {
       setError(null);
     } catch (error) {
       console.error('Error submitting request:', error);
-      setError(error.response?.data?.message || 'Failed to submit request. Please try again.');
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to submit request. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -148,7 +179,10 @@ const AdminDocumentInterface = () => {
       setError(null);
     } catch (error) {
       console.error('Error canceling request:', error);
-      setError(error.response?.data?.message || 'Failed to cancel request. Please try again.');
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          'Failed to cancel request. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -172,7 +206,7 @@ const AdminDocumentInterface = () => {
   // Filter documents/requests based on search and filter
   const filteredData = (activeTab === 'requests' ? documentRequests : documents).filter(item => {
     const matchesSearch = searchTerm === '' || 
-      (item.document_owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.document_owner?.toLowerCase().includes(searchTerm.toLowerCase()) ||
        item.document_type_display?.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesFilter = filterType === 'all' || 
@@ -412,14 +446,13 @@ const AdminDocumentInterface = () => {
                                 <FaCheck /> Review
                               </button>
                             )}
-                            <a 
-                              href={document.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button 
                               className="btn-secondary btn-sm"
+                              onClick={() => handleDocumentDownload(document)}
+                              disabled={!document.file_url}
                             >
                               <FaDownload /> Download
-                            </a>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -451,10 +484,16 @@ const AdminDocumentInterface = () => {
             
             <div className="modal-body">
               <div className="document-details">
-                <p><strong>Member:</strong> {selectedDocument.document_owner} {selectedDocument.member?.user?.last_name}</p>
+                <p><strong>Member:</strong> {selectedDocument.document_owner}</p>
                 <p><strong>Document Type:</strong> {selectedDocument.document_type_display}</p>
                 <p><strong>Uploaded:</strong> {formatDate(selectedDocument.uploaded_at)}</p>
                 <p><strong>File Size:</strong> {selectedDocument.file_size_mb} MB</p>
+                {selectedDocument.original_filename && (
+                  <p><strong>Original Filename:</strong> {selectedDocument.original_filename}</p>
+                )}
+                {selectedDocument.notes && (
+                  <p><strong>Member Notes:</strong> {selectedDocument.notes}</p>
+                )}
               </div>
 
               <div className="review-form">
@@ -614,6 +653,7 @@ const AdminDocumentInterface = () => {
           setSelectedDocument(null);
         }}
         onReview={handlePreviewReview}
+        onDownload={handleDocumentDownload}
       />
     </div>
   );
