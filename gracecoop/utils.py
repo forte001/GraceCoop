@@ -26,6 +26,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django.core.mail import send_mail
 import requests
+import logging
+
 
 
 def create_member_profile_if_not_exists(user):
@@ -557,3 +559,31 @@ def upload_receipt_to_supabase(file, filename):
     )
     return public_url
 
+logger = logging.getLogger(__name__)
+def upload_document_to_supabase(file, filename):
+    """Upload document file to Supabase storage"""
+    try:
+        import requests
+        
+        # Upload file to Supabase storage
+        upload_url = f"{settings.SUPABASE_URL}/storage/v1/object/{settings.SUPABASE_BUCKET}/{filename}"
+        
+        headers = {
+            'Authorization': f'Bearer {settings.SUPABASE_SERVICE_KEY}',
+            'apikey': settings.SUPABASE_SERVICE_KEY,
+            'Content-Type': file.content_type or 'application/octet-stream'
+        }
+        
+        response = requests.post(upload_url, headers=headers, data=file.read())
+        
+        if response.status_code in [200, 201]:
+            # Return public URL
+            public_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/{settings.SUPABASE_BUCKET}/{filename}"
+            return public_url
+        else:
+            logger.error(f"Supabase upload failed: Status {response.status_code}, Response: {response.text}")
+            raise Exception(f"Upload failed with status {response.status_code}")
+            
+    except Exception as e:
+        logger.error(f"Error uploading to Supabase: {str(e)}")
+        raise

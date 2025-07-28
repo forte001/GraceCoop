@@ -47,24 +47,61 @@ const MemberDocuments = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedType || !file) return toast.warn("Select type & file");
+    
     setSubmitting(true);
     const fd = new FormData();
     fd.append("document_type", selectedType);
     fd.append("document_file", file);
     fd.append("notes", notes);
+    
     try {
-      await axiosMemberInstance.post("members/documents/", fd);
-      toast.success("Uploaded!");
+      await axiosMemberInstance.post("members/documents/", fd, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      toast.success("Document uploaded successfully!");
       setSelectedType("");
       setFile(null);
       setNotes("");
       refreshDocs(); // Refresh documents
       refreshRequests(); // Refresh requests in case this fulfills one
     } catch (err) {
-      console.error(err);
-      toast.error("Upload failed");
+      console.error("Upload error:", err);
+      
+      // Handle different error responses
+      if (err.response?.data) {
+        const errorData = err.response.data;
+        if (errorData.error) {
+          // Handle Supabase upload error format
+          toast.error(`Upload failed: ${errorData.error}`);
+        } else if (errorData.document_file) {
+          // Handle validation errors
+          toast.error(`File error: ${errorData.document_file[0]}`);
+        } else if (errorData.non_field_errors) {
+          toast.error(`Error: ${errorData.non_field_errors[0]}`);
+        } else {
+          toast.error("Upload failed. Please try again.");
+        }
+      } else {
+        toast.error("Upload failed. Please check your connection and try again.");
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleFileDownload = async (doc) => {
+    try {
+      // Use the file_url directly for viewing/downloading
+      if (doc.file_url) {
+        window.open(doc.file_url, '_blank');
+      } else {
+        toast.error("File not available for download");
+      }
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to access file");
     }
   };
 
@@ -175,21 +212,29 @@ const MemberDocuments = () => {
               onChange={e => setFile(e.target.files[0])} 
               required 
             />
+            {file && (
+              <div className="file-info">
+                <p>Selected: {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)</p>
+                {file.size > 5 * 1024 * 1024 && (
+                  <p className="error-text">File size exceeds 5MB limit</p>
+                )}
+              </div>
+            )}
             <textarea
               placeholder="Notes (optional)"
               value={notes}
               onChange={e => setNotes(e.target.value)}
             />
             <button 
-            type="submit" 
-            disabled={submitting}
-            style={{
-              backgroundColor: '#4caf50',
-              borderColor: '#4caf50'
-            }}
-          >
-            {submitting ? "Uploading…" : <><FaUpload /> Upload</>}
-          </button>
+              type="submit" 
+              disabled={submitting || (file && file.size > 5 * 1024 * 1024)}
+              style={{
+                backgroundColor: '#4caf50',
+                borderColor: '#4caf50'
+              }}
+            >
+              {submitting ? "Uploading…" : <><FaUpload /> Upload</>}
+            </button>
           </form>
 
           <div className="document-list">
@@ -216,20 +261,32 @@ const MemberDocuments = () => {
                         {doc.status_display}
                       </span>
                     </div>
-                    {doc.rejection_reason && <p>Reason: {doc.rejection_reason}</p>}
-                    {doc.notes && <p>Notes: {doc.notes}</p>}
+                    {doc.rejection_reason && <p className="rejection-reason">Reason: {doc.rejection_reason}</p>}
+                    {doc.notes && <p className="document-notes">Notes: {doc.notes}</p>}
                     <p>Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}</p>
-                    <a class="btn" href={doc.file_url} target="_blank" rel="noreferrer">View</a>
-                    {doc.status === "rejected" && (
-                      <div className="document-actions">
-                        <button onClick={() => {
-                          setSelectedType(doc.document_type);
-                          // Can't reupload same file object, user chooses new
-                        }}>
+                    {doc.original_filename && <p className="original-filename">File: {doc.original_filename}</p>}
+                    <p>Size: {doc.file_size_mb} MB</p>
+                    <div className="document-actions">
+                      <button 
+                        className="btn view-btn" 
+                        onClick={() => handleFileDownload(doc)}
+                        disabled={!doc.file_url}
+                      >
+                        View
+                      </button>
+                      {doc.status === "rejected" && (
+                        <button 
+                          className="btn reupload-btn"
+                          onClick={() => {
+                            setSelectedType(doc.document_type);
+                            // Can't reupload same file object, user chooses new
+                            toast.info("Please select a new file to re-upload");
+                          }}
+                        >
                           <FaRedo /> Re-upload
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 ))}
                 

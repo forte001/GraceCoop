@@ -4,14 +4,18 @@ from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
 import os
+import logging
+from django.conf import settings
+import time
 
+
+logger = logging.getLogger(__name__)
 
 def validate_document_file(value):
     """Validate uploaded documents"""
     # Check file size (max 5MB)
     if value.size > 5 * 1024 * 1024:
         raise ValidationError('File size cannot exceed 5MB.')
-
 
 
 def document_upload_path(instance, filename):
@@ -26,7 +30,6 @@ def document_upload_path(instance, filename):
     if hasattr(member, 'member_id') and member.member_id:
         member_identifier = member.member_id
     elif hasattr(member, 'user') and member.user:
-
         # For pending members
         member_identifier = f"pending_user_{member.user.id}"
     else:
@@ -35,14 +38,11 @@ def document_upload_path(instance, filename):
     doc_type = getattr(instance, 'document_type', 'misc') or 'misc'
     
     # Generate timestamp to avoid filename conflicts
-    import time
     timestamp = int(time.time())
     name, ext = os.path.splitext(filename)
     unique_filename = f"{name}_{timestamp}{ext}"
     
     return f'documents/{member_identifier}/{doc_type}/{unique_filename}'
-
-
 
 class MemberDocument(models.Model):
     """Simplified model for member documents"""
@@ -78,13 +78,21 @@ class MemberDocument(models.Model):
         choices=DOCUMENT_TYPES
     )
     
+    # For local development
     document_file = models.FileField(
         upload_to=document_upload_path,
         validators=[
             validate_document_file,
             FileExtensionValidator(allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'])
-        ]
+        ],
+        null=True,
+        blank=True
     )
+    
+    # For production (Supabase)
+    document_url = models.URLField(max_length=500, null=True, blank=True)
+    original_filename = models.CharField(max_length=255, null=True, blank=True)
+    file_size = models.PositiveIntegerField(null=True, blank=True)  # Store file size in bytes
     
     # Status and review
     status = models.CharField(
@@ -147,8 +155,18 @@ class MemberDocument(models.Model):
         """Get file size in MB"""
         if self.document_file:
             return round(self.document_file.size / (1024 * 1024), 2)
+        elif self.file_size:
+            return round(self.file_size / (1024 * 1024), 2)
         return 0
-
+    
+    @property
+    def file_url(self):
+        """Get file URL (works for both local and production)"""
+        if settings.DEBUG and self.document_file:
+            return self.document_file.url
+        elif self.document_url:
+            return self.document_url
+        return None
 
 class DocumentRequest(models.Model):
     """Model for admin to request documents from members"""
