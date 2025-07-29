@@ -85,3 +85,38 @@ class CanDisburseLoan(BasePermission):
 class CanApproveGracePeriod(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.has_perm('gracecoop.can_approve_grace_period')
+    
+
+
+########################################################
+# DOCUMENT-RELATED PERMISSIONS
+#######################################################
+
+class CanApproveDocument(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.has_perm('gracecoop.can_approve_document')
+
+
+class CanRejectDocument(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.has_perm('gracecoop.can_reject_document')
+
+
+class CanReviewDocument(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.has_perm('gracecoop.can_review_document')
+    
+
+class CanRequestDocument(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.has_perm('gracecoop.can_request_document')
+
+
+class CanCancelDocumentRequest(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.has_perm('gracecoop.can_cancel_document_request')
+
+
+class CanViewDocumentRequests(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.has_perm('gracecoop.can_view_document_requests')

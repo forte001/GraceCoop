@@ -46,6 +46,14 @@ def document_upload_path(instance, filename):
 
 class MemberDocument(models.Model):
     """Simplified model for member documents"""
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        permissions = [
+            ("can_approve_document", "Can approve member document"),
+            ("can_reject_document", "Can reject member document"),
+            ("can_review_document", "Can review member document"),
+        ]
     
     DOCUMENT_TYPES = [
         ('national_id', 'National ID Card'),
@@ -173,6 +181,15 @@ class MemberDocument(models.Model):
 
 class DocumentRequest(models.Model):
     """Model for admin to request documents from members"""
+
+    class Meta:
+        ordering = ['-requested_at']
+        unique_together = ['member', 'document_type', 'status']
+        permissions = [
+            ("can_request_document", "Can request document from member"),
+            ("can_cancel_document_request", "Can cancel a document request"),
+            ("can_view_document_requests", "Can view all document requests"),
+        ]
     
     REQUEST_STATUS = [
         ('pending', 'Pending'),

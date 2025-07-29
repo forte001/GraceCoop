@@ -39,6 +39,12 @@ from ..serializers import (
     MemberDocumentSerializer, DocumentRequestSerializer,
     DocumentReviewSerializer, DocumentUploadSerializer
 )
+from ..permissions import(
+    CanApproveDocument,
+    CanRejectDocument, CanCancelDocumentRequest,
+    CanRequestDocument, CanViewDocumentRequests,
+    CanReviewDocument
+)
 from datetime import datetime
 from gracecoop.utils import send_verification_email, send_password_reset_email
 import uuid
@@ -508,6 +514,15 @@ class MemberDocumentViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     ordering = ['-uploaded_at']
 
+    def get_permissions(self):
+        if self.action == 'approve':
+            self.permission_classes = [CanApproveDocument]
+        elif self.action == 'reject':
+            self.permission_classes = [CanRejectDocument]
+        elif self.action == 'review':
+            self.permission_classes = [CanReviewDocument]
+        return super().get_permissions()
+
     def get_queryset(self):
         user = self.request.user
         if user.is_staff:
@@ -566,6 +581,17 @@ class MemberDocumentViewSet(viewsets.ModelViewSet):
 class DocumentRequestViewSet(viewsets.ModelViewSet):
     queryset = DocumentRequest.objects.all()
     serializer_class = DocumentRequestSerializer
+    pagination_class = StandardResultsSetPagination
+    ordering = ['-requested_at']
+
+    def get_permissions(self):
+        if self.action == 'create':
+            self.permission_classes = [CanRequestDocument]
+        elif self.action == 'cancel':
+            self.permission_classes = [CanCancelDocumentRequest]
+        elif self.action in ['list', 'retrieve']:
+            self.permission_classes = [CanViewDocumentRequests]
+        return super().get_permissions()
 
     def get_queryset(self):
         user = self.request.user
