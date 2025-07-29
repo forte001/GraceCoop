@@ -153,13 +153,14 @@ class MemberDocument(models.Model):
     @property
     def file_size_mb(self):
         try:
-            if self.document_file:
+            if self.file_size:
+                return round(self.file_size / (1024 * 1024), 2)
+            elif self.document_file:
                 return round(self.document_file.size / (1024 * 1024), 2)
-            elif self.document_url:
-                return None
             return None
         except Exception:
             return None
+
     
     @property
     def file_url(self):
