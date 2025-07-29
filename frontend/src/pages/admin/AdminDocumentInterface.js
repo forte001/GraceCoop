@@ -7,6 +7,7 @@ import {
 import axiosAdminInstance from '../../utils/axiosAdminInstance';
 import DocumentPreviewModal from './DocumentPreviewModal';
 import '../../styles/admin/AdminDocumentInterface.css'
+import Spinner from '../../components/Spinner';
 
 const AdminDocumentInterface = () => {
   const [activeTab, setActiveTab] = useState('pending');
@@ -337,9 +338,8 @@ const AdminDocumentInterface = () => {
 
       {/* Content */}
       <div className="content-area">
-        {loading ? (
-          <div className="loading-spinner">Loading...</div>
-        ) : (
+        {loading && <Spinner />}
+      
           <div className="data-table">
             {activeTab === 'requests' ? (
               // Document Requests Table
@@ -468,7 +468,9 @@ const AdminDocumentInterface = () => {
               </table>
             )}
           </div>
-        )}
+
+        
+
       </div>
 
       {/* Review Modal */}

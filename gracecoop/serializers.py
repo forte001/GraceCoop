@@ -1381,9 +1381,14 @@ class DocumentUploadSerializer(serializers.ModelSerializer):
 
                     public_url = upload_document_to_supabase(document_file, unique_filename)
 
+                    # Assign file size BEFORE popping the file out
+                    validated_data['file_size'] = document_file.size
+                    validated_data['original_filename'] = document_file.name
+
                     # Remove local file, add URL and original name
                     validated_data.pop('document_file', None)
                     validated_data['document_url'] = public_url
+                
 
                     instance = MemberDocument.objects.create(**validated_data)
 
