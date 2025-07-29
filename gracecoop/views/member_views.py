@@ -564,18 +564,27 @@ class MemberDocumentViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class DocumentRequestViewSet(viewsets.ModelViewSet):
+    queryset = DocumentRequest.objects.all()
     serializer_class = DocumentRequestSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    pagination_class = StandardResultsSetPagination
-    ordering = ['-requested_at']
-    
+
     def get_queryset(self):
-        # Members see only their requests, staff see all
-        if self.request.user.is_staff:
-            return DocumentRequest.objects.all().order_by('-requested_at')  # Latest first
-        elif hasattr(self.request.user, 'memberprofile'):
-            return DocumentRequest.objects.filter(member=self.request.user.memberprofile).order_by('-requested_at')
+        user = self.request.user
+
+        # Admins (staff users) see all document requests
+        if user.is_staff:
+            return DocumentRequest.objects.all().order_by('-requested_at')
+
+        # Regular members (or admins acting as members) see only requests *directed to them*
+        if hasattr(user, 'memberprofile'):
+            return DocumentRequest.objects.filter(member=user.memberprofile).order_by('-requested_at')
+
         return DocumentRequest.objects.none()
+
+    def get_serializer_context(self):
+        """Pass request context for use in serializer (for is_self_request)"""
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
     
     def get_serializer_class(self):
         if self.action == 'create':

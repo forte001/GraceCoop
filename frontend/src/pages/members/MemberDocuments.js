@@ -11,6 +11,20 @@ const MemberDocuments = () => {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("upload"); // "upload" or "requests"
+  const [userId, setUserId] = useState(null);
+
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const response = await axiosMemberInstance.get('members/user/me/');
+        setUserId(response.data.id);
+      } catch (error) {
+        console.error('Failed to get current user:', error);
+      }
+    };
+    getCurrentUser();
+  }, []);
 
   // Paginated data for documents (3 per page)
   const {
@@ -43,6 +57,24 @@ const MemberDocuments = () => {
     setDocsPageSize(3); // 3 documents per page
     setRequestsPageSize(3); // 3 request per page
   }, [setDocsPageSize, setRequestsPageSize]);
+
+  // Filter requests to only show those directed to the current user
+  const allRequests = userId ? 
+    (requestsFullData.results || []).filter(req => req.requested_from_id === userId) : 
+    [];
+
+  // Filter current page requests for display
+  const filteredCurrentPageRequests = userId ? 
+    (requests || []).filter(req => req.requested_from_id === userId) : 
+    [];
+
+  // Recalculate stats based on filtered requests
+  const pendingRequests = allRequests.filter(req => req.status === 'pending');
+  const overdueRequests = allRequests.filter(req => req.is_overdue && req.status === 'pending');
+
+  // Calculate pagination for filtered results
+  const filteredTotalCount = allRequests.length;
+  const filteredTotalPages = Math.ceil(filteredTotalCount / requestsPageSize);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -133,11 +165,6 @@ const MemberDocuments = () => {
     };
     return badges[status] || 'status-pending';
   };
-
-  // Calculate stats from full data (not just current page)
-  const allRequests = requestsFullData.results || [];
-  const pendingRequests = allRequests.filter(req => req.status === 'pending');
-  const overdueRequests = allRequests.filter(req => req.is_overdue && req.status === 'pending');
 
   const PaginationControls = ({ currentPage, setCurrentPage, totalPages, itemName }) => {
     if (totalPages <= 1) return null;
@@ -309,7 +336,7 @@ const MemberDocuments = () => {
           <div className="list-header">
             <h2>Document Requests</h2>
             <span className="total-count">
-              {requestsFullData.count} total request{requestsFullData.count !== 1 ? 's' : ''}
+              {filteredTotalCount} total request{filteredTotalCount !== 1 ? 's' : ''} directed to you
             </span>
           </div>
           
@@ -326,9 +353,9 @@ const MemberDocuments = () => {
             </div>
           )}
 
-          {Array.isArray(requests) && requests.length > 0 ? (
+          {Array.isArray(filteredCurrentPageRequests) && filteredCurrentPageRequests.length > 0 ? (
             <div className="request-list">
-              {requests.map(request => (
+              {filteredCurrentPageRequests.map(request => (
                 <div key={request.id} className={`request-item ${getRequestStatusClass(request)}`}>
                   <div className="request-header">
                     <div className="request-title">
@@ -375,12 +402,14 @@ const MemberDocuments = () => {
               <PaginationControls 
                 currentPage={requestsCurrentPage}
                 setCurrentPage={setRequestsCurrentPage}
-                totalPages={requestsTotalPages}
+                totalPages={filteredTotalPages}
                 itemName="requests"
               />
             </div>
           ) : (
-            <p>No document requests found.</p>
+            <p className="no-requests-message">
+              No document requests directed to you.
+            </p>
           )}
         </div>
       )}

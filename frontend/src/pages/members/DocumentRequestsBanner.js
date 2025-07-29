@@ -25,8 +25,10 @@ const DocumentRequestsBanner = () => {
 
   if (loading || requests.length === 0) return null;
 
-  const pendingRequests = requests.filter(req => req.status === 'pending');
-  const overdueRequests = requests.filter(req => req.is_overdue && req.status === 'pending');
+  const memberRequests = requests.filter(req => !req.is_self_request);
+  const pendingRequests = memberRequests.filter(req => req.status === 'pending');
+  const overdueRequests = memberRequests.filter(req => req.is_overdue && req.status === 'pending');
+
 
   if (pendingRequests.length === 0) return null;
 

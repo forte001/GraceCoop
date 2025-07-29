@@ -1421,15 +1421,25 @@ class DocumentRequestSerializer(serializers.ModelSerializer):
     document_owner = serializers.CharField(source='member.full_name', read_only=True)
     requester_name = serializers.CharField(source='requested_by.get_full_name', read_only=True)
     is_overdue = serializers.ReadOnlyField()
+    is_self_request = serializers.SerializerMethodField()
+    requested_from_id = serializers.SerializerMethodField()
     
     class Meta:
         model = DocumentRequest
         fields = [
             'id', 'document_type', 'document_type_display', 'status', 
             'status_display', 'message', 'requested_at', 'deadline',
-            'fulfilled_at', 'requester_name','document_owner', 'is_overdue'
+            'fulfilled_at', 'requester_name','document_owner', 'is_overdue','is_self_request',
+            'requested_from_id'
         ]
         read_only_fields = ['status', 'fulfilled_at']
+    
+    def get_is_self_request(self, obj):
+        request = self.context.get("request")
+        return request and obj.requested_by == request.user
+    
+    def get_requested_from_id(self, obj):
+        return obj.member.user.id if obj.member and obj.member.user else None
 
 class CreateDocumentRequestSerializer(serializers.ModelSerializer):
     deadline = serializers.DateTimeField(required=False, allow_null=True)
