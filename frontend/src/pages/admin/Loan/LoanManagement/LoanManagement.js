@@ -11,13 +11,14 @@ const LoanManagement = () => {
   const [activeTab, setActiveTab] = useState('pending');
   const navigate = useNavigate();
 
+  // Hook for loan applications
   const {
-    filters,
-    setFilters,
     data: loanApplicationsData,
     currentPage: applicationPage,
     totalPages: totalApplicationPages,
     setCurrentPage: setApplicationPage,
+    filters: applicationFilters,
+    setFilters: setApplicationFilters,
     refresh: refreshApplications,
   } = usePaginatedData('/admin/loan/loan-applications-admin/', {
     query: '',
@@ -26,14 +27,32 @@ const LoanManagement = () => {
     ordering: '-approval_date',
   });
 
+  // Hook for active loans
   const {
     data: loansData,
     currentPage: loanPage,
     totalPages: totalLoanPages,
     setCurrentPage: setLoanPage,
+    filters: loanFilters,
+    setFilters: setLoanFilters,
     refresh: refreshLoans,
-  } = usePaginatedData('/admin/loan/loans-admin/', filters);
+  } = usePaginatedData('/admin/loan/loans-admin/', {
+    query: '',
+    approved_at_after: '',
+    approved_at_before: '',
+    ordering: '-approved_at',
+  });
 
+  // Reset pages when filters change
+  useEffect(() => {
+    setApplicationPage(1);
+  }, [applicationFilters, setApplicationPage]);
+
+  useEffect(() => {
+    setLoanPage(1);
+  }, [loanFilters, setLoanPage]);
+
+  // Helpers
   const transformExportLoan = (loan) => ({
     'Loan Ref': loan.reference || 'N/A',
     'Member': loan.applicant_name || 'N/A',
@@ -58,23 +77,18 @@ const LoanManagement = () => {
     'Disbursed',
   ];
 
-  const {
-    exportToExcel,
-    exportToCSV,
-    exportToPDF,
-  } = exportHelper({
+  const { exportToExcel, exportToCSV, exportToPDF } = exportHelper({
     url: '/admin/loan/loans-admin/',
-    filters,
+    filters: loanFilters,
     transformFn: transformExportLoan,
     columns: exportColumns,
     fileName: 'loans',
     reportTitle: 'Loan Management Report',
   });
 
-  useEffect(() => {
-    setApplicationPage(1);
-    setLoanPage(1);
-  }, [filters, setApplicationPage, setLoanPage]);
+  // Tab-specific filters
+  const currentFilters = activeTab === 'pending' ? applicationFilters : loanFilters;
+  const setCurrentFilters = activeTab === 'pending' ? setApplicationFilters : setLoanFilters;
 
   return (
     <div className="loan-management">
@@ -84,11 +98,11 @@ const LoanManagement = () => {
         <small className="form-hint">Search with:</small>
         <input
           className="filter-input"
-          type='text'
-          placeholder="Loan reference or member name"
-          value={filters.query || ''}
+          type="text"
+          placeholder={activeTab === 'pending' ? "Applicant username or name" : "Loan reference or member name"}
+          value={currentFilters.query || ''}
           onChange={(e) =>
-            setFilters((f) => ({ ...f, query: e.target.value }))
+            setCurrentFilters((f) => ({ ...f, query: e.target.value }))
           }
         />
 
@@ -96,9 +110,9 @@ const LoanManagement = () => {
         <input
           className="filter-input"
           type="date"
-          value={filters.approved_at_after || ''}
+          value={currentFilters.approved_at_after || ''}
           onChange={(e) =>
-            setFilters((f) => ({ ...f, approved_at_after: e.target.value }))
+            setCurrentFilters((f) => ({ ...f, approved_at_after: e.target.value }))
           }
         />
 
@@ -106,9 +120,9 @@ const LoanManagement = () => {
         <input
           className="filter-input"
           type="date"
-          value={filters.approved_at_before || ''}
+          value={currentFilters.approved_at_before || ''}
           onChange={(e) =>
-            setFilters((f) => ({ ...f, approved_at_before: e.target.value }))
+            setCurrentFilters((f) => ({ ...f, approved_at_before: e.target.value }))
           }
         />
 

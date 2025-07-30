@@ -27,8 +27,8 @@ class LoanApplicationFilter(django_filters.FilterSet):
 
     def filter_by_query(self, queryset, name, value):
         return queryset.filter(
-            Q(applicant__user__first_name__icontains=value) |
-            Q(applicant__user__last_name__icontains=value)|
+            Q(applicant__first_name__icontains=value) |
+            Q(applicant__last_name__icontains=value) |
             Q(applicant__username__icontains=value)
         )
 

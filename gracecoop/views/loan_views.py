@@ -98,6 +98,7 @@ class BaseLoanViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = LoanFilter
+    ordering = ['-approved_at']
     
     def get_queryset(self):
         """Base queryset with optimized database queries"""
