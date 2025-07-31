@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, generics, status, permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -14,7 +15,7 @@ from collections import OrderedDict
 from calendar import month_name
 from decimal import Decimal
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-
+from rest_framework.exceptions import PermissionDenied
 from gracecoop.pagination import StandardResultsSetPagination
 from ..models import (MemberProfile, 
                       CooperativeConfig,
@@ -508,133 +509,10 @@ class MemberDashboardSummaryView(APIView):
 ### DOCUMENT OPERATIONS VIEWS
 ####################################################
 logger = logging.getLogger(__name__)
-class MemberDocumentViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+class BaseDocumentViewSet(viewsets.ModelViewSet):
+    """Base viewset with common document functionality"""
+    pagination_class = StandardResultsSetPagination
     parser_classes = [MultiPartParser, FormParser, JSONParser]
-    pagination_class = StandardResultsSetPagination
-    ordering = ['-uploaded_at']
-
-    def get_permissions(self):
-        if self.action == 'approve':
-            self.permission_classes = [CanApproveDocument]
-        elif self.action == 'reject':
-            self.permission_classes = [CanRejectDocument]
-        elif self.action == 'review':
-            self.permission_classes = [CanReviewDocument]
-        return super().get_permissions()
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_staff:
-            return MemberDocument.objects.all().order_by('-uploaded_at')
-        elif hasattr(user, 'memberprofile'):
-            return MemberDocument.objects.filter(member=user.memberprofile).order_by('-uploaded_at')
-        return MemberDocument.objects.none()
-
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return DocumentUploadSerializer
-        elif self.action == 'review':
-            return DocumentReviewSerializer
-        return MemberDocumentSerializer
-
-    def perform_create(self, serializer):
-        try:
-            member = self.request.user.memberprofile
-            serializer.save(member=member)
-        except AttributeError:
-            raise ValidationError("User must have a member profile to upload documents")
-
-    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
-    def review(self, request, pk=None):
-        document = self.get_object()
-        serializer = DocumentReviewSerializer(data=request.data)
-
-        if serializer.is_valid():
-            action = serializer.validated_data['action']
-            notes = serializer.validated_data.get('notes', '')
-
-            if action == 'approve':
-                document.approve(reviewed_by=request.user, notes=notes)
-                message = "Document approved successfully"
-            else:
-                reason = serializer.validated_data.get('reason', 'Not specified')
-                document.reject(reviewed_by=request.user, reason=reason, notes=notes)
-                message = "Document rejected"
-
-            return Response({
-                'message': message,
-                'document': MemberDocumentSerializer(document, context={'request': request}).data
-            })
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=['get'])
-    def pending(self, request):
-        if not request.user.is_staff:
-            return Response({'error': 'Admin access required'}, status=403)
-
-        pending_docs = MemberDocument.objects.filter(status='pending')
-        serializer = MemberDocumentSerializer(pending_docs, many=True, context={'request': request})
-        return Response(serializer.data)
-
-class DocumentRequestViewSet(viewsets.ModelViewSet):
-    queryset = DocumentRequest.objects.all()
-    serializer_class = DocumentRequestSerializer
-    pagination_class = StandardResultsSetPagination
-    ordering = ['-requested_at']
-
-    def get_permissions(self):
-        if self.action == 'create':
-            self.permission_classes = [CanRequestDocument]
-        elif self.action == 'cancel':
-            self.permission_classes = [CanCancelDocumentRequest]
-        elif self.action in ['list', 'retrieve']:
-            self.permission_classes = [CanViewDocumentRequests]
-        return super().get_permissions()
-
-    def get_queryset(self):
-        user = self.request.user
-
-        # Admins (staff users) see all document requests
-        if user.is_staff:
-            return DocumentRequest.objects.all().order_by('-requested_at')
-
-        # Regular members (or admins acting as members) see only requests *directed to them*
-        if hasattr(user, 'memberprofile'):
-            return DocumentRequest.objects.filter(member=user.memberprofile).order_by('-requested_at')
-
-        return DocumentRequest.objects.none()
-
-    def get_serializer_context(self):
-        """Pass request context for use in serializer (for is_self_request)"""
-        context = super().get_serializer_context()
-        context.update({"request": self.request})
-        return context
-    
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return CreateDocumentRequestSerializer
-        return DocumentRequestSerializer
-    
-    def create(self, request, *args, **kwargs):
-        """Create new document request (admin only)"""
-        if not request.user.is_staff:
-            return Response({'error': 'Admin access required'}, status=403)
-        return super().create(request, *args, **kwargs)
-    
-    @action(detail=True, methods=['post'])
-    def cancel(self, request, pk=None):
-        """Cancel a document request"""
-        doc_request = self.get_object()
-        
-        # Only admin or the member can cancel
-        if not (request.user.is_staff or 
-                (hasattr(request.user, 'memberprofile') and request.user.memberprofile == doc_request.member)):
-            return Response({'error': 'Permission denied'}, status=403)
-        
-        doc_request.cancel()
-        return Response({'message': 'Request cancelled successfully'})
     
     @action(detail=True, methods=['get'], url_path='signed-url')
     def get_signed_url(self, request, pk=None):
@@ -655,7 +533,6 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                     'direct_url': True
                 })
             
-            # For production with Supabase
             elif document.document_url:
                 # If using Supabase storage, generate signed URL
                 if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY:
@@ -704,9 +581,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
                 })
             
             return Response({'error': 'No document file available'}, status=404)
-                
-        except MemberDocument.DoesNotExist:
-            return Response({'error': 'Document not found'}, status=404)
+         
         except Exception as e:
             logger.error(f"Error generating signed URL: {str(e)}")
             return Response({'error': 'Failed to generate signed URL'}, status=500)
@@ -752,3 +627,252 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error downloading document: {str(e)}")
             return Response({'error': 'Download failed'}, status=500)
+
+
+# Admin Document ViewSet
+class AdminDocumentViewSet(BaseDocumentViewSet):
+    """Admin-specific document management viewset"""
+    permission_classes = [IsAdminUser]
+    ordering = ['-uploaded_at']
+
+    def get_permissions(self):
+        if self.action == 'approve':
+            self.permission_classes = [CanApproveDocument]
+        elif self.action == 'reject':
+            self.permission_classes = [CanRejectDocument]
+        elif self.action == 'review':
+            self.permission_classes = [CanReviewDocument]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        """Admin sees ALL documents in the system"""
+        return MemberDocument.objects.select_related(
+            'member__user', 'reviewed_by'
+        ).all().order_by('-uploaded_at')
+    
+    def get_serializer_class(self):
+        if self.action == 'review':
+            return DocumentReviewSerializer
+        return MemberDocumentSerializer
+    
+    @action(detail=True, methods=['post'])
+    def review(self, request, pk=None):
+        """Review (approve/reject) a document"""
+        document = self.get_object()
+        serializer = DocumentReviewSerializer(data=request.data)
+
+        if serializer.is_valid():
+            action = serializer.validated_data['action']
+            notes = serializer.validated_data.get('notes', '')
+
+            if action == 'approve':
+                document.approve(reviewed_by=request.user, notes=notes)
+                message = "Document approved successfully"
+            else:
+                reason = serializer.validated_data.get('reason', 'Not specified')
+                document.reject(reviewed_by=request.user, reason=reason, notes=notes)
+                message = "Document rejected"
+
+            return Response({
+                'message': message,
+                'document': MemberDocumentSerializer(document, context={'request': request}).data
+            })
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def pending(self, request):
+        """Get all pending documents for admin review"""
+        pending_docs = MemberDocument.objects.filter(
+            status='pending'
+        ).select_related('member__user', 'reviewed_by').order_by('-uploaded_at')
+        
+        serializer = MemberDocumentSerializer(pending_docs, many=True, context={'request': request})
+        return Response(serializer.data)
+        
+# Member Document ViewSet
+class MemberDocumentViewSet(BaseDocumentViewSet):
+    """Member-specific document management viewset"""
+    permission_classes = [IsAuthenticated]
+    ordering = ['-uploaded_at']
+    
+    def get_queryset(self):
+        """Members see ONLY their own documents"""
+        try:
+            # Get the current user's member profile
+            member_profile = self.request.user.memberprofile
+            
+            # Debug logging
+            logger.info(f"Member {member_profile.id} accessing documents")
+            
+            # Return only documents belonging to this member
+            queryset = MemberDocument.objects.filter(
+                member=member_profile
+            ).select_related('member__user', 'reviewed_by').order_by('-uploaded_at')
+            
+            logger.info(f"Found {queryset.count()} documents for member {member_profile.id}")
+            return queryset
+            
+        except AttributeError as e:
+            logger.error(f"User {self.request.user.id} has no member profile: {str(e)}")
+            return MemberDocument.objects.none()
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return DocumentUploadSerializer
+        return MemberDocumentSerializer
+
+    def perform_create(self, serializer):
+        """Ensure document is created for the current user's member profile"""
+        try:
+            member = self.request.user.memberprofile
+            logger.info(f"Creating document for member {member.id}")
+            serializer.save(member=member)
+        except AttributeError:
+            logger.error(f"User {self.request.user.id} attempted to upload without member profile")
+            raise ValidationError("User must have a member profile to upload documents")
+    
+
+# Admin Document Request ViewSet
+class AdminDocumentRequestViewSet(viewsets.ModelViewSet):
+    """Admin-specific document request management"""
+    permission_classes = [IsAdminUser]
+    serializer_class = DocumentRequestSerializer
+    pagination_class = StandardResultsSetPagination
+    ordering = ['-requested_at']
+
+    def get_permissions(self):
+        if self.action == 'create':
+            self.permission_classes = [CanRequestDocument]
+        elif self.action == 'cancel':
+            self.permission_classes = [CanCancelDocumentRequest]
+        elif self.action in ['list', 'retrieve']:
+            self.permission_classes = [CanViewDocumentRequests]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        """Admin sees ALL document requests in the system"""
+        return DocumentRequest.objects.select_related(
+            'member__user', 'requested_by'
+        ).all().order_by('-requested_at')
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CreateDocumentRequestSerializer
+        return DocumentRequestSerializer
+    
+    def get_serializer_context(self):
+        """Pass request context for use in serializer"""
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+    
+    def create(self, request, *args, **kwargs):
+        """Create new document request (admin only)"""
+        return super().create(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancel a document request (admin can cancel any)"""
+        doc_request = self.get_object()
+        doc_request.cancel()
+        return Response({'message': 'Request cancelled successfully'})
+    
+    @action(detail=False, methods=['get'])
+    def pending(self, request):
+        """Get all pending document requests"""
+        pending_requests = DocumentRequest.objects.filter(
+            status='pending'
+        ).select_related('member__user', 'requested_by').order_by('-requested_at')
+        
+        serializer = DocumentRequestSerializer(pending_requests, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def overdue(self, request):
+        """Get all overdue document requests"""
+        overdue_requests = DocumentRequest.objects.filter(
+            status='pending',
+            deadline__lt=timezone.now()
+        ).select_related('member__user', 'requested_by').order_by('-requested_at')
+        
+        serializer = DocumentRequestSerializer(overdue_requests, many=True, context={'request': request})
+        return Response(serializer.data)
+
+class MemberDocumentRequestViewSet(viewsets.ReadOnlyModelViewSet):
+    """Member-specific document request viewing"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = DocumentRequestSerializer
+    pagination_class = StandardResultsSetPagination
+    ordering = ['-requested_at']
+    
+    def get_queryset(self):
+        """Members see ONLY requests directed TO them"""
+        try:
+            # Get the current user's member profile
+            member_profile = self.request.user.memberprofile
+            
+            # Debug logging
+            logger.info(f"Member {member_profile.id} accessing document requests")
+            
+            # Return requests where this member is the TARGET of the request
+            queryset = DocumentRequest.objects.filter(
+                member=member_profile  # Requests FOR this member
+            ).select_related('member__user', 'requested_by').order_by('-requested_at')
+            
+            logger.info(f"Found {queryset.count()} requests for member {member_profile.id}")
+            return queryset
+            
+        except AttributeError as e:
+            logger.error(f"User {self.request.user.id} has no member profile: {str(e)}")
+            return DocumentRequest.objects.none()
+    
+    def get_serializer_context(self):
+        """Pass request context for use in serializer"""
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+    
+    @action(detail=False, methods=['get'])
+    def pending(self, request):
+        """Get member's pending document requests"""
+        try:
+            member_profile = request.user.memberprofile
+            
+            pending_requests = DocumentRequest.objects.filter(
+                member=member_profile,
+                status='pending'
+            ).select_related('member__user', 'requested_by').order_by('-requested_at')
+            
+            serializer = DocumentRequestSerializer(pending_requests, many=True, context={'request': request})
+            return Response(serializer.data)
+            
+        except AttributeError:
+            return Response({'error': 'Member profile required'}, status=403)
+    
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def notifications(self, request):
+        """Get pending document requests for dashboard notifications"""
+        try:
+            member_profile = request.user.memberprofile
+            
+            # Get recent pending requests
+            recent_requests = DocumentRequest.objects.filter(
+                member=member_profile,  # Requests FOR this member
+                status='pending',
+                requested_at__gte=timezone.now() - timezone.timedelta(days=30)
+            ).select_related('member__user', 'requested_by').order_by('-requested_at')[:5]
+            
+            serializer = DocumentRequestSerializer(recent_requests, many=True, context={'request': request})
+            
+            logger.info(f"Returning {len(recent_requests)} notifications for member {member_profile.id}")
+            
+            return Response({
+                'count': len(recent_requests),
+                'results': serializer.data
+            })
+            
+        except AttributeError:
+            logger.warning(f"User {request.user.id} has no member profile for notifications")
+            return Response({'count': 0, 'results': []})

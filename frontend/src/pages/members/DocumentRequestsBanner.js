@@ -1,36 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FaFileAlt, FaExclamationTriangle, FaClock } from 'react-icons/fa';
 import axiosMemberInstance from '../../utils/axiosMemberInstance';
+import { FaExclamationTriangle, FaClock, FaFileAlt, FaTimes } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
-const DocumentRequestsBanner = () => {
-  const [requests, setRequests] = useState([]);
+const DocumentRequestBanner = () => {
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dismissed, setDismissed] = useState(new Set());
 
   useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const res = await axiosMemberInstance.get("admin/requests/");
-        const requestsData = res.data.results || res.data;
-        setRequests(requestsData);
-      } catch (err) {
-        console.error("Failed to load document requests:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRequests();
+    fetchNotifications();
   }, []);
 
-  if (loading || requests.length === 0) return null;
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosMemberInstance.get('members/member-document-requests/notifications/');
+      if (response.data && response.data.results) {
+        setNotifications(response.data.results);
+      }
+    } catch (error) {
+      console.error('Error fetching document request notifications:', error);
+      if (error.response) {
+        console.error('Response error:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const memberRequests = requests.filter(req => !req.is_self_request);
-  const pendingRequests = memberRequests.filter(req => req.status === 'pending');
-  const overdueRequests = memberRequests.filter(req => req.is_overdue && req.status === 'pending');
+  // const dismissNotification = (notificationId) => {
+  //   setDismissed(prev => new Set([...prev, notificationId]));
+  // };
 
+  const dismissAllNotifications = () => {
+    const allIds = notifications.map(n => n.id);
+    setDismissed(new Set(allIds));
+  };
 
-  if (pendingRequests.length === 0) return null;
+  const visibleNotifications = notifications.filter(n => !dismissed.has(n.id));
+
+  const overdueRequests = visibleNotifications.filter(n => n.is_overdue);
+  const pendingRequests = visibleNotifications;
+
+  if (loading || visibleNotifications.length === 0) return null;
 
   return (
     <div className={`document-requests-banner ${overdueRequests.length > 0 ? 'overdue' : 'pending'}`}>
@@ -39,13 +54,13 @@ const DocumentRequestsBanner = () => {
       </div>
       <div className="banner-content">
         <h4>
-          {overdueRequests.length > 0 
+          {overdueRequests.length > 0
             ? `⚠️ ${overdueRequests.length} Overdue Document Request${overdueRequests.length > 1 ? 's' : ''}!`
             : `📄 ${pendingRequests.length} Pending Document Request${pendingRequests.length > 1 ? 's' : ''}`
           }
         </h4>
         <p>
-          {overdueRequests.length > 0 
+          {overdueRequests.length > 0
             ? 'You have overdue document requests that need immediate attention.'
             : 'You have pending document requests from admin.'
           }
@@ -62,13 +77,23 @@ const DocumentRequestsBanner = () => {
           )}
         </div>
       </div>
+      {visibleNotifications.length > 0 && (
+          <button 
+            className="dismiss-all-btn"
+            onClick={dismissAllNotifications}
+            title="Dismiss all notifications"
+          >
+            <FaTimes />
+          </button>
+        )}
       <div className="banner-actions">
         <Link to="/member/edit-profile" className="view-requests-btn">
           <FaFileAlt /> View & Upload
         </Link>
+        
       </div>
     </div>
   );
 };
 
-export default DocumentRequestsBanner;
+export default DocumentRequestBanner;

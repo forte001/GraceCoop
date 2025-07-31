@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import axiosMemberInstance from "../../utils/axiosMemberInstance";
 import usePaginatedData from "../../utils/usePaginatedData";
@@ -10,23 +11,9 @@ const MemberDocuments = () => {
   const [file, setFile] = useState(null);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState("upload"); // "upload" or "requests"
-  const [userId, setUserId] = useState(null);
+  const [activeTab, setActiveTab] = useState("upload");
 
-  // Get current user ID
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      try {
-        const response = await axiosMemberInstance.get('members/user/me/');
-        setUserId(response.data.id);
-      } catch (error) {
-        console.error('Failed to get current user:', error);
-      }
-    };
-    getCurrentUser();
-  }, []);
 
-  // Paginated data for documents (3 per page)
   const {
     data: docs,
     loading: docsLoading,
@@ -37,9 +24,9 @@ const MemberDocuments = () => {
     setPageSize: setDocsPageSize,
     fullData: docsFullData,
     refresh: refreshDocs
-  } = usePaginatedData("members/documents/", {}, 1);
+  } = usePaginatedData("/members/member-documents/", {}, 1);
 
-  // Paginated data for requests (3 per page)
+  
   const {
     data: requests,
     loading: requestsLoading,
@@ -50,31 +37,18 @@ const MemberDocuments = () => {
     setPageSize: setRequestsPageSize,
     fullData: requestsFullData,
     refresh: refreshRequests
-  } = usePaginatedData("admin/requests/", {}, 1);
+  } = usePaginatedData("/members/member-document-requests/", {}, 1);
 
   // Set page sizes on component mount
   useEffect(() => {
-    setDocsPageSize(3); // 3 documents per page
-    setRequestsPageSize(3); // 3 request per page
+    setDocsPageSize(3);
+    setRequestsPageSize(3);
   }, [setDocsPageSize, setRequestsPageSize]);
 
-  // Filter requests to only show those directed to the current user
-  const allRequests = userId ? 
-    (requestsFullData.results || []).filter(req => req.requested_from_id === userId) : 
-    [];
-
-  // Filter current page requests for display
-  const filteredCurrentPageRequests = userId ? 
-    (requests || []).filter(req => req.requested_from_id === userId) : 
-    [];
-
-  // Recalculate stats based on filtered requests
+  // Calculate stats based on all requests
+  const allRequests = requestsFullData.results || [];
   const pendingRequests = allRequests.filter(req => req.status === 'pending');
   const overdueRequests = allRequests.filter(req => req.is_overdue && req.status === 'pending');
-
-  // Calculate pagination for filtered results
-  const filteredTotalCount = allRequests.length;
-  const filteredTotalPages = Math.ceil(filteredTotalCount / requestsPageSize);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,7 +61,8 @@ const MemberDocuments = () => {
     fd.append("notes", notes);
     
     try {
-      await axiosMemberInstance.post("members/documents/", fd, {
+      
+      await axiosMemberInstance.post("members/member-documents/", fd, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -96,19 +71,16 @@ const MemberDocuments = () => {
       setSelectedType("");
       setFile(null);
       setNotes("");
-      refreshDocs(); // Refresh documents
-      refreshRequests(); // Refresh requests in case this fulfills one
+      refreshDocs();
+      refreshRequests();
     } catch (err) {
       console.error("Upload error:", err);
       
-      // Handle different error responses
       if (err.response?.data) {
         const errorData = err.response.data;
         if (errorData.error) {
-          // Handle Supabase upload error format
           toast.error(`Upload failed: ${errorData.error}`);
         } else if (errorData.document_file) {
-          // Handle validation errors
           toast.error(`File error: ${errorData.document_file[0]}`);
         } else if (errorData.non_field_errors) {
           toast.error(`Error: ${errorData.non_field_errors[0]}`);
@@ -125,15 +97,20 @@ const MemberDocuments = () => {
 
   const handleFileDownload = async (doc) => {
     try {
-      // Use the file_url directly for viewing/downloading
-      if (doc.file_url) {
-        window.open(doc.file_url, '_blank');
+      
+      const response = await axiosMemberInstance.get(`/members/member-documents/${doc.id}/signed-url/`);
+      if (response.data.signed_url) {
+        window.open(response.data.signed_url, '_blank');
       } else {
         toast.error("File not available for download");
       }
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to access file");
+      if (doc.file_url) {
+        window.open(doc.file_url, '_blank');
+      } else {
+        toast.error("Failed to access file");
+      }
     }
   };
 
@@ -198,6 +175,7 @@ const MemberDocuments = () => {
 
   return (
     <div className="member-documents-container">
+
       {/* Tab Navigation */}
       <div className="document-tabs">
         <button 
@@ -268,7 +246,7 @@ const MemberDocuments = () => {
             <div className="list-header">
               <h3>Your Documents</h3>
               <span className="total-count">
-                {docsFullData.count} total document{docsFullData.count !== 1 ? 's' : ''}
+                {docsFullData.count || 0} total document{(docsFullData.count || 0) !== 1 ? 's' : ''}
               </span>
             </div>
             
@@ -297,7 +275,6 @@ const MemberDocuments = () => {
                       <button 
                         className="btn view-btn" 
                         onClick={() => handleFileDownload(doc)}
-                        disabled={!doc.file_url}
                       >
                         View
                       </button>
@@ -306,7 +283,6 @@ const MemberDocuments = () => {
                           className="btn reupload-btn"
                           onClick={() => {
                             setSelectedType(doc.document_type);
-                            // Can't reupload same file object, user chooses new
                             toast.info("Please select a new file to re-upload");
                           }}
                         >
@@ -336,7 +312,7 @@ const MemberDocuments = () => {
           <div className="list-header">
             <h2>Document Requests</h2>
             <span className="total-count">
-              {filteredTotalCount} total request{filteredTotalCount !== 1 ? 's' : ''} directed to you
+              {requestsFullData.count || 0} total request{(requestsFullData.count || 0) !== 1 ? 's' : ''}
             </span>
           </div>
           
@@ -353,9 +329,9 @@ const MemberDocuments = () => {
             </div>
           )}
 
-          {Array.isArray(filteredCurrentPageRequests) && filteredCurrentPageRequests.length > 0 ? (
+          {Array.isArray(requests) && requests.length > 0 ? (
             <div className="request-list">
-              {filteredCurrentPageRequests.map(request => (
+              {requests.map(request => (
                 <div key={request.id} className={`request-item ${getRequestStatusClass(request)}`}>
                   <div className="request-header">
                     <div className="request-title">
@@ -402,7 +378,7 @@ const MemberDocuments = () => {
               <PaginationControls 
                 currentPage={requestsCurrentPage}
                 setCurrentPage={setRequestsCurrentPage}
-                totalPages={filteredTotalPages}
+                totalPages={requestsTotalPages}
                 itemName="requests"
               />
             </div>
